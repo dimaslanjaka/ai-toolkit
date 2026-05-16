@@ -29,7 +29,8 @@ export default {
       // Ensure declaration files (.d.ts) are generated
       declaration: true,
       declarationDir: 'dist',
-      rootDir: 'src',
+      rootDir: '.',
+      "include": ["src/**/*"],
     }),
     resolve({ preferBuiltins: true }),
     commonjs(),
