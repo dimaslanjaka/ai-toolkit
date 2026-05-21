@@ -1,4 +1,4 @@
-import { loginToChatGpt } from './chatgpt.js';
+import { login } from './chatgpt.js';
 
 // runChatGpt({
 //   headless: false,
@@ -8,6 +8,6 @@ import { loginToChatGpt } from './chatgpt.js';
 //   console.error("Error running ChatGPT:", error);
 // });
 
-loginToChatGpt().catch((error) => {
+login().catch((error) => {
   console.error('Error logging into ChatGPT:', error);
 });
