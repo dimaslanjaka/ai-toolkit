@@ -1,16 +1,50 @@
 {
   "compilerOptions": {
+     // Specify the ECMAScript target version for transpilation
+    "target": "ES2020",
+
+    // Specify the module system for the generated JavaScript
+    "module": "ESNext",
+
+    // Specify libraries to include in the compilation
+    "lib": ["ES2022", "DOM"],
+
+    // Define how module paths are resolved
+    "moduleResolution": "bundler",
+
+    // Specify directories for type definitions
+    "typeRoots": ["./types", "./node_modules/@types"],
+
+    // Enable importing JSON files as modules
+    "resolveJsonModule": true,
+
+    // Allow JavaScript files to be included in the project
+    "allowJs": true,
+
+    // Disable error reporting in JavaScript files
+    "checkJs": false,
+
+    // Generate declaration files for TypeScript files
+    "declaration": true,
+
+    // Generate source maps for debugging purposes
+    "sourceMap": true,
+
+    // Specify the directory for emitted files
     "outDir": "./dist",
     "rootDir": ".",
-    "target": "ES2022",
-    "module": "Node16",
-    "moduleResolution": "Node16",
-    "strict": true,
+
+    // Enable interoperability between ES Modules and CommonJS modules
     "esModuleInterop": true,
+
+    // Enable strict type-checking options
+    "strict": true,
+
+    // Skip type checking for declaration files in `node_modules`
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "types": ["node"]
+
+    // Enable support for JSX/TSX
+    "jsx": "react-jsx"
   },
   "exclude": ["node_modules", "dist", "tmp"]
 }
