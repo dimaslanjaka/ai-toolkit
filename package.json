@@ -7,7 +7,9 @@
   "license": "ISC",
   "type": "module",
   "scripts": {
-    "build": "tsdown"
+    "build-declaration": "tsc -p tsconfig.dts.json",
+    "build": "tsdown && npm run build-declaration",
+    "clean": "npx -y rimraf tmp dist"
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
