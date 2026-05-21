@@ -1,6 +1,6 @@
 import { spawn } from 'child_process';
 
-const proc = spawn('node', ['mcp-server/index.js'], {
+const proc = spawn('node', ['src/mcp-server/index.js'], {
   stdio: ['pipe', 'pipe', 'pipe']
 });
 
