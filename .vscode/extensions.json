@@ -1,0 +1,22 @@
+{
+  "recommendations": [
+    "ms-python.isort",
+    "esbenp.prettier-vscode",
+    "ms-python.debugpy",
+    "ms-python.vscode-pylance",
+    "natizyskunk.sftp",
+    "coolbear.systemd-unit-file",
+    "ms-python.python",
+    "k--kato.intellij-idea-keybindings",
+    "dbaeumer.vscode-eslint",
+    "formulahendry.code-runner",
+    "ms-python.black-formatter",
+    "iliazeus.vscode-ansi",
+    "mblode.twig-language",
+    "shakram02.bash-beautify",
+    "shevaua.phpcs",
+    "bmewburn.vscode-intelephense-client",
+    "junstyle.php-cs-fixer",
+    "tamasfe.even-better-toml"
+  ]
+}
