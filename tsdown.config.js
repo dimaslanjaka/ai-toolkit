@@ -16,6 +16,6 @@ export default defineConfig({
   treeshake: false,
 
   deps: {
-    alwaysBundle: ['fs-extra', 'upath', 'zod']
+    skipNodeModulesBundle: true
   }
 });

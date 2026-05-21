@@ -1,21 +1,21 @@
 {
   "/release/mcp-tools-1.0.0.tgz": {
     "integrity": {
-      "sha1": "d3aaba7986f1078ba0430f4e03f9fc5f02c6d1b4",
-      "sha256": "OzZ7or34KBLxNu4Q8W2GEEpueOTGwBBwVDe8nmWpmCw=",
-      "md5": "461a7e76af3df275c98cfb595a8a4665",
-      "sha512": "PBoLjjdMK+ssUGE5sUx96Zy8AwTfi4UDejtpxXWo7QsUSWmO1lpmWZaShX8rn7VMgTmk7zRiiMi5hT9hqbXb8A=="
+      "sha1": "b947960990a7e2929f98b3cc99d3e113a50eb071",
+      "sha256": "NzU2xA3eq5UfHXKZhJsBigEiqMA6mlT3yD5+F0sovjw=",
+      "md5": "f49a89d9f7134aff3c3d4f87fa847143",
+      "sha512": "9gXE6UnhLK3kqSsWk50M7XK/AO7e7L4iF2sBD0fDdahCC9SY9S+EEDj3AaAIzGLkhjBW7JpxrdoY6AJLgM6Tig=="
     },
-    "size": "1501.53 KB"
+    "size": "51.55 KB"
   },
   "/release/mcp-tools.tgz": {
     "integrity": {
-      "sha1": "d3aaba7986f1078ba0430f4e03f9fc5f02c6d1b4",
-      "sha256": "OzZ7or34KBLxNu4Q8W2GEEpueOTGwBBwVDe8nmWpmCw=",
-      "md5": "461a7e76af3df275c98cfb595a8a4665",
-      "sha512": "PBoLjjdMK+ssUGE5sUx96Zy8AwTfi4UDejtpxXWo7QsUSWmO1lpmWZaShX8rn7VMgTmk7zRiiMi5hT9hqbXb8A=="
+      "sha1": "b947960990a7e2929f98b3cc99d3e113a50eb071",
+      "sha256": "NzU2xA3eq5UfHXKZhJsBigEiqMA6mlT3yD5+F0sovjw=",
+      "md5": "f49a89d9f7134aff3c3d4f87fa847143",
+      "sha512": "9gXE6UnhLK3kqSsWk50M7XK/AO7e7L4iF2sBD0fDdahCC9SY9S+EEDj3AaAIzGLkhjBW7JpxrdoY6AJLgM6Tig=="
     },
-    "size": "1501.53 KB"
+    "size": "51.55 KB"
   },
   "/yarn.lock": {
     "integrity": {
