@@ -16,12 +16,12 @@ if "%ROLLUP_OUTPUT_FILE%"=="" (
     exit /b 1
 )
 
-REM Export env vars for rollup.config.js
+REM Export env vars for rollup.executor.js
 set "ROLLUP_INPUT=%ROLLUP_INPUT%"
 set "ROLLUP_OUTPUT_FILE=%ROLLUP_OUTPUT_FILE%"
 
 REM Run Rollup
-call rollup -c rollup.config.js
+call rollup -c rollup.executor.js
 
 REM Stop if Rollup failed
 if errorlevel 1 (
