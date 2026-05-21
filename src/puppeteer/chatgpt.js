@@ -342,6 +342,7 @@ export async function login() {
     console.log('Login process completed.');
   } else {
     console.log('No login required - user appears to be already logged in.');
+    await browser.close();
   }
 }
 
