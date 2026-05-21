@@ -2,6 +2,7 @@ import fs from 'fs-extra';
 import path from 'upath';
 import { getCookiePathForUrl, saveCookies } from './cookies.js';
 import { createBrowser, navigatePage, NAVIGATION_TIMEOUT_MS, NETWORK_IDLE_TIMEOUT_MS } from './launcher.js';
+import { delay } from 'sbg-utility';
 
 const MAX_INLINE_QUESTION_FILE_BYTES = 2 * 1024;
 
@@ -210,16 +211,6 @@ let messageCount = 0;
 const is_streaming = false; // Set to true if you want to stream the response
 
 /**
- * Creates a promise that resolves after a specified number of milliseconds.
- *
- * @param {number} ms - The number of milliseconds to wait.
- * @returns {Promise<void>} A promise that resolves after the specified delay.
- */
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/**
  * Waits for the initial assistant response to appear and finish thinking.
  *
  * @param {import('puppeteer').Page} page - Puppeteer page instance.
@@ -240,7 +231,7 @@ async function waitForInitialResponse(page, timeout = 30000) {
         return;
       }
     }
-    await sleep(100);
+    await delay(100);
   }
   console.log('Timed out waiting for the initial response.');
 }
@@ -280,7 +271,7 @@ async function handleStreamingResponse(page, outputFile = path.join(process.cwd(
         lastMessageId = currentMessageId;
       }
     }
-    await sleep(100);
+    await delay(100);
   }
 
   if (!is_streaming) {
@@ -489,7 +480,7 @@ export async function run(options = {}) {
 
     await plusButton.click();
 
-    await sleep(500);
+    await delay(500);
 
     const menuItems = await page.$$('[role="menuitem"]');
 
@@ -510,7 +501,7 @@ export async function run(options = {}) {
 
     await uploadMenuItem.hover();
 
-    await sleep(1000);
+    await delay(1000);
 
     const fileInput = await page.waitForSelector('input[type="file"]', { timeout: 10000 });
 
