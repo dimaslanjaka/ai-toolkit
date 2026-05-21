@@ -1,13 +1,11 @@
 import fs from 'fs-extra';
 import path from 'upath';
+import { getCookiePathForUrl, loadCookies, saveCookies } from './cookies.js';
 import { createBrowser } from './launcher.js';
 
-const COOKIE_DIR = path.join(process.cwd(), 'tmp', 'cookies');
-const DEFAULT_COOKIE_PATH = path.join(COOKIE_DIR, 'cookies.json');
 const NAVIGATION_TIMEOUT_MS = 90000;
 const NETWORK_IDLE_TIMEOUT_MS = 15000;
 const MAX_INLINE_QUESTION_FILE_BYTES = 2 * 1024;
-fs.ensureDirSync(COOKIE_DIR);
 
 /**
  * Navigates to a page with a resilient strategy for apps that keep long-lived network connections.
@@ -24,33 +22,6 @@ async function gotoWithFallback(page, url) {
     await page.waitForNetworkIdle({ idleTime: 1000, timeout: NETWORK_IDLE_TIMEOUT_MS });
   } catch {
     // Ignore network-idle timeouts because ChatGPT keeps active connections open.
-  }
-}
-
-/**
- * Saves cookies from a Puppeteer page to a specified file path.
- *
- * @param {import('puppeteer').Page} page - Puppeteer page instance.
- * @param {string} [path=DEFAULT_COOKIE_PATH] - Path to save the cookies file.
- * @returns {Promise<void>} Resolves when cookies are saved.
- */
-async function saveCookies(page, path = DEFAULT_COOKIE_PATH) {
-  const cookies = await page.cookies();
-  fs.writeFileSync(path, JSON.stringify(cookies, null, 2));
-}
-
-/**
- * Returns the cookie file path for a given URL's hostname.
- *
- * @param {string} url - The URL to extract the hostname from.
- * @returns {string} The path to the cookie file for the hostname, or the default cookie path if invalid.
- */
-function getCookiePathForUrl(url) {
-  try {
-    const { hostname } = new URL(url);
-    return path.join(COOKIE_DIR, `cookies_${hostname}.json`);
-  } catch {
-    return DEFAULT_COOKIE_PATH;
   }
 }
 
@@ -126,31 +97,6 @@ async function navigatePage(page, url) {
   };
 
   return { waitForDomIdle };
-}
-
-/**
- * Loads cookies from a specified file path.
- *
- * @param {string} [cookieFilePath=DEFAULT_COOKIE_PATH] - Path to the cookie file.
- * @returns {Array|Null} Parsed cookies array, or null if file does not exist.
- */
-function loadCookies(cookieFilePath = DEFAULT_COOKIE_PATH) {
-  if (!fs.existsSync(cookieFilePath)) return null;
-  return JSON.parse(fs.readFileSync(cookieFilePath));
-}
-
-/**
- * Restores cookies from a file to a Puppeteer page.
- *
- * @param {import('puppeteer').Page} page - Puppeteer page instance.
- * @param {string} [cookieFilePath=DEFAULT_COOKIE_PATH] - Path to the cookie file.
- * @returns {Promise<void>} Resolves when cookies are restored.
- */
-async function _restoreCookies(page, cookieFilePath = DEFAULT_COOKIE_PATH) {
-  const cookies = loadCookies(cookieFilePath);
-  if (cookies) {
-    await page.setCookie(...cookies);
-  }
 }
 
 /**
