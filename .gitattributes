@@ -1,0 +1,114 @@
+# =========================
+# DEFAULT
+# =========================
+* text=auto eol=lf
+
+
+# =========================
+# LINE ENDINGS
+# =========================
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+*.txt text eol=lf
+*.toml text eol=lf
+*.sql text eol=lf
+*.sh text eol=lf
+*.php text eol=lf filter=spaceonly
+
+*.json text eol=lf filter=tabspace
+*.ts text eol=lf filter=tabspace
+*.js text eol=lf filter=tabspace
+*.cjs text eol=lf filter=tabspace
+*.css text eol=lf filter=tabspace
+*.scss text eol=lf filter=tabspace
+
+*.java text eol=lf filter=tabspace
+*.kt text eol=lf filter=tabspace
+
+*.xml text eol=lf filter=tabspace2
+*.html text eol=lf filter=tabspace2
+
+*.py text eol=lf filter=spaceonly
+
+# =========================
+# BINARIES (NO LFS)
+# =========================
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.bmp binary
+*.svg binary
+*.webp binary
+*.avif binary
+*.tiff binary
+*.tif binary
+*.psd binary
+*.ai binary
+*.eps binary
+*.raw binary
+
+*.pdf binary
+*.exe binary
+*.dll binary
+*.so binary
+*.bin binary
+
+# Archives (IMPORTANT: explicitly binary, no LFS)
+*.zip binary
+*.rar binary
+*.7z binary
+*.tar binary
+*.gz binary
+*.tgz binary
+*.bz2 binary
+*.xz binary
+*.iso binary
+*.img binary
+*.dmg binary
+
+# Java / installers
+*.jar binary
+*.war binary
+*.ear binary
+*.apk binary
+*.msi binary
+*.deb binary
+*.rpm binary
+
+# Media
+*.mp3 binary
+*.mp4 binary
+*.mov binary
+*.avi binary
+*.mkv binary
+*.flv binary
+*.wmv binary
+*.webm binary
+*.ogg binary
+*.wav binary
+*.aac binary
+*.m4a binary
+
+# Fonts
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.eot binary
+
+
+# =========================
+# GIT HOOKS
+# =========================
+pre-commit text eol=lf
+post-commit text eol=lf
+
+
+# =========================
+# SPECIAL CASES
+# =========================
+.husky/hash.txt text eol=lf merge=ours driver=resolve_hash
