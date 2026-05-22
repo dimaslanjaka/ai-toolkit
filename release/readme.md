@@ -1,23 +1,24 @@
-# Release `mcp-tools` tarball
+# Release `ai-toolkit` tarball
 ## Releases
 | version | tarball url |
 | :--- | :--- |
-| 1.0.0 | https://github.com/dimaslanjaka/ai-toolkit/raw/8a5e9e8/release/mcp-tools-1.0.0.tgz |
-| latest | https://github.com/dimaslanjaka/ai-toolkit/raw/8a5e9e8/release/mcp-tools.tgz |
+| latest | https://github.com/dimaslanjaka/ai-toolkit/raw/4d2948d/release/mcp-tools-1.0.0.tgz |
+| latest | https://github.com/dimaslanjaka/ai-toolkit/raw/master/release/mcp-tools-1.0.0.tgz |
+| latest | https://github.com/dimaslanjaka/ai-toolkit/raw/4d2948d/release/mcp-tools.tgz |
 | latest | https://github.com/dimaslanjaka/ai-toolkit/raw/master/release/mcp-tools.tgz |
 
 use this tarball with `resolutions`:
 ```json
 {
   "resolutions": {
-    "mcp-tools": "<url of tarball>"
+    "ai-toolkit": "<url of tarball>"
   }
 }
 ```
 
 ## Releases
 
-    ## Get URL of `mcp-tools` Release Tarball
+    ## Get URL of `ai-toolkit` Release Tarball
 - select tarball file
 ![gambar](https://user-images.githubusercontent.com/12471057/203216375-8af4b5d9-00c2-40fb-8d3d-d220beaabd46.png)
 - copy raw url
