@@ -88,13 +88,66 @@ async function navigatePage(page, url) {
 }
 
 /**
+ * Waits until the DOM has been idle (no mutations) for `idleMs` milliseconds.
+ * Injects a fresh MutationObserver (same logic as navigatePage).
+ * Works after navigation, clicks, or any other action.
+ *
+ * @param {import('puppeteer').Page} page
+ * @param {number} [idleMs=1000]
+ * @param {number} [timeout=10000]
+ * @returns {Promise<boolean>}
+ */
+async function waitForDomIdle(page, idleMs = 1000, timeout = 10000) {
+  await page.evaluate(() => {
+    window.__domStillUpdating = true;
+
+    if (window.__domObserver) {
+      window.__domObserver.disconnect();
+    }
+
+    window.__domObserver = new MutationObserver(() => {
+      window.__lastDomMutation = Date.now();
+    });
+
+    window.__lastDomMutation = Date.now();
+
+    window.__domObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      characterData: true
+    });
+
+    setTimeout(() => {
+      window.__domStillUpdating = false;
+      window.__domObserver.disconnect();
+    }, 30000);
+  });
+
+  const start = Date.now();
+
+  while (Date.now() - start < timeout) {
+    const lastMutation = await page.evaluate(() => window.__lastDomMutation);
+    const idle = Date.now() - lastMutation;
+
+    if (idle >= idleMs) {
+      return true;
+    }
+
+    await new Promise((r) => setTimeout(r, 200));
+  }
+
+  throw new Error('DOM did not stabilize within timeout');
+}
+
+export { gotoWithFallback, navigatePage, waitForDomIdle, NAVIGATION_TIMEOUT_MS, NETWORK_IDLE_TIMEOUT_MS };
+
+/**
  * Creates a new Puppeteer browser instance with StealthPlugin enabled.
  *
  * @param {Parameters<import("puppeteer-extra").VanillaPuppeteer["launch"]>[0]} [browserOptions={}] - Browser launch options.
  * @returns {Promise<import("puppeteer-extra").Browser>} The created browser instance.
  */
-export { gotoWithFallback, navigatePage, NAVIGATION_TIMEOUT_MS, NETWORK_IDLE_TIMEOUT_MS };
-
 export async function createBrowser(browserOptions = {}) {
   const windowsChromeExecutable = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
   const hasWindowsChrome = process.platform === 'win32' && fs.existsSync(windowsChromeExecutable);

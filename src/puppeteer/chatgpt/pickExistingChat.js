@@ -1,4 +1,5 @@
 import Fuse from 'fuse.js';
+import { waitForDomIdle } from '../launcher.js';
 
 /**
  * Picks an existing chat from the sidebar based on the question.
@@ -79,4 +80,5 @@ export async function pickExistingChat(page, question) {
 
   const best = results[0].item;
   await best.element.click();
+  await waitForDomIdle(page, 1000, 10000);
 }
