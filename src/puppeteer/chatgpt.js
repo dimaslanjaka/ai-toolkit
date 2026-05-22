@@ -275,6 +275,7 @@ async function handleStreamingResponse(page, outputFile = path.join(process.cwd(
   }
 
   if (!is_streaming) {
+    console.log('='.repeat(20) + ' Final Response ' + '='.repeat(20));
     console.log(completeResponse.trim());
     console.log('\n\n');
     fs.ensureDirSync(path.dirname(outputFile));
