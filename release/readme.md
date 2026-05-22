@@ -2,8 +2,8 @@
 ## Releases
 | version | tarball url |
 | :--- | :--- |
-| 1.0.0 | https://github.com/dimaslanjaka/ai-toolkit/raw/ac67d07/release/ai-toolkit-1.0.0.tgz |
-| latest | https://github.com/dimaslanjaka/ai-toolkit/raw/ac67d07/release/ai-toolkit.tgz |
+| 1.0.0 | https://github.com/dimaslanjaka/ai-toolkit/raw/0288461/release/ai-toolkit-1.0.0.tgz |
+| latest | https://github.com/dimaslanjaka/ai-toolkit/raw/0288461/release/ai-toolkit.tgz |
 | latest | https://github.com/dimaslanjaka/ai-toolkit/raw/master/release/ai-toolkit.tgz |
 
 use this tarball with `resolutions`:
@@ -17,7 +17,9 @@ use this tarball with `resolutions`:
 
 ## Releases
 
-    ## Get URL of `ai-toolkit` Release Tarball
+    
+
+## Get URL of `ai-toolkit` Release Tarball
 - select tarball file
 ![gambar](https://user-images.githubusercontent.com/12471057/203216375-8af4b5d9-00c2-40fb-8d3d-d220beaabd46.png)
 - copy raw url
