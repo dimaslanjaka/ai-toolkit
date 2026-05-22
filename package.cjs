@@ -80,22 +80,22 @@ const getPackageHashes = async function () {
   // read old meta
   if (fs.existsSync(metafile)) {
     try {
-      hashes = Object.assign(hashes, JSON.parse(fs.readFileSync(metafile, 'utf-8')));
+      hashes = Object.assign(
+        hashes,
+        Object.fromEntries(
+          Object.entries(JSON.parse(fs.readFileSync(metafile, 'utf-8'))).filter(
+            ([key]) => !key.endsWith('yarn.lock') && !key.endsWith('package-lock.json')
+          )
+        )
+      );
     } catch {
       hashes = {};
     }
   }
-  const pkglock = [join(__dirname, 'package-lock.json'), join(__dirname, 'yarn.lock')].filter((str) =>
-    fs.existsSync(str)
-  )[0];
   const readDir = fs
     .readdirSync(releaseDir)
     .filter((path) => path.endsWith('tgz'))
     .map((path) => join(releaseDir, path));
-
-  if (typeof pkglock === 'string' && fs.existsSync(pkglock)) {
-    readDir.push(pkglock);
-  }
   for (let i = 0; i < readDir.length; i++) {
     const file = readDir[i];
     const stat = fs.statSync(file);

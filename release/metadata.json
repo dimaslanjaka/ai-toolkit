@@ -16,14 +16,5 @@
       "sha512": "xdeDWqsvVMB+iIwgJZCgmW8gjnrP482FIsbLV1pTR1Pn9nCYYUjWXez7GPbsVoz9FtjZWOydKysMGx1zBvueHA=="
     },
     "size": "63.73 KB"
-  },
-  "/yarn.lock": {
-    "integrity": {
-      "sha1": "9b6608dc2ac3fcb58547cc2edc66bb44c8da4668",
-      "sha256": "HFz4YgLvzzoQ8i6EakmMvKs+7jg87ea8der/CqYNWxU=",
-      "md5": "571e4e3f2cb05d896457b608b2543c79",
-      "sha512": "ftjCuTP10GNaP2gzWbx+XIf18NUYURAlp8SARkCNZvp5fn9xcLllqpgUpWYm+hlCVo8PZTNv2vi5bCfcDpvQTQ=="
-    },
-    "size": "323.71 KB"
   }
 }
