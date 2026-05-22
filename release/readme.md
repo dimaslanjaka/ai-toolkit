@@ -2,8 +2,8 @@
 ## Releases
 | version | tarball url |
 | :--- | :--- |
-| 1.0.0 | https://github.com/dimaslanjaka/ai-toolkit/raw/99c099a/release/mcp-tools-1.0.0.tgz |
-| latest | https://github.com/dimaslanjaka/ai-toolkit/raw/99c099a/release/mcp-tools.tgz |
+| 1.0.0 | https://github.com/dimaslanjaka/ai-toolkit/raw/8a5e9e8/release/mcp-tools-1.0.0.tgz |
+| latest | https://github.com/dimaslanjaka/ai-toolkit/raw/8a5e9e8/release/mcp-tools.tgz |
 | latest | https://github.com/dimaslanjaka/ai-toolkit/raw/master/release/mcp-tools.tgz |
 
 use this tarball with `resolutions`:
