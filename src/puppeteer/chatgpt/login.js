@@ -36,3 +36,5 @@ export default async function login() {
     await browser.close();
   }
 }
+
+export { login as loginChatGpt };

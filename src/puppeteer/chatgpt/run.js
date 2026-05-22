@@ -17,9 +17,11 @@ const MAX_INLINE_QUESTION_FILE_BYTES = 2 * 1024;
  *
  * @param {Object} [chatgptOptions={}] - Configuration options for ChatGPT automation.
  * @param {boolean} [chatgptOptions.headless=true] - Whether to run the browser in headless mode.
+ * @param {boolean} [chatgptOptions.temporaryChat=true] - Whether to enable temporary chat mode.
  * @param {string} [chatgptOptions.question] - Text question to send to ChatGPT. Either question or questionFile must be provided.
  * @param {string} [chatgptOptions.questionFile] - Path to a file to upload to ChatGPT. Either question or questionFile must be provided.
  * @param {string} [chatgptOptions.responseFile] - Path to save the response. Defaults to tmp/response.txt.
+ * @param {boolean} [chatgptOptions.close=true] - Whether to close the browser after completion.
  * @returns {Promise<void>} Resolves when the ChatGPT interaction is complete. Responses are logged to console and saved to specified file.
  * @throws {Error} Throws an error if neither question nor questionFile is provided.
  *
@@ -42,7 +44,8 @@ export default async function run(options = {}) {
     headless = true,
     questionFile,
     responseFile = path.join(process.cwd(), 'tmp', 'response.txt'),
-    close = true
+    close = true,
+    temporaryChat = true
   } = options;
 
   let { question } = options;
@@ -96,19 +99,21 @@ export default async function run(options = {}) {
 
     await navigate.waitForDomIdle(2000, 15000);
 
-    // Enable temporary chat if available
-    try {
-      const tempChatButton = await page.$('button[aria-label="Turn on temporary chat"]');
+    // Enable/disable temporary chat based on options
+    if (temporaryChat) {
+      try {
+        const tempChatButton = await page.$('button[aria-label="Turn on temporary chat"]');
 
-      if (tempChatButton) {
-        await tempChatButton.click();
+        if (tempChatButton) {
+          await tempChatButton.click();
 
-        console.log('Temporary chat enabled');
+          console.log('Temporary chat enabled');
 
-        await navigate.waitForDomIdle(1000, 10000);
+          await navigate.waitForDomIdle(1000, 10000);
+        }
+      } catch (error) {
+        console.log(`Temporary chat unavailable: ${error.message}`);
       }
-    } catch (error) {
-      console.log(`Temporary chat unavailable: ${error.message}`);
     }
 
     // Text prompt flow
@@ -219,3 +224,5 @@ export default async function run(options = {}) {
     }
   }
 }
+
+export { run as runChatGpt };

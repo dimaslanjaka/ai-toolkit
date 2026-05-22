@@ -1,5 +1,2 @@
-import login from './login.js';
-import run from './run.js';
-
-export { login, login as loginChatGpt };
-export { run, run as runChatGpt };
+export * from './login.js';
+export * from './run.js';
