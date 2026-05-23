@@ -1,0 +1,5 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "shell": "cmd",
+  "plugin": ["@gotgenes/opencode-agent-identity"]
+}
