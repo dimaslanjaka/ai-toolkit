@@ -5,5 +5,5 @@
   "server": {
     "port": 4096
   },
-  "plugin": ["@gotgenes/opencode-agent-identity", "opencode-agent-memory"]
+  // "plugin": ["@gotgenes/opencode-agent-identity", "opencode-agent-memory", "@tarquinen/opencode-smart-title"]
 }
