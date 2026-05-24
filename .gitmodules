@@ -1,0 +1,4 @@
+[submodule ".opencode/plugins/memory"]
+	path = .opencode/plugins/memory
+	url = https://github.com/dimaslanjaka/opencode-file-memory.git
+	branch = main
