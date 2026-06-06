@@ -117,3 +117,6 @@ coverage.*
 **/.coverage*
 **/coverage.*
 !*coverage*.toml
+
+# Non-indexed files
+.opencode/plugins/opencode-request-logger
