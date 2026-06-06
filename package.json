@@ -11,7 +11,8 @@
     "build": "tsdown && npm run build-declaration",
     "clean": "npx -y rimraf tmp dist",
     "pack": "node package.cjs",
-    "prepare": "husky"
+    "prepare": "husky",
+    "update:ncu": "npx -y npm-check-updates -u"
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -28,8 +29,13 @@
     ".puppeteerrc.cjs"
   ],
   "dependencies": {
-    "@gotgenes/opencode-agent-identity": "^3.1.1",
+    "@babel/parser": "^7.29.7",
+    "@babel/traverse": "^7.29.7",
+    "@heyputer/puter.js": "^2.5.1",
+    "@opencode-ai/plugin": "^1.16.0",
     "@qwen-code/qwen-code": "^0.15.11",
+    "cross-spawn": "*",
+    "crypto-js": "^4.2.0",
     "dotenv": "^17.4.2",
     "fs-extra": "^11.3.5",
     "fuse.js": "^7.3.0",
@@ -47,7 +53,7 @@
     "@babel/core": "^7.29.0",
     "@babel/eslint-parser": "^7.28.6",
     "@babel/plugin-syntax-import-assertions": "^7.28.6",
-    "@dimaslanjaka/eslint-base-config": "^1.0.0",
+    "@dimaslanjaka/eslint-base-config": "^1.0.2",
     "@eslint/eslintrc": "3.3.5",
     "@eslint/js": "9",
     "@modelcontextprotocol/sdk": "^1.29.0",
@@ -56,18 +62,20 @@
     "@rollup/plugin-node-resolve": "^16.0.3",
     "@rollup/plugin-typescript": "^12.3.0",
     "@types/babel__core": "^7",
+    "@types/babel__traverse": "^7",
+    "@types/crypto-js": "^4",
     "@types/fs-extra": "^11",
     "@types/node": "^25.8.0",
     "@typescript-eslint/eslint-plugin": "8.59.3",
     "@typescript-eslint/parser": "8.59.3",
-    "binary-collections": "^2.0.11",
+    "binary-collections": "^2.0.15",
     "eslint": "9",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-prettier": "5.5.5",
     "globals": "^17.6.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.5",
-    "openai": "^6.38.0",
+    "openai": "^6.41.0",
     "prettier": "3.8.3",
     "prettier-plugin-embed": "^0.5.1",
     "prettier-plugin-sh": "^0.18.1",
@@ -83,9 +91,10 @@
     "zod": "^4.4.3"
   },
   "resolutions": {
-    "cross-spawn": "https://github.com/dimaslanjaka/node-cross-spawn/raw/78b09a1f799430fb251c1b438ec56ce7957674f4/release/cross-spawn.tgz",
-    "binary-collections": "https://github.com/dimaslanjaka/bin/raw/22ac0e33425a6fecc6f9e587af9d1186538d38b8/releases/bin.tgz",
-    "git-command-helper": "https://github.com/dimaslanjaka/git-command-helper/raw/ed17f70eb7444d24bd8eb984a4afe9fd64652838/release/git-command-helper.tgz",
+    "cross-spawn": "https://github.com/dimaslanjaka/node-cross-spawn/raw/eb74103efcb296e453b62512ebd73c88d33ab630/release/cross-spawn.tgz",
+    "binary-collections": "https://github.com/dimaslanjaka/bin/raw/dabc33b7bcf7d1c1df9479e275997feafbba9b66/releases/bin.tgz",
+    "git-command-helper": "https://github.com/dimaslanjaka/git-command-helper/raw/8cdac3d63629e1a11b63e616a99556a36b069834/release/git-command-helper.tgz",
+    "@dimaslanjaka/eslint-base-config": "https://github.com/dimaslanjaka/eslint-base-config/raw/822b872f18985462f0da358579cd6493472a2ee0/release/dimaslanjaka-eslint-base-config.tgz",
     "sbg-utility": "https://github.com/dimaslanjaka/static-blog-generator/raw/44e5c7b79b4e60f8c2d34857c27b8ce677d7493e/packages/sbg-utility/release/sbg-utility.tgz"
   }
 }
