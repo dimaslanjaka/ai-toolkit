@@ -1,9 +1,11 @@
-import { createBrowser, navigatePage, NAVIGATION_TIMEOUT_MS, NETWORK_IDLE_TIMEOUT_MS } from '../launcher.js';
+import { createBrowser, navigatePage } from '../launcher.js';
+import { saveCookies, getCookiePathForUrl } from '../cookies.js';
 
 /**
- * Handles the login process for ChatGPT by launching a browser and clicking the login button if needed.
+ * Opens ChatGPT in a visible browser and waits for the user to log in manually.
+ * Does NOT auto-click the login button — you must complete login yourself.
  *
- * @returns {Promise<void>} Resolves when the login process is complete.
+ * @returns {Promise<void>} Resolves when login is detected or the browser is closed.
  */
 export default async function login() {
   const browser = await createBrowser({ headless: false });
@@ -12,29 +14,64 @@ export default async function login() {
   const url = 'https://chat.openai.com';
   const navigate = await navigatePage(page, url);
 
-  // Wait for page to fully load before checking login status
+  // Wait for initial page load
   await navigate.waitForDomIdle(2000, 10000);
 
-  // Check if the login button exists
-  const loginButtonExists = await page.evaluate(() => {
-    return document.querySelector('[data-testid="login-button"]') !== null;
+  // Check current login state
+  const alreadyLoggedIn = await page.evaluate(() => {
+    const hasChatInput = !!document.querySelector(
+      'textarea[placeholder*="Message"], textarea#prompt-textarea, [contenteditable="true"][data-placeholder*="Message"]'
+    );
+    const loginButton = document.querySelector('[data-testid="login-button"]');
+    return hasChatInput || !loginButton;
   });
 
-  if (loginButtonExists) {
-    console.log('Login button found, clicking to log in...');
-    await page.click('[data-testid="login-button"]');
-    // Wait for the login process to complete without requiring full network idleness.
-    await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: NAVIGATION_TIMEOUT_MS });
-    try {
-      await page.waitForNetworkIdle({ idleTime: 1000, timeout: NETWORK_IDLE_TIMEOUT_MS });
-    } catch {
-      // Ignore: authentication pages can keep background connections active.
-    }
-    console.log('Login process completed.');
-  } else {
-    console.log('No login required - user appears to be already logged in.');
+  if (alreadyLoggedIn) {
+    console.log('Already logged in.');
+    await saveCookies(page, getCookiePathForUrl(url));
     await browser.close();
+    return;
   }
+
+  console.log('');
+  console.log('Please log in to ChatGPT in the opened browser window.');
+  console.log('Complete the login manually — this script will detect when you are logged in.');
+  console.log('');
+
+  // Poll until login button disappears (user completed login) or chat input appears
+  const pollIntervalMs = 2000;
+  const maxWaitMs = 5 * 60 * 1000; // 5 minutes timeout
+  const startTime = Date.now();
+
+  while (Date.now() - startTime < maxWaitMs) {
+    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+
+    const loggedIn = await page.evaluate(() => {
+      const hasChatInput = !!document.querySelector(
+        'textarea[placeholder*="Message"], textarea#prompt-textarea, [contenteditable="true"][data-placeholder*="Message"]'
+      );
+      const loginButton = document.querySelector('[data-testid="login-button"]');
+      return hasChatInput || !loginButton;
+    });
+
+    if (loggedIn) {
+      console.log('Login detected. Continuing...');
+      await saveCookies(page, getCookiePathForUrl(url));
+      await browser.close();
+      return;
+    }
+
+    // Check if browser was closed by the user
+    try {
+      await page.evaluate(() => document.title);
+    } catch {
+      console.log('Browser was closed. Aborting login.');
+      return;
+    }
+  }
+
+  console.log('Login timeout reached (5 minutes). Please try again.');
+  await browser.close();
 }
 
 export { login as loginChatGpt };
