@@ -2,12 +2,12 @@
 ## Releases
 | version | tarball url |
 | :--- | :--- |
-| 1.0.0 | https://github.com/dimaslanjaka/ai-toolkit/raw/28fa106/release/ai-toolkit-1.0.0.tgz |
-| latest | https://github.com/dimaslanjaka/ai-toolkit/raw/28fa106/release/ai-toolkit.tgz |
+| 1.0.0 | https://github.com/dimaslanjaka/ai-toolkit/raw/a3bd5ee/release/ai-toolkit-1.0.0.tgz |
+| latest | https://github.com/dimaslanjaka/ai-toolkit/raw/a3bd5ee/release/ai-toolkit.tgz |
 | latest | https://github.com/dimaslanjaka/ai-toolkit/raw/master/release/ai-toolkit.tgz |
-| latest | https://github.com/dimaslanjaka/ai-toolkit/raw/28fa106/release/mcp-tools-1.0.0.tgz |
+| latest | https://github.com/dimaslanjaka/ai-toolkit/raw/a3bd5ee/release/mcp-tools-1.0.0.tgz |
 | latest | https://github.com/dimaslanjaka/ai-toolkit/raw/master/release/mcp-tools-1.0.0.tgz |
-| latest | https://github.com/dimaslanjaka/ai-toolkit/raw/28fa106/release/mcp-tools.tgz |
+| latest | https://github.com/dimaslanjaka/ai-toolkit/raw/a3bd5ee/release/mcp-tools.tgz |
 | latest | https://github.com/dimaslanjaka/ai-toolkit/raw/master/release/mcp-tools.tgz |
 
 use this tarball with `resolutions`:
