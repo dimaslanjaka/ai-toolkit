@@ -15,12 +15,12 @@
     "update:ncu": "npx -y npm-check-updates -u"
   },
   "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
+  "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
+      "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
     }
   },
@@ -34,7 +34,7 @@
     "@heyputer/puter.js": "^2.5.1",
     "@opencode-ai/plugin": "^1.16.0",
     "@qwen-code/qwen-code": "^0.15.11",
-    "cross-spawn": "https://github.com/dimaslanjaka/node-cross-spawn/raw/78b09a1f799430fb251c1b438ec56ce7957674f4/release/cross-spawn.tgz",
+    "cross-spawn": "*",
     "crypto-js": "^4.2.0",
     "dotenv": "^17.4.2",
     "fs-extra": "^11.3.5",
@@ -46,7 +46,7 @@
     "puppeteer": "^25.0.4",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2",
-    "sbg-utility": "https://github.com/dimaslanjaka/static-blog-generator/raw/44e5c7b79b4e60f8c2d34857c27b8ce677d7493e/packages/sbg-utility/release/sbg-utility.tgz",
+    "sbg-utility": "^2.0.11",
     "upath": "^3.0.7"
   },
   "devDependencies": {
