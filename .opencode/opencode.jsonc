@@ -9,7 +9,7 @@
     "opencode-agent-memory@https://github.com/dimaslanjaka/opencode-file-memory/raw/refs/heads/main/release/opencode-agent-memory.tgz",
     "@tarquinen/opencode-smart-title@latest",
     "@tarquinen/opencode-dcp@latest",
-    ".opencode/plugins/opencode-request-logger"
+    "opencode-request-logger@https://github.com/Opencode-DCP/opencode-request-logger.git"
   ],
   "instructions": [
     "AGENTS.md",
