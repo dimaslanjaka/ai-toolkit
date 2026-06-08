@@ -19,20 +19,20 @@
   },
   "/release/ai-toolkit-1.0.0.tgz": {
     "integrity": {
-      "sha1": "b80911aa065c840c3dc5ad38864834d6f1b1c196",
-      "sha256": "E3iUIbz5Ag4oqbIf0dJEyKII507/gE6WhzJUbkVo2vU=",
-      "md5": "c857b349f6f05f8b284eca86481b00f4",
-      "sha512": "d2cR9xn04b/TC8hsEbEMvdiV1Y1KLHSNlhZEbPJnVH9mGDh4QnEowioEzZsMHMfw4BdtOS0YhYZN4KS//s74nQ=="
+      "sha1": "1d79510a9aad98cc39eb1c6b5bc32c34b3a6674b",
+      "sha256": "uuLgMUu/1JLpAcmXl96H/NerEreb4rbXt+AIt/7rOc0=",
+      "md5": "b293599494ca502d6603ca08d70fd6c1",
+      "sha512": "p9JQ7j73mS4gBKLYtnF6p1/3y4cSYTpQh3rOOV3zUfjL5dB18MUdh82CLOORw6kVOI69044KpI6GAhWQJhsvcg=="
     },
-    "size": "66.93 KB"
+    "size": "68.99 KB"
   },
   "/release/ai-toolkit.tgz": {
     "integrity": {
-      "sha1": "b80911aa065c840c3dc5ad38864834d6f1b1c196",
-      "sha256": "E3iUIbz5Ag4oqbIf0dJEyKII507/gE6WhzJUbkVo2vU=",
-      "md5": "c857b349f6f05f8b284eca86481b00f4",
-      "sha512": "d2cR9xn04b/TC8hsEbEMvdiV1Y1KLHSNlhZEbPJnVH9mGDh4QnEowioEzZsMHMfw4BdtOS0YhYZN4KS//s74nQ=="
+      "sha1": "1d79510a9aad98cc39eb1c6b5bc32c34b3a6674b",
+      "sha256": "uuLgMUu/1JLpAcmXl96H/NerEreb4rbXt+AIt/7rOc0=",
+      "md5": "b293599494ca502d6603ca08d70fd6c1",
+      "sha512": "p9JQ7j73mS4gBKLYtnF6p1/3y4cSYTpQh3rOOV3zUfjL5dB18MUdh82CLOORw6kVOI69044KpI6GAhWQJhsvcg=="
     },
-    "size": "66.93 KB"
+    "size": "68.99 KB"
   }
 }
