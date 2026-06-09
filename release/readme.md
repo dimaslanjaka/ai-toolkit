@@ -1,20 +1,13 @@
-# Release `ai-toolkit` tarball
+# Release `@dimaslanjaka/ai-toolkit` tarball
 ## Releases
 | version | tarball url |
 | :--- | :--- |
-| 1.0.0 | https://github.com/dimaslanjaka/ai-toolkit/raw/24df6d3/release/ai-toolkit-1.0.0.tgz |
-| latest | https://github.com/dimaslanjaka/ai-toolkit/raw/24df6d3/release/ai-toolkit.tgz |
-| latest | https://github.com/dimaslanjaka/ai-toolkit/raw/master/release/ai-toolkit.tgz |
-| latest | https://github.com/dimaslanjaka/ai-toolkit/raw/24df6d3/release/mcp-tools-1.0.0.tgz |
-| latest | https://github.com/dimaslanjaka/ai-toolkit/raw/master/release/mcp-tools-1.0.0.tgz |
-| latest | https://github.com/dimaslanjaka/ai-toolkit/raw/24df6d3/release/mcp-tools.tgz |
-| latest | https://github.com/dimaslanjaka/ai-toolkit/raw/master/release/mcp-tools.tgz |
 
 use this tarball with `resolutions`:
 ```json
 {
   "resolutions": {
-    "ai-toolkit": "<url of tarball>"
+    "@dimaslanjaka/ai-toolkit": "<url of tarball>"
   }
 }
 ```
@@ -23,7 +16,7 @@ use this tarball with `resolutions`:
 
     
 
-## Get URL of `ai-toolkit` Release Tarball
+## Get URL of `@dimaslanjaka/ai-toolkit` Release Tarball
 - select tarball file
 ![gambar](https://user-images.githubusercontent.com/12471057/203216375-8af4b5d9-00c2-40fb-8d3d-d220beaabd46.png)
 - copy raw url
@@ -31,6 +24,7 @@ use this tarball with `resolutions`:
 - or copy download url
 ![gambar](https://user-images.githubusercontent.com/12471057/203216541-3807d2c3-5213-49f3-b93d-c626dbae3b2e.png)
 - then run installation from command line
+
 ```bash
 npm i https://....url-tgz
 ```
