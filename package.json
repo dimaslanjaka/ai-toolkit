@@ -1,16 +1,29 @@
 {
-  "name": "ai-toolkit",
+  "name": "@dimaslanjaka/ai-toolkit",
   "version": "1.0.0",
-  "description": "",
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "description": "AI toolkit and utilities for opencode integration, LLM providers, and AI-powered development workflows",
+  "keywords": [
+    "ai",
+    "toolkit",
+    "opencode",
+    "llm",
+    "openai",
+    "ollama",
+    "chatgpt",
+    "copilot"
+  ],
+  "author": {
+    "name": "dimaslanjaka",
+    "email": "dimaslanjaka@gmail.com",
+    "url": "https://webmanajemen.com"
+  },
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "build-declaration": "tsc -p tsconfig.dts.json",
     "build": "tsdown && npm run build-declaration",
     "clean": "npx -y rimraf tmp dist",
-    "pack": "node package.cjs",
+    "pack": "npx -y tarball-packer --filename ai-toolkit --normalize-resolutions",
     "prepare": "husky",
     "update:ncu": "npx -y npm-check-updates -u"
   },
@@ -37,7 +50,7 @@
     "@heyputer/puter.js": "^2.5.1",
     "@opencode-ai/plugin": "^1.16.0",
     "@qwen-code/qwen-code": "^0.15.11",
-    "cross-spawn": "*",
+    "cross-spawn": "https://github.com/dimaslanjaka/node-cross-spawn/raw/eb74103efcb296e453b62512ebd73c88d33ab630/release/cross-spawn.tgz",
     "crypto-js": "^4.2.0",
     "diff": "^9.0.0",
     "dotenv": "^17.4.2",
@@ -72,7 +85,7 @@
     "@types/node": "^25.8.0",
     "@typescript-eslint/eslint-plugin": "8.59.3",
     "@typescript-eslint/parser": "8.59.3",
-    "binary-collections": "^2.0.15",
+    "binary-collections": "https://github.com/dimaslanjaka/bin/raw/dabc33b7bcf7d1c1df9479e275997feafbba9b66/releases/bin.tgz",
     "eslint": "9",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-prettier": "5.5.5",
