@@ -119,4 +119,7 @@ coverage.*
 !*coverage*.toml
 
 # Non-indexed files
-.opencode/plugins/opencode-request-logger
+.opencode/*
+!.opencode/plugins/memory
+!.opencode/opencode.json
+!.opencode/opencode.jsonc
