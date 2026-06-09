@@ -28,6 +28,9 @@
     "dist",
     ".puppeteerrc.cjs"
   ],
+  "workspaces": [
+    "packages/*"
+  ],
   "dependencies": {
     "@babel/parser": "^7.29.7",
     "@babel/traverse": "^7.29.7",
@@ -36,6 +39,7 @@
     "@qwen-code/qwen-code": "^0.15.11",
     "cross-spawn": "*",
     "crypto-js": "^4.2.0",
+    "diff": "^9.0.0",
     "dotenv": "^17.4.2",
     "fs-extra": "^11.3.5",
     "fuse.js": "^7.3.0",
