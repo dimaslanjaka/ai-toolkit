@@ -107,7 +107,7 @@
   },
   "resolutions": {
     "cross-spawn": "https://github.com/dimaslanjaka/node-cross-spawn/raw/dd0273f55b21f8c546ba86565b00a2f89151d15a/release/cross-spawn.tgz",
-    "binary-collections": "https://github.com/dimaslanjaka/bin/raw/f35e46e28ef266be56931a0fcdaba63ddbaab548/releases/bin.tgz",
+    "binary-collections": "https://github.com/dimaslanjaka/bin/raw/c50682c5c9276c5f07646f33b834987202767f83/releases/bin.tgz",
     "git-command-helper": "https://github.com/dimaslanjaka/git-command-helper/raw/849f10f15740f2c24911bc03e2fe9eb663f854c1/release/git-command-helper.tgz",
     "@dimaslanjaka/eslint-base-config": "https://github.com/dimaslanjaka/eslint-base-config/raw/84028e4a2892cd5958fbf3e200aacf0f8f0e5700/release/dimaslanjaka-eslint-base-config.tgz",
     "sbg-utility": "https://github.com/dimaslanjaka/static-blog-generator/raw/1ca385787f7287155b547c5b97d5ffd5bcfab482/packages/sbg-utility/release/sbg-utility.tgz"
