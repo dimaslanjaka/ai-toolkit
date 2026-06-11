@@ -1,12 +1,39 @@
 ---
-applyTo: '**/*.*'
+applyTo: '**'
 ---
 
-# GitHub Copilot Instructions — All Files
+- When updating `/readme.md`, ensure lookup for `build.mjs` and `src/` folder.
+- When i ask to create commit message, print as raw text (code block) without any formatting and use the following structure:
 
-- Git commit messages should be clear and concise, following the conventional commits format.
-- When running shell commands that produce output files, direct these outputs to the `tmp/output-shell` directory and review the complete results for thorough debugging, especially for long-running processes.
-- All projects test folders should be named `tests`.
-- Moving files should be done with care, ensuring that the new location is correctly referenced in the codebase.
-- When creating or modifying files, ensure that the file paths are correct and that the files are placed in appropriate directories.
-- Always check for existing files before creating new ones to avoid overwriting important data.
+  **Commit types description:**
+
+  - `<type>!`:  Commit that introduces a breaking API change (correlating with MAJOR in Semantic
+    Versioning)
+  - `feat`: A new feature
+  - `fix`: A bug fix
+  - `docs`: Documentation only changes
+  - `style`: Changes that do not affect the meaning of the code (white-space, formatting, missing
+    semi-colons, etc)
+  - `refactor`: A code change that neither fixes a bug nor adds a feature
+  - `perf`: A code change that improves performance
+  - `test`: Adding missing tests or correcting existing tests
+  - `build`: Changes that affect the build system or external dependencies (example scopes: gulp,
+    broccoli, npm)
+  - `ci`: Changes to our CI configuration files and scripts (example scopes: Travis, Circle,
+    BrowserStack, SauceLabs)
+  - `chore`: Other changes that don't modify src or test files
+  - `revert`: Reverts a previous commit
+
+  **Commit footer:**
+
+  - `BREAKING CHANGE`: Commit that introduces a breaking API change (correlating with MAJOR in Semantic Versioning)
+
+  **Commit message structure**
+  ```
+  <type>[(<optional-scope>)]: <description>
+
+  [optional-body]
+
+  [optional-footer(s)]
+
+  ```
