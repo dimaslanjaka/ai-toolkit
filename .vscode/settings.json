@@ -50,10 +50,7 @@
   "[twig]": {
     "editor.defaultFormatter": "vscode.html-language-features"
   },
-  "autopep8.args": [
-    "--ignore",
-    "E401,E402,E211,E501"
-  ],
+  "autopep8.args": ["--ignore", "E401,E402,E211,E501"],
   "code-runner.clearPreviousOutput": true,
   "code-runner.cwd": "${workspaceFolder}",
   "code-runner.executorMapByGlob": {
@@ -66,7 +63,8 @@
     "rollup.*.{js,cjs,mjs,ts}": "rollup -c",
     "*.sh": "sh",
     "*.bat": "cmd /c",
-    "*.ts": "run-ts $fullFileName dist/$fileNameWithoutExt.cjs"
+    // "*.ts": "run-ts $fullFileName dist/$fileNameWithoutExt.cjs"
+    "*.ts": "bun run"
   },
   "code-runner.ignoreSelection": true,
   "code-runner.respectShebang": false,
@@ -75,11 +73,7 @@
   "code-runner.saveFileBeforeRun": true,
   "debug.terminal.clearBeforeReusing": true,
   "debug.javascript.terminalOptions": {
-    "resolveSourceMapLocations": [
-      "${workspaceFolder}/**",
-      "!**/node_modules/**",
-      "**/node_modules/.vite-temp/**"
-    ]
+    "resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**", "**/node_modules/.vite-temp/**"]
   },
   "editor.codeActionsOnSave": {
     "source.fixAll": "explicit",
@@ -157,20 +151,11 @@
   },
   "git.autoStash": true,
   "git.useCommitInputAsStashMessage": true,
-  "git.repositoryScanIgnoredFolders": [
-    "node_modules",
-    ".deploy_git",
-    "tmp",
-    ".cache"
-  ],
+  "git.repositoryScanIgnoredFolders": ["node_modules", ".deploy_git", "tmp", ".cache"],
   "intelephense.environment.phpVersion": "8.0.0",
   "intelephense.diagnostics.enable": true,
   "intelephense.diagnostics.run": "onSave",
-  "intelephense.environment.includePaths": [
-    "./src",
-    "./vendor",
-    "${workspaceFolder}/tests"
-  ],
+  "intelephense.environment.includePaths": ["./src", "./vendor", "${workspaceFolder}/tests"],
   "intelephense.files.exclude": [
     "**/.DS_Store/**",
     "**/.git/**",
@@ -184,10 +169,7 @@
   "intelephense.maxMemory": 4000,
   "intelephense.references.exclude": [],
   "intelephense.rename.exclude": [],
-  "isort.args": [
-    "--profile",
-    "black"
-  ],
+  "isort.args": ["--profile", "black"],
   "js/ts.updateImportsOnPaste.enabled": false,
   "js/ts.implicitProjectConfig.checkJs": false,
   "js/ts.implicitProjectConfig.experimentalDecorators": true,
@@ -239,10 +221,7 @@
   },
   "terminal.integrated.profiles.windows": {
     "Cygwin": {
-      "args": [
-        "--login",
-        "-i"
-      ],
+      "args": ["--login", "-i"],
       "env": {
         "CHERE_INVOKING": "1"
       },
@@ -251,10 +230,7 @@
     "Command Prompt": {
       "args": [],
       "icon": "terminal-cmd",
-      "path": [
-        "${env:windir}\\Sysnative\\cmd.exe",
-        "${env:windir}\\System32\\cmd.exe"
-      ]
+      "path": ["${env:windir}\\Sysnative\\cmd.exe", "${env:windir}\\System32\\cmd.exe"]
     },
     "Git Bash": {
       "source": "Git Bash"
@@ -265,21 +241,12 @@
     },
     "Short PowerShell": {
       "source": "PowerShell",
-      "args": [
-        "-NoExit",
-        "-Command",
-        "function prompt { \"[$((Get-Item .).Name)]> \" }"
-      ],
+      "args": ["-NoExit", "-Command", "function prompt { \"[$((Get-Item .).Name)]> \" }"],
       "icon": "terminal-powershell"
     },
     "Short Command Prompt": {
-      "path": [
-        "${env:windir}\\System32\\cmd.exe"
-      ],
-      "args": [
-        "/k",
-        "prompt $p$_$g"
-      ],
+      "path": ["${env:windir}\\System32\\cmd.exe"],
+      "args": ["/k", "prompt $p$_$g"],
       "icon": "terminal-cmd"
     },
     "PowerShell 7": {
@@ -385,10 +352,7 @@
   "intelephense.format.braces": "allman",
   "intelephense.format.enable": false,
   "python-envs.defaultEnvManager": "ms-python.python:venv",
-  "python-envs.workspaceSearchPaths": [
-    "./**/venv",
-    "./**/.venv"
-  ],
+  "python-envs.workspaceSearchPaths": ["./**/venv", "./**/.venv"],
   "python.terminal.activateEnvironment": true,
   "python.analysis.autoFormatStrings": true,
   "python.analysis.autoImportCompletions": true,
