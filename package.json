@@ -23,7 +23,7 @@
     "build-declaration": "tsc -p tsconfig.dts.json",
     "build": "tsdown && npm run build-declaration",
     "clean": "npx -y rimraf tmp dist",
-    "pack": "npx -y tarball-packer --filename ai-toolkit --normalize-resolutions",
+    "pack": "npx -y tarball-packer --yarn --filename ai-toolkit --normalize-resolutions",
     "prepare": "husky",
     "update:ncu": "npx -y npm-check-updates -u"
   },

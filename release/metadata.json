@@ -1,20 +1,11 @@
 {
-  "/release/dimaslanjaka-ai-toolkit-1.0.0.tgz": {
+  "/release/ai-toolkit.tgz": {
     "integrity": {
-      "sha1": "3d3c02b4046cb8aff53b0d7baff1a02a0866f5f1",
-      "sha256": "hTxSLR5dPHBx9M8xJxpz/giCLhBg9KErYab8huZPG/w=",
-      "md5": "6f16b3f6f8887fe83122cd447928c7f0",
-      "sha512": "zG+LicdTgYTxvsqGbDyLBblIV7kmogJHrCRjNg4l+ETXNSiWrWWJi3HRb5sQmK23Ub3YJP7ZQ5gq/lytZ+YlQg=="
+      "sha1": "5facd0d767df3e48b02c4a0d9b6708af36696391",
+      "sha256": "HJ78BMwUPtVcVJx7DhVVEf9scP38eN9OGIf/7KL53cA=",
+      "md5": "8a73aa5c8c0fe8fd52ffef218578225c",
+      "sha512": "qr14XwXZIrh+ZzX8eXlt0XZ/EZgPMOl17fSfZaXLwpDozpNkreob7aARBox6BoZjTPzxVyr47nCcubfwQE41CQ=="
     },
-    "size": "90.08 KB"
-  },
-  "/release/dimaslanjaka-ai-toolkit.tgz": {
-    "integrity": {
-      "sha1": "3d3c02b4046cb8aff53b0d7baff1a02a0866f5f1",
-      "sha256": "hTxSLR5dPHBx9M8xJxpz/giCLhBg9KErYab8huZPG/w=",
-      "md5": "6f16b3f6f8887fe83122cd447928c7f0",
-      "sha512": "zG+LicdTgYTxvsqGbDyLBblIV7kmogJHrCRjNg4l+ETXNSiWrWWJi3HRb5sQmK23Ub3YJP7ZQ5gq/lytZ+YlQg=="
-    },
-    "size": "90.08 KB"
+    "size": "1304.58 KB"
   }
 }
