@@ -16,6 +16,6 @@ export default defineConfig({
   treeshake: false,
 
   deps: {
-    skipNodeModulesBundle: true
+    alwaysBundle: ['@modelcontextprotocol/sdk']
   }
 });
