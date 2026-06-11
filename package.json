@@ -59,7 +59,6 @@
     "jsonc-parser": "3.3.1",
     "ollama": "^0.6.3",
     "opencode-agent-memory": "^0.2.0",
-    "opencode-ai": "^1.15.5",
     "puppeteer": "^25.0.4",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2",
