@@ -11,19 +11,22 @@ const transport = new StdioClientTransport({
   args: ['src/mcp-server/context-compress/server.mjs']
 });
 
-await client.connect(transport);
-
-const result = await client.callTool({
-  name: 'compress_context',
-  arguments: {
-    text: `Create MCP server for GitHub automation. Fix Node.js errors. Configure filesystem and puppeteer tools.
+client
+  .connect(transport)
+  .then(() =>
+    client.callTool({
+      name: 'compress_context',
+      arguments: {
+        text: `Create MCP server for GitHub automation. Fix Node.js errors. Configure filesystem and puppeteer tools.
 Implement caching layer for memory optimization. Add GitHub issue integration. Improve error handling strategy.
 Refactor server architecture into modular components. Optimize token usage across MCP pipeline.`,
-    mode: 'full',
-    maxSentences: 3
-  }
-});
-
-console.log(result);
-client.close();
-// process.exit(0);
+        mode: 'full',
+        maxSentences: 3
+      }
+    })
+  )
+  .then((result) => {
+    console.log(result);
+    client.close();
+  })
+  .catch(console.error);

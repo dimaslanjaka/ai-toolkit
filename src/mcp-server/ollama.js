@@ -49,7 +49,7 @@ async function chat({ prompt }) {
 
   // Check if model is configured correctly to avoid cryptic Ollama errors
   if (!MODEL) {
-      throw new Error("OLLAMA_MODEL is not defined in .env or defaults");
+    throw new Error('OLLAMA_MODEL is not defined in .env or defaults');
   }
 
   const response = await client.chat.completions.create({

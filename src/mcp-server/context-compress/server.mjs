@@ -175,6 +175,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 /**
  * START SERVER
  */
-await loadMemory();
-const transport = new StdioServerTransport();
-await server.connect(transport);
+loadMemory()
+  .then(() => {
+    const transport = new StdioServerTransport();
+    return server.connect(transport);
+  })
+  .catch(console.error);

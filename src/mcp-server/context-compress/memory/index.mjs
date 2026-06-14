@@ -1,6 +1,7 @@
-import * as fs from 'fs-extra';
+import fs from 'fs-extra';
 import * as path from 'upath';
 import { fileURLToPath } from 'url';
+import { existsSync } from 'fs';
 import { formatMemoryToMarkdown, parseMarkdownToMemory } from './markdown.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -19,7 +20,7 @@ function findOpencodePath() {
 
   for (const candidate of candidates) {
     const opencodeDir = path.dirname(candidate);
-    if (fs.pathExistsSync(opencodeDir)) {
+    if (existsSync(opencodeDir)) {
       return candidate;
     }
   }
