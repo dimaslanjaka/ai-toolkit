@@ -7,6 +7,7 @@ import path from 'upath';
 import pkgJson from './package.json' with { type: 'json' };
 import * as glob from 'glob';
 import fs from 'fs';
+import { isEmpty } from 'sbg-utility';
 
 const { dependencies = {}, devDependencies = {} } = pkgJson;
 
@@ -152,9 +153,17 @@ export function externalPackagesFilter(source, importer, isResolved) {
  * @type {import('rollup').RollupOptions[]}
  */
 const configs = [];
-const inputs = glob.sync('src/**/*.{ts,js,mjs,cjs}', {
+let inputs = glob.sync('src/**/*.{ts,js,mjs,cjs}', {
   ignore: ['**/*.runner.*', '**/*test*']
 });
+if (!isEmpty(process.env.ROLLUP_ENTRIES)) {
+  inputs = process.env.ROLLUP_ENTRIES.split(',').map((p) => {
+    const trimmed = p.trim();
+    const resolved = path.resolve(trimmed);
+    console.log(`Custom input: "${trimmed}" → "${resolved}"`);
+    return resolved;
+  });
+}
 
 for (let input of inputs) {
   input = path.toUnix(input);
