@@ -167,8 +167,26 @@ export async function handleChatCompletion(req: Request, res: Response) {
       };
       res.json(result);
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error('Chat endpoint error:', err);
-    res.status(500).json({ error: { message: (err as any).message || 'Internal server error' } });
+    // Determine the error message gracefully
+    let errorMessage = 'Internal server error';
+    if (err instanceof Error) {
+      errorMessage = err.message;
+    } else if (err && typeof err === 'object') {
+      // In case the error is a custom object without a message property but thrown anyway
+      errorMessage = err.message || err.toString();
+    } else if (typeof err === 'string') {
+      errorMessage = err;
+    }
+
+    // Since we're in an async express handler, we shouldn't throw; we just end the response.
+    // If headers are already sent (like in SSE streaming), just end the stream.
+    if (!res.headersSent) {
+      res.status(500).json({ error: { message: errorMessage } });
+    } else {
+      res.write(`data: ${JSON.stringify({ error: { message: errorMessage } })}\n\n`);
+      res.end();
+    }
   }
 }
