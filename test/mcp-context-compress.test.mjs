@@ -112,41 +112,54 @@ function summarize(text, options = {}) {
   return selected.join(' ');
 }
 
-function extractState(text) {
-  if (!text) return { tools: [], constraints: [] };
+function extractState(text, existingState = { tools: [], constraints: [] }) {
+  if (!text) return { tools: [], constraints: [], intent: 'unknown' };
 
-  const tools = new Set();
-  const constraints = new Set();
+  const tools = new Set(existingState.tools);
+  const constraints = new Set(existingState.constraints);
 
   // Detect tools
-  const toolPatterns = [
-    { pattern: /filesystem|file\s*system/i, name: 'filesystem' },
-    { pattern: /\bgit\b/i, name: 'git' },
-    { pattern: /github/i, name: 'github' },
-    { pattern: /fetch|http|https|axios|request/i, name: 'fetch' },
-    { pattern: /puppeteer|playwright/i, name: 'browser' }
-  ];
-
-  toolPatterns.forEach(({ pattern, name }) => {
-    if (pattern.test(text)) tools.add(name);
-  });
+  if (/filesystem/i.test(text)) tools.add('filesystem');
+  if (/git/i.test(text)) tools.add('git');
+  if (/github/i.test(text)) tools.add('github');
+  if (/puppeteer|playwright/i.test(text)) tools.add('browser');
+  if (/fetch|http|https|axios|request/i.test(text)) tools.add('fetch');
 
   // Detect constraints
-  const constraintPatterns = [
-    { pattern: /no\s+docker|cannot\s+use\s+docker|without\s+docker/i, constraint: 'no docker' },
-    { pattern: /node\.?js|nodejs/i, constraint: 'nodejs' },
-    { pattern: /typescript|ts/i, constraint: 'typescript' },
-    { pattern: /python/i, constraint: 'python' }
-  ];
+  if (/node\.?js/i.test(text)) constraints.add('nodejs');
+  if (/no\s+docker|cannot\s+use\s+docker|without\s+docker/i.test(text)) constraints.add('no docker');
+  if (/typescript|ts/i.test(text)) constraints.add('typescript');
+  if (/python/i.test(text)) constraints.add('python');
 
-  constraintPatterns.forEach(({ pattern, constraint }) => {
-    if (pattern.test(text)) constraints.add(constraint);
-  });
+  let intent = 'unknown';
+  if (/create|build/i.test(text)) intent = 'build';
+  if (/fix|debug/i.test(text)) intent = 'debug';
+  if (/optimize/i.test(text)) intent = 'optimize';
+  if (/configure|setup/i.test(text)) intent = 'setup';
 
   return {
-    tools: Array.from(tools),
-    constraints: Array.from(constraints)
+    tools: [...tools],
+    constraints: [...constraints],
+    intent
   };
+}
+
+// Memory Fusion Core for testing
+const memoryStore = {
+  state: {
+    tools: new Set(),
+    constraints: new Set(),
+    intent: 'unknown'
+  },
+  history: []
+};
+
+function updateMemory(summary, state) {
+  memoryStore.history.push(summary);
+  if (memoryStore.history.length > 10) memoryStore.history.shift();
+  memoryStore.state.tools = new Set([...memoryStore.state.tools, ...state.tools]);
+  memoryStore.state.constraints = new Set([...memoryStore.state.constraints, ...state.constraints]);
+  memoryStore.state.intent = state.intent;
 }
 
 // Test suite
@@ -355,4 +368,83 @@ test('extractState: case insensitive matching', () => {
   const state = extractState(text);
   const githubCount = state.tools.filter((t) => t === 'github').length;
   assert.equal(githubCount, 1);
+});
+
+test('extractState: detects intent (build)', () => {
+  const text = 'We need to create a new feature and build the API.';
+  const state = extractState(text);
+  assert.equal(state.intent, 'build');
+});
+
+test('extractState: detects intent (debug)', () => {
+  const text = 'We need to fix the bug and debug the server.';
+  const state = extractState(text);
+  assert.equal(state.intent, 'debug');
+});
+
+test('extractState: detects intent (optimize)', () => {
+  const text = 'We should optimize performance across the app.';
+  const state = extractState(text);
+  assert.equal(state.intent, 'optimize');
+});
+
+test('extractState: detects intent (setup)', () => {
+  const text = 'Configure the database and setup the environment.';
+  const state = extractState(text);
+  assert.equal(state.intent, 'setup');
+});
+
+test('updateMemory: stores compressed summaries', () => {
+  // Clear memory store for test
+  memoryStore.state = { tools: new Set(), constraints: new Set(), intent: 'unknown' };
+  memoryStore.history = [];
+
+  const summary = 'This is a compressed summary.';
+  const state = { tools: ['git', 'filesystem'], constraints: ['nodejs'], intent: 'build' };
+
+  updateMemory(summary, state);
+
+  assert.equal(memoryStore.history.length, 1);
+  assert.equal(memoryStore.history[0], summary);
+});
+
+test('updateMemory: merges tools and constraints', () => {
+  memoryStore.state = { tools: new Set(['git']), constraints: new Set(['nodejs']), intent: 'unknown' };
+  memoryStore.history = [];
+
+  const summary = 'Another summary.';
+  const state = { tools: ['github', 'filesystem'], constraints: ['typescript'], intent: 'debug' };
+
+  updateMemory(summary, state);
+
+  assert.ok(memoryStore.state.tools.has('git'));
+  assert.ok(memoryStore.state.tools.has('github'));
+  assert.ok(memoryStore.state.tools.has('filesystem'));
+  assert.ok(memoryStore.state.constraints.has('nodejs'));
+  assert.ok(memoryStore.state.constraints.has('typescript'));
+});
+
+test('updateMemory: updates intent', () => {
+  memoryStore.state = { tools: new Set(), constraints: new Set(), intent: 'unknown' };
+  memoryStore.history = [];
+
+  const summary = 'Summary with intent.';
+  const state = { tools: [], constraints: [], intent: 'optimize' };
+
+  updateMemory(summary, state);
+
+  assert.equal(memoryStore.state.intent, 'optimize');
+});
+
+test('updateMemory: keeps only last 10 summaries', () => {
+  memoryStore.state = { tools: new Set(), constraints: new Set(), intent: 'unknown' };
+  memoryStore.history = [];
+
+  for (let i = 0; i < 15; i++) {
+    updateMemory(`Summary ${i}`, { tools: [], constraints: [], intent: 'unknown' });
+  }
+
+  assert.equal(memoryStore.history.length, 10);
+  assert.equal(memoryStore.history[0], 'Summary 5');
+  assert.equal(memoryStore.history[9], 'Summary 14');
 });
