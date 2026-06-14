@@ -48,6 +48,7 @@
     "@opencode-ai/plugin": "^1.16.0",
     "@qwen-code/qwen-code": "^0.15.11",
     "axios": "^1.17.0",
+    "binary-collections": "^2.0.15",
     "cors": "^2.8.6",
     "cross-spawn": "https://github.com/dimaslanjaka/node-cross-spawn/raw/private/release/cross-spawn.tgz",
     "crypto-js": "^4.2.0",
@@ -56,6 +57,7 @@
     "express": "^5.2.1",
     "fs-extra": "^11.3.5",
     "fuse.js": "^7.3.0",
+    "glob": "^13.0.6",
     "jsonc-parser": "3.3.1",
     "ollama": "^0.6.3",
     "puppeteer": "^25.0.4",
@@ -90,7 +92,6 @@
     "@types/node": "^25.8.0",
     "@typescript-eslint/eslint-plugin": "8.59.3",
     "@typescript-eslint/parser": "8.59.3",
-    "binary-collections": "^2.0.15",
     "eslint": "^9",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-prettier": "5.5.5",
@@ -114,10 +115,10 @@
     "zod": "^4.4.3"
   },
   "resolutions": {
-    "cross-spawn": "https://github.com/dimaslanjaka/node-cross-spawn/raw/dd0273f55b21f8c546ba86565b00a2f89151d15a/release/cross-spawn.tgz",
-    "binary-collections": "https://github.com/dimaslanjaka/bin/raw/c50682c5c9276c5f07646f33b834987202767f83/releases/bin.tgz",
-    "git-command-helper": "https://github.com/dimaslanjaka/git-command-helper/raw/849f10f15740f2c24911bc03e2fe9eb663f854c1/release/git-command-helper.tgz",
-    "@dimaslanjaka/eslint-base-config": "https://github.com/dimaslanjaka/eslint-base-config/raw/84028e4a2892cd5958fbf3e200aacf0f8f0e5700/release/dimaslanjaka-eslint-base-config.tgz",
+    "cross-spawn": "https://github.com/dimaslanjaka/node-cross-spawn/raw/645f2ab49603b55fa9609e54a43a76dfa6caa114/release/cross-spawn.tgz",
+    "binary-collections": "https://github.com/dimaslanjaka/bin/raw/3a5ceeab075f0d687bdd3c30c274d21aaa7b39a3/releases/bin.tgz",
+    "git-command-helper": "https://github.com/dimaslanjaka/git-command-helper/raw/2975e8dc24be19511dcb2c90da21d351128ec291/release/git-command-helper.tgz",
+    "@dimaslanjaka/eslint-base-config": "https://github.com/dimaslanjaka/eslint-base-config/raw/8e2fe9eae97117a187f49711eb7abee755123dd9/release/dimaslanjaka-eslint-base-config.tgz",
     "sbg-utility": "https://github.com/dimaslanjaka/static-blog-generator/raw/1ca385787f7287155b547c5b97d5ffd5bcfab482/packages/sbg-utility/release/sbg-utility.tgz"
   },
   "directories": {
