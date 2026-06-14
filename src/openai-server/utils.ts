@@ -64,7 +64,7 @@ export async function startServer(app: any, preferredPort: number = 5758) {
   const port = await findFreePort(preferredPort);
 
   return new Promise<ServerState>((resolve) => {
-    app.listen(port, '0.0.0.0', () => {
+    const server = app.listen(port, '0.0.0.0', () => {
       const state: ServerState = {
         port,
         pid: process.pid,
@@ -76,8 +76,14 @@ export async function startServer(app: any, preferredPort: number = 5758) {
 
       serverLogger.log(`OpenAI-compatible server running on http://0.0.0.0:${port}`);
       serverLogger.log(`State saved to ${STATE_FILE}`);
+      serverLogger.log(`Provider: ${process.env.PROVIDER || 'puter'}`);
 
       resolve(state);
+
+      // Setup cleanup on server close
+      server.on('close', () => {
+        serverLogger.log('Server shutting down');
+      });
     });
   });
 }

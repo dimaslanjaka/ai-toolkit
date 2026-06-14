@@ -1,9 +1,17 @@
 import express from 'express';
 import cors from 'cors';
-import { handleModels, handleChatCompletion } from './provider/puter';
+import * as puterProvider from './provider/puter';
+import * as chatgptProvider from './provider/chatgpt';
 import { serverLogger } from './utils.js';
 
 const app = express();
+
+// Determine provider from environment variable
+const provider = process.env.PROVIDER?.toLowerCase() === 'chatgpt' ? chatgptProvider : puterProvider;
+
+serverLogger.log(
+  `Using provider: ${process.env.PROVIDER?.toLowerCase() === 'chatgpt' ? 'ChatGPT (Puppeteer)' : 'Puter'}`
+);
 
 // Basic request logging (before body parsing)
 app.use((req, res, next) => {
@@ -37,11 +45,11 @@ app.use((req, res, next) => {
 /**
  * OpenAI‑compatible Models List endpoint.
  */
-app.get('/v1/models', handleModels);
+app.get('/v1/models', provider.handleModels);
 
 /**
  * OpenAI‑compatible Chat Completion endpoint.
  */
-app.post('/v1/chat/completions', handleChatCompletion);
+app.post('/v1/chat/completions', provider.handleChatCompletion);
 
 export { app };
