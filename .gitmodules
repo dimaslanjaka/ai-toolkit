@@ -1,8 +1,0 @@
-[submodule "packages/openai-local"]
-	path = packages/openai-local
-	url = https://github.com/dimaslanjaka/openai-local.git
-	branch = main
-[submodule "packages/opencode-plugin-memory"]
-	path = packages/opencode-plugin-memory
-	url = https://github.com/dimaslanjaka/opencode-file-memory.git
-	branch = main
