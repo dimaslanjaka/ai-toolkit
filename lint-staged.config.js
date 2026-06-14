@@ -10,8 +10,8 @@ export default {
     return files.map((file) => `corepack yarn exec eslint --fix --max-warnings=0 "${file}"`);
   },
 
-  // Prettier for JSON, CSS, SCSS, LESS, YAML, SQL
-  '**/*.{json,css,scss,less,yml,yaml,sql}': (files) => {
+  // Prettier for JSON(c), CSS, SCSS, LESS, YAML, SQL
+  '**/*.{json,css,scss,less,yml,yaml,sql,jsonc}': (files) => {
     if (!files.length) return [];
     return files.map((file) => `npx prettier --list-different --write "${file}"`);
   },
