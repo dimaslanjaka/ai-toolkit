@@ -1,6 +1,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { ListToolsRequestSchema, CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { memoryStore, loadMemory, extractState, updateMemory } from './memory/index.mjs';
 
 const server = new Server(
   {
@@ -13,21 +14,6 @@ const server = new Server(
     }
   }
 );
-
-/**
- * =========================
- * MEMORY STORE (FUSION CORE)
- * =========================
- * Stores ONLY compressed state
- */
-const memoryStore = {
-  state: {
-    tools: new Set(),
-    constraints: new Set(),
-    intent: 'unknown'
-  },
-  history: [] // compressed summaries only
-};
 
 /**
  * Abbreviations
@@ -106,58 +92,6 @@ function summarize(text, maxSentences = 5) {
 }
 
 /**
- * =========================
- * STATE EXTRACTION
- * =========================
- */
-function extractState(text) {
-  const tools = new Set(memoryStore.state.tools);
-  const constraints = new Set(memoryStore.state.constraints);
-
-  if (/filesystem/i.test(text)) tools.add('filesystem');
-  if (/git/i.test(text)) tools.add('git');
-  if (/github/i.test(text)) tools.add('github');
-  if (/puppeteer|playwright/i.test(text)) tools.add('browser');
-
-  if (/node\.?js/i.test(text)) constraints.add('nodejs');
-  if (/no\s+docker|cannot\s+use\s+docker|without\s+docker/i.test(text)) constraints.add('no docker');
-
-  let intent = 'unknown';
-  if (/create|build/i.test(text)) intent = 'build';
-  if (/fix|debug/i.test(text)) intent = 'debug';
-  if (/optimize/i.test(text)) intent = 'optimize';
-  if (/configure|setup/i.test(text)) intent = 'setup';
-
-  return {
-    tools: [...tools],
-    constraints: [...constraints],
-    intent
-  };
-}
-
-/**
- * =========================
- * MEMORY FUSION UPDATE
- * =========================
- */
-function updateMemory(summary, state) {
-  // store compressed history only
-  memoryStore.history.push(summary);
-
-  // keep last N only (prevents token explosion)
-  if (memoryStore.history.length > 10) {
-    memoryStore.history.shift();
-  }
-
-  // merge state (NO raw text ever stored)
-  memoryStore.state.tools = new Set([...memoryStore.state.tools, ...state.tools]);
-
-  memoryStore.state.constraints = new Set([...memoryStore.state.constraints, ...state.constraints]);
-
-  memoryStore.state.intent = state.intent;
-}
-
-/**
  * LIST TOOLS
  */
 server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -199,7 +133,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const state = extractState(text);
 
   // 🔥 MEMORY FUSION STEP
-  updateMemory(summary, state);
+  await updateMemory(summary, state);
 
   const result = (() => {
     if (mode === 'state') {
@@ -241,5 +175,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 /**
  * START SERVER
  */
+await loadMemory();
 const transport = new StdioServerTransport();
 await server.connect(transport);
