@@ -63,7 +63,6 @@
     "rollup.*.{js,cjs,mjs,ts}": "rollup -c",
     "*.sh": "sh",
     "*.bat": "cmd /c",
-    // "*.ts": "run-ts $fullFileName dist/$fileNameWithoutExt.cjs"
     "*.ts": "bun run"
   },
   "code-runner.ignoreSelection": true,
@@ -73,7 +72,11 @@
   "code-runner.saveFileBeforeRun": true,
   "debug.terminal.clearBeforeReusing": true,
   "debug.javascript.terminalOptions": {
-    "resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**", "**/node_modules/.vite-temp/**"]
+    "resolveSourceMapLocations": [
+      "${workspaceFolder}/**",
+      "!**/node_modules/**",
+      "**/node_modules/.vite-temp/**"
+    ]
   },
   "editor.codeActionsOnSave": {
     "source.fixAll": "explicit",
@@ -147,15 +150,27 @@
     "**/config/**": true,
     "**/databases/**": true,
     "**/node_modules/**": true,
+    "**/tmp/**": true,
+    "**/out/**": true,
+    "**/coverage/**": true,
     "src/database.sqlite*": true
   },
   "git.autoStash": true,
   "git.useCommitInputAsStashMessage": true,
-  "git.repositoryScanIgnoredFolders": ["node_modules", ".deploy_git", "tmp", ".cache"],
+  "git.repositoryScanIgnoredFolders": [
+    "node_modules",
+    ".deploy_git",
+    "tmp",
+    ".cache"
+  ],
   "intelephense.environment.phpVersion": "8.0.0",
   "intelephense.diagnostics.enable": true,
   "intelephense.diagnostics.run": "onSave",
-  "intelephense.environment.includePaths": ["./src", "./vendor", "${workspaceFolder}/tests"],
+  "intelephense.environment.includePaths": [
+    "./src",
+    "./vendor",
+    "${workspaceFolder}/tests"
+  ],
   "intelephense.files.exclude": [
     "**/.DS_Store/**",
     "**/.git/**",
@@ -230,7 +245,10 @@
     "Command Prompt": {
       "args": [],
       "icon": "terminal-cmd",
-      "path": ["${env:windir}\\Sysnative\\cmd.exe", "${env:windir}\\System32\\cmd.exe"]
+      "path": [
+        "${env:windir}\\Sysnative\\cmd.exe",
+        "${env:windir}\\System32\\cmd.exe"
+      ]
     },
     "Git Bash": {
       "source": "Git Bash"
@@ -241,7 +259,11 @@
     },
     "Short PowerShell": {
       "source": "PowerShell",
-      "args": ["-NoExit", "-Command", "function prompt { \"[$((Get-Item .).Name)]> \" }"],
+      "args": [
+        "-NoExit",
+        "-Command",
+        "function prompt { \"[$((Get-Item .).Name)]> \" }"
+      ],
       "icon": "terminal-powershell"
     },
     "Short Command Prompt": {

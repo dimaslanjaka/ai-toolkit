@@ -12,11 +12,7 @@
     "chatgpt",
     "copilot"
   ],
-  "author": {
-    "name": "dimaslanjaka",
-    "email": "dimaslanjaka@gmail.com",
-    "url": "https://webmanajemen.com"
-  },
+  "author": "dimaslanjaka <dimaslanjaka@gmail.com> (https://webmanajemen.com)",
   "license": "MIT",
   "type": "module",
   "scripts": {
@@ -50,7 +46,7 @@
     "@heyputer/puter.js": "^2.5.1",
     "@opencode-ai/plugin": "^1.16.0",
     "@qwen-code/qwen-code": "^0.15.11",
-    "cross-spawn": "https://github.com/dimaslanjaka/node-cross-spawn/raw/eb74103efcb296e453b62512ebd73c88d33ab630/release/cross-spawn.tgz",
+    "cross-spawn": "https://github.com/dimaslanjaka/node-cross-spawn/raw/private/release/cross-spawn.tgz",
     "crypto-js": "^4.2.0",
     "diff": "^9.0.0",
     "dotenv": "^17.4.2",
@@ -84,7 +80,7 @@
     "@typescript-eslint/eslint-plugin": "8.59.3",
     "@typescript-eslint/parser": "8.59.3",
     "binary-collections": "^2.0.15",
-    "eslint": "9",
+    "eslint": "^9",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-prettier": "5.5.5",
     "globals": "^17.6.0",
@@ -111,5 +107,16 @@
     "git-command-helper": "https://github.com/dimaslanjaka/git-command-helper/raw/849f10f15740f2c24911bc03e2fe9eb663f854c1/release/git-command-helper.tgz",
     "@dimaslanjaka/eslint-base-config": "https://github.com/dimaslanjaka/eslint-base-config/raw/84028e4a2892cd5958fbf3e200aacf0f8f0e5700/release/dimaslanjaka-eslint-base-config.tgz",
     "sbg-utility": "https://github.com/dimaslanjaka/static-blog-generator/raw/1ca385787f7287155b547c5b97d5ffd5bcfab482/packages/sbg-utility/release/sbg-utility.tgz"
-  }
+  },
+  "directories": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dimaslanjaka/ai-toolkit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dimaslanjaka/ai-toolkit/issues"
+  },
+  "homepage": "https://github.com/dimaslanjaka/ai-toolkit#readme"
 }
