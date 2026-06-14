@@ -25,7 +25,12 @@ else
 fi
 
 # Run lint-staged through Yarn so the local binary is resolved consistently
-corepack yarn exec lint-staged --config lint-staged.config.js
+staged_files=$(git diff --cached --name-only)
+if echo "$staged_files" | grep -qE '\.(php|cjs|mjs|js|ts|jsx|tsx|py|yml|yaml|json|css|scss|less|sql)$'; then
+  corepack yarn exec lint-staged --config lint-staged.config.js
+else
+  echo "No lintable files staged — skipping lint-staged"
+fi
 
 # ---- git merge driver setup (idempotent) ----
 if ! git config --get merge.resolve_hash.driver >/dev/null; then
