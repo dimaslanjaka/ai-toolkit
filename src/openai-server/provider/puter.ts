@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { serverLogger } from '../utils.js';
 
 // Lazy-load the Puter provider to avoid token prompts at import time
 let puterInstance: any;
@@ -168,7 +169,7 @@ export async function handleChatCompletion(req: Request, res: Response) {
       res.json(result);
     }
   } catch (err: any) {
-    console.error('Chat endpoint error:', err);
+    serverLogger.logSync(`Chat endpoint error: ${err}`);
     // Determine the error message gracefully
     let errorMessage = 'Internal server error';
     if (err instanceof Error) {

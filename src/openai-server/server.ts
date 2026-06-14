@@ -1,13 +1,14 @@
 import express from 'express';
 import cors from 'cors';
 import { handleModels, handleChatCompletion } from './provider/puter';
+import { serverLogger } from './utils.js';
 
 const app = express();
 
 // Basic request logging (before body parsing)
 app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path}`);
-  console.log('Headers:', JSON.stringify(req.headers, null, 2));
+  serverLogger.log(`${req.method} ${req.path}`);
+  serverLogger.log(JSON.stringify({ headers: req.headers }));
   next();
 });
 
@@ -17,7 +18,7 @@ app.use(express.json());
 // Body logging middleware (after JSON parsing)
 app.use((req, res, next) => {
   if (req.body && Object.keys(req.body).length > 0) {
-    console.log('Body:', JSON.stringify(req.body, null, 2));
+    serverLogger.log(JSON.stringify({ body: req.body }));
   }
   next();
 });

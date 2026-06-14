@@ -46,7 +46,30 @@ async function main() {
 
     console.log('\n✅ Test success!');
   } catch (err: any) {
-    console.error(`\n❌ Error: ${err.response?.data?.error?.message || err.message}`);
+    let errorMsg = 'Unknown error';
+
+    // Handle axios error response
+    if (err.response) {
+      errorMsg = err.response.data?.error?.message || err.response.data?.message || JSON.stringify(err.response.data);
+    }
+    // Handle fetch/network errors
+    else if (err.cause) {
+      errorMsg = err.cause.message || err.cause.toString();
+    }
+    // Handle standard Error objects
+    else if (err instanceof Error) {
+      errorMsg = err.message;
+    }
+    // Handle string errors
+    else if (typeof err === 'string') {
+      errorMsg = err;
+    }
+    // Fallback
+    else if (err && typeof err === 'object') {
+      errorMsg = err.message || err.toString();
+    }
+
+    console.error(`\n❌ Error: ${errorMsg}`);
     process.exit(1);
   }
 }

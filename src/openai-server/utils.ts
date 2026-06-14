@@ -1,8 +1,11 @@
 import net from 'net';
 import { writefile, readfile } from 'sbg-utility';
 import path from 'upath';
+import { PersistentLogger } from '../utils/logs.cjs';
 
 const STATE_FILE = path.join(process.cwd(), 'tmp/data/openai-server.json');
+const LOG_FILE = path.join(process.cwd(), 'tmp/logs/openai-compatible/server.log');
+export const serverLogger = new PersistentLogger(LOG_FILE);
 
 export interface ServerState {
   port: number;
@@ -71,8 +74,8 @@ export async function startServer(app: any, preferredPort: number = 5758) {
 
       saveServerState(state);
 
-      console.log(`OpenAI-compatible server running on http://0.0.0.0:${port}`);
-      console.log(`State saved to ${STATE_FILE}`);
+      serverLogger.log(`OpenAI-compatible server running on http://0.0.0.0:${port}`);
+      serverLogger.log(`State saved to ${STATE_FILE}`);
 
       resolve(state);
     });
