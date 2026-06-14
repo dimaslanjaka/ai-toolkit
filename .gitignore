@@ -125,3 +125,4 @@ coverage.*
 !.opencode/opencode.jsonc
 !.opencode/agents/
 !.opencode/agents/*
+binary-collection*
