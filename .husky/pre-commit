@@ -12,7 +12,7 @@ else
 fi
 
 # Regenerate workflow/action YAML files from source fixtures and stage for commit
-npx -y generate-ci
+npx -y generate-ci | bcc generate-ci
 if [ -n "$GITHUB_ACTIONS" ] || [ -n "$CI" ]; then
   echo "CI environment detected — skipping git add of generated action"
 else
