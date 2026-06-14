@@ -4,6 +4,7 @@ import { builtinModules } from 'node:module';
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import typescript from '@rollup/plugin-typescript';
+import json from '@rollup/plugin-json';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -92,6 +93,7 @@ export default {
   ],
 
   plugins: [
+    json(),
     resolve({
       preferBuiltins: true,
       exportConditions: ['node'],
