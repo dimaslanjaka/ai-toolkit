@@ -1,11 +1,33 @@
 import net from 'net';
 import { writefile, readfile } from 'sbg-utility';
 import path from 'upath';
+import moment from 'moment';
 import { PersistentLogger } from '../utils/logs.cjs';
 
 const STATE_FILE = path.join(process.cwd(), 'tmp/data/openai-server.json');
 const LOG_FILE = path.join(process.cwd(), 'tmp/logs/openai-compatible/server.log');
 export const serverLogger = new PersistentLogger(LOG_FILE);
+
+/**
+ * Log a message to a timestamp-based file inside tmp/logs/openai-compatible/messages/
+ * and print its file path to the main serverLogger and console.
+ *
+ * @param prefix A prefix to describe the message (e.g., 'CHATGPT REQUEST PROMPT')
+ * @param content The actual content to log
+ */
+export function logMessageToFile(prefix: string, content: string) {
+  const timestamp = moment().format('DD-MM-YYYY-HH-mm-ss');
+  const filename = `${prefix.replace(/[^a-zA-Z0-9-]/g, '_').toLowerCase()}_${timestamp}.log`;
+  const filePath = path.join(process.cwd(), 'tmp/logs/openai-compatible/messages', filename);
+
+  const messageLogger = new PersistentLogger(filePath);
+  messageLogger.logSync(`\n--- ${prefix} ---\n${content}\n----------------${'-'.repeat(prefix.length)}\n`);
+  
+  // Write the file path to the main server log and console
+  const infoMsg = `Logged ${prefix} to: ${filePath}`;
+  serverLogger.log(infoMsg);
+  console.log(infoMsg);
+}
 
 export interface ServerState {
   port: number;
@@ -61,6 +83,9 @@ export function getServerState(): ServerState | null {
  * Start the OpenAI-compatible server on a free port and save state
  */
 export async function startServer(app: any, preferredPort: number = 5758) {
+  // Reset log on startup
+  serverLogger.reset();
+
   const port = await findFreePort(preferredPort);
 
   return new Promise<ServerState>((resolve) => {

@@ -1,17 +1,9 @@
 import express from 'express';
 import cors from 'cors';
-import * as puterProvider from './provider/puter';
-import * as chatgptProvider from './provider/chatgpt';
+import * as provider from './provider/index.js';
 import { serverLogger } from './utils.js';
 
 const app = express();
-
-// Determine provider from environment variable
-const provider = process.env.PROVIDER?.toLowerCase() === 'chatgpt' ? chatgptProvider : puterProvider;
-
-serverLogger.log(
-  `Using provider: ${process.env.PROVIDER?.toLowerCase() === 'chatgpt' ? 'ChatGPT (Puppeteer)' : 'Puter'}`
-);
 
 // Basic request logging (before body parsing)
 app.use((req, res, next) => {
@@ -21,7 +13,7 @@ app.use((req, res, next) => {
 });
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 
 // Body logging middleware (after JSON parsing)
 app.use((req, res, next) => {
@@ -51,5 +43,10 @@ app.get('/v1/models', provider.handleModels);
  * OpenAI‑compatible Chat Completion endpoint.
  */
 app.post('/v1/chat/completions', provider.handleChatCompletion);
+
+/**
+ * OpenAI‑compatible Responses endpoint.
+ */
+app.post('/v1/responses', provider.handleResponses);
 
 export { app };

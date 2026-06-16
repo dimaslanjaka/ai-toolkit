@@ -17,7 +17,7 @@
  */
 
 import axios from 'axios';
-import { getServerState } from '../openai-server/index.js';
+import { getServerState } from './index.js';
 
 async function main() {
   // Get server state
@@ -33,7 +33,7 @@ async function main() {
 
   const client = axios.create({
     baseURL,
-    headers: { 'Content-Type': 'application/json' }
+    headers: { 'Content-Type': 'application/json', 'X-Request-Provider': 'chatgpt' }
   });
 
   // Test non-streaming request
