@@ -2,8 +2,8 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { promises as fs } from 'fs';
-import path from 'path';
+import fs from 'fs-extra';
+import path from 'upath';
 import { z } from 'zod';
 
 // Define memory file path using environment variable with fallback
