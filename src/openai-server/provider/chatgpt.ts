@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { serverLogger, logMessageToFile } from '../utils.js';
+import { serverLogger, logMessageToFile, appendMessageToFile } from '../utils.js';
 import type { Browser, Page } from 'puppeteer';
 import {
   convertResponsesRequestToChatCompletions,
@@ -170,7 +170,7 @@ export async function handleChatCompletion(req: Request, res: Response) {
     serverLogger.log(
       `ChatGPT request - Model: ${model}, Stream: ${stream}, Message: ${lastUserMessage.substring(0, 50)}...`
     );
-    logMessageToFile('CHATGPT REQUEST PROMPT', lastUserMessage);
+    const logFile = logMessageToFile('CHATGPT REQUEST PROMPT', lastUserMessage);
 
     // Get browser session
     const { page } = await getBrowserSession();
@@ -203,7 +203,7 @@ export async function handleChatCompletion(req: Request, res: Response) {
           res.write(`data: ${JSON.stringify(data)}\n\n`);
         }
 
-        logMessageToFile('CHATGPT STREAMING RESPONSE', fullResponse);
+        appendMessageToFile(logFile, 'CHATGPT STREAMING RESPONSE', fullResponse);
 
         // Send final chunk
         res.write(
@@ -236,7 +236,7 @@ export async function handleChatCompletion(req: Request, res: Response) {
           fullResponse += chunk;
         }
 
-        logMessageToFile('CHATGPT RESPONSE', fullResponse);
+        appendMessageToFile(logFile, 'CHATGPT RESPONSE', fullResponse);
 
         const result = {
           id: `chatcmpl-${Date.now()}`,
@@ -295,7 +295,7 @@ export async function handleResponses(req: Request, res: Response) {
     serverLogger.log(
       `ChatGPT Responses request - Model: ${requestData.model}, Stream: ${requestData.stream}, Message: ${lastUserMessage.substring(0, 50)}...`
     );
-    logMessageToFile('CHATGPT REQUEST PROMPT (Responses API)', lastUserMessage);
+    const logFile = logMessageToFile('CHATGPT REQUEST PROMPT (Responses API)', lastUserMessage);
 
     // Get browser session
     const { page } = await getBrowserSession();
@@ -329,7 +329,7 @@ export async function handleResponses(req: Request, res: Response) {
           res.write(`data: ${JSON.stringify(deltaPayload)}\n\n`);
         }
 
-        logMessageToFile('CHATGPT STREAMING RESPONSE (Responses API)', fullResponse);
+        appendMessageToFile(logFile, 'CHATGPT STREAMING RESPONSE (Responses API)', fullResponse);
 
         // Send completion event
         res.write(
@@ -355,7 +355,7 @@ export async function handleResponses(req: Request, res: Response) {
           fullResponse += chunk;
         }
 
-        logMessageToFile('CHATGPT RESPONSE (Responses API)', fullResponse);
+        appendMessageToFile(logFile, 'CHATGPT RESPONSE (Responses API)', fullResponse);
 
         // Convert to Responses API format
         const chatCompletionsFormat = {

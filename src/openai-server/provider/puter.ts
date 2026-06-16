@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { serverLogger, logMessageToFile } from '../utils.js';
+import { serverLogger, logMessageToFile, appendMessageToFile } from '../utils.js';
 import {
   convertResponsesRequestToChatCompletions,
   convertChatCompletionsToResponses,
@@ -130,7 +130,7 @@ export async function handleChatCompletion(req: Request, res: Response) {
     // Resolve model: 'auto' → undefined (Puter default agent), otherwise use provided model
     const resolvedModel = model === 'auto' ? undefined : (model ?? 'gpt-5-nano');
 
-    logMessageToFile('PUTER REQUEST PROMPT', prompt);
+    const logFile = logMessageToFile('PUTER REQUEST PROMPT', prompt);
 
     const options: any = {
       model: resolvedModel,
@@ -159,12 +159,12 @@ export async function handleChatCompletion(req: Request, res: Response) {
           res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: chunk.text } }] })}\n\n`);
         }
       }
-      logMessageToFile('PUTER STREAMING RESPONSE', fullResponse);
+      appendMessageToFile(logFile, 'PUTER STREAMING RESPONSE', fullResponse);
       res.write('data: [DONE]\n\n');
       res.end();
     } else {
       const content = response.message?.content ?? '';
-      logMessageToFile('PUTER RESPONSE', content);
+      appendMessageToFile(logFile, 'PUTER RESPONSE', content);
       const result = {
         id: `chatcmpl-${Date.now()}`,
         object: 'chat.completion',
@@ -236,7 +236,7 @@ export async function handleResponses(req: Request, res: Response) {
     // Resolve model: 'auto' → undefined (Puter default agent), otherwise use provided model
     const resolvedModel = chatReq.model === 'auto' ? undefined : (chatReq.model ?? 'gpt-5-nano');
 
-    logMessageToFile('PUTER REQUEST PROMPT (Responses API)', prompt);
+    const logFile = logMessageToFile('PUTER REQUEST PROMPT (Responses API)', prompt);
 
     const options: any = {
       model: resolvedModel,
@@ -277,7 +277,7 @@ export async function handleResponses(req: Request, res: Response) {
           res.write(`data: ${JSON.stringify(deltaPayload)}\n\n`);
         }
       }
-      logMessageToFile('PUTER STREAMING RESPONSE (Responses API)', fullResponse);
+      appendMessageToFile(logFile, 'PUTER STREAMING RESPONSE (Responses API)', fullResponse);
       res.write(
         `data: ${JSON.stringify({ type: 'response.done', response: { id: responseId, status: 'completed' } })}\n\n`
       );
@@ -286,7 +286,7 @@ export async function handleResponses(req: Request, res: Response) {
     } else {
       const response = await puter.ai.chat(prompt, options);
       const content = response.message?.content ?? '';
-      logMessageToFile('PUTER RESPONSE (Responses API)', content);
+      appendMessageToFile(logFile, 'PUTER RESPONSE (Responses API)', content);
 
       // We mimic chatCompletions output first, then convert it
       const chatCompletionsFormat = {

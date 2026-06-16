@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import fs from 'fs-extra';
 import * as provider from './provider/index.js';
 import { serverLogger } from './utils.js';
 
@@ -9,6 +10,16 @@ const app = express();
 app.use((req, res, next) => {
   serverLogger.log(`${req.method} ${req.path}`);
   serverLogger.log(JSON.stringify({ headers: req.headers }));
+  next();
+});
+
+// Clear messages log folder on server restart
+app.use((req, res, next) => {
+  if (req.path === '/v1/chat/completions' || req.path === '/v1/responses') {
+    const logDir = 'tmp/logs/openai-compatible/messages';
+    fs.rmSync(logDir, { recursive: true, force: true });
+    fs.mkdirSync(logDir, { recursive: true });
+  }
   next();
 });
 

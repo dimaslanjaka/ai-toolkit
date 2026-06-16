@@ -12,19 +12,39 @@ export const serverLogger = new PersistentLogger(LOG_FILE);
  * Log a message to a timestamp-based file inside tmp/logs/openai-compatible/messages/
  * and print its file path to the main serverLogger and console.
  *
- * @param prefix A prefix to describe the message (e.g., 'CHATGPT REQUEST PROMPT')
+ * @param prefix A prefix to describe the message (e.g., 'PUTER REQUEST PROMPT')
  * @param content The actual content to log
+ * @returns The absolute file path of the created log file, for use with appendMessageToFile
  */
-export function logMessageToFile(prefix: string, content: string) {
+export function logMessageToFile(prefix: string, content: string): string {
   const timestamp = moment().format('DD-MM-YYYY-HH-mm-ss');
   const filename = `${prefix.replace(/[^a-zA-Z0-9-]/g, '_').toLowerCase()}_${timestamp}.log`;
   const filePath = path.join(process.cwd(), 'tmp/logs/openai-compatible/messages', filename);
 
   const messageLogger = new PersistentLogger(filePath);
   messageLogger.logSync(`\n--- ${prefix} ---\n${content}\n----------------${'-'.repeat(prefix.length)}\n`);
-  
+
   // Write the file path to the main server log and console
   const infoMsg = `Logged ${prefix} to: ${filePath}`;
+  serverLogger.log(infoMsg);
+  console.log(infoMsg);
+
+  return filePath;
+}
+
+/**
+ * Append a message to an existing log file created by logMessageToFile.
+ * Useful for writing related content (e.g., prompt + response) to a single file.
+ *
+ * @param filePath The absolute path to the existing log file
+ * @param prefix A section label (e.g., 'PUTER RESPONSE')
+ * @param content The content to append
+ */
+export function appendMessageToFile(filePath: string, prefix: string, content: string): void {
+  const messageLogger = new PersistentLogger(filePath);
+  messageLogger.logSync(`\n--- ${prefix} ---\n${content}\n----------------${'-'.repeat(prefix.length)}\n`);
+
+  const infoMsg = `Appended ${prefix} to: ${filePath}`;
   serverLogger.log(infoMsg);
   console.log(infoMsg);
 }
