@@ -1,12 +1,13 @@
-import { Request, Response } from 'express';
-import { serverLogger, logMessageToFile, appendMessageToFile } from '../utils.js';
+import { Request } from 'express';
 import type { Browser, Page } from 'puppeteer';
 import {
-  convertResponsesRequestToChatCompletions,
   convertChatCompletionsToResponses,
+  convertResponsesRequestToChatCompletions,
   convertStreamingChunkToResponses,
   type ResponsesRequest
 } from '../responses-adapter.js';
+import { appendMessageToFile, logMessageToFile, serverLogger } from '../utils.js';
+import type { ProviderResult } from './index.js';
 
 // Browser session management
 let browserInstance: Browser | null = null;
@@ -118,270 +119,248 @@ async function* sendChatGPTMessage(page: Page, message: string): AsyncGenerator<
 /**
  * Handle listing models for ChatGPT provider
  */
-export async function handleModels(req: Request, res: Response) {
-  try {
-    const models = [
-      {
-        id: 'gpt-4o',
-        object: 'model',
-        created: 1718380395,
-        owned_by: 'openai',
-        permission: [],
-        root: 'gpt-4o',
-        parent: null
-      },
-      {
-        id: 'gpt-4',
-        object: 'model',
-        created: 1687882411,
-        owned_by: 'openai',
-        permission: [],
-        root: 'gpt-4',
-        parent: null
-      }
-    ];
+export async function handleModels(_req: Request): Promise<ProviderResult> {
+  const models = [
+    {
+      id: 'gpt-4o',
+      object: 'model',
+      created: 1718380395,
+      owned_by: 'openai',
+      permission: [],
+      root: 'gpt-4o',
+      parent: null
+    },
+    {
+      id: 'gpt-4',
+      object: 'model',
+      created: 1687882411,
+      owned_by: 'openai',
+      permission: [],
+      root: 'gpt-4',
+      parent: null
+    }
+  ];
 
-    res.json({
+  return {
+    type: 'json',
+    data: {
       object: 'list',
       data: models
-    });
-  } catch (err) {
-    serverLogger.logSync(`Models endpoint error: ${err}`);
-    res.status(500).json({ error: { message: (err as Error).message || 'Internal server error' } });
-  }
+    }
+  };
 }
 
 /**
  * Handle chat completion for ChatGPT provider
  */
-export async function handleChatCompletion(req: Request, res: Response) {
-  try {
-    const { model, messages, stream } = req.body as any;
+export async function handleChatCompletion(req: Request): Promise<ProviderResult> {
+  const { model, messages, stream } = req.body as any;
 
-    // Extract the last user message
-    const userMessages = (messages || []).filter((m: any) => m.role === 'user');
-    if (userMessages.length === 0) {
-      res.status(400).json({ error: { message: 'No user message provided' } });
-      return;
-    }
-
-    const lastUserMessage = userMessages[userMessages.length - 1].content;
-
-    serverLogger.log(
-      `ChatGPT request - Model: ${model}, Stream: ${stream}, Message: ${lastUserMessage.substring(0, 50)}...`
-    );
-    const logFile = logMessageToFile('CHATGPT REQUEST PROMPT', lastUserMessage);
-
-    // Get browser session
-    const { page } = await getBrowserSession();
-
-    if (stream) {
-      // Set SSE headers
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
-      res.flushHeaders();
-
-      try {
-        let fullResponse = '';
-        for await (const chunk of sendChatGPTMessage(page, lastUserMessage)) {
-          fullResponse += chunk;
-          const data = {
-            id: `chatcmpl-${Date.now()}`,
-            object: 'chat.completion.chunk',
-            created: Math.floor(Date.now() / 1000),
-            model: model || 'gpt-4o',
-            choices: [
-              {
-                index: 0,
-                delta: { content: chunk },
-                finish_reason: null
-              }
-            ]
-          };
-
-          res.write(`data: ${JSON.stringify(data)}\n\n`);
-        }
-
-        appendMessageToFile(logFile, 'CHATGPT STREAMING RESPONSE', fullResponse);
-
-        // Send final chunk
-        res.write(
-          `data: ${JSON.stringify({
-            id: `chatcmpl-${Date.now()}`,
-            object: 'chat.completion.chunk',
-            created: Math.floor(Date.now() / 1000),
-            model: model || 'gpt-4o',
-            choices: [{ index: 0, delta: {}, finish_reason: 'stop' }]
-          })}\n\n`
-        );
-
-        res.write('data: [DONE]\n\n');
-        res.end();
-      } catch (err) {
-        serverLogger.logSync(`ChatGPT streaming error: ${err}`);
-        if (!res.headersSent) {
-          res.status(500).json({ error: { message: (err as Error).message } });
-        } else {
-          res.write(`data: ${JSON.stringify({ error: { message: (err as Error).message } })}\n\n`);
-          res.end();
-        }
-      }
-    } else {
-      // Non-streaming response
-      let fullResponse = '';
-
-      try {
-        for await (const chunk of sendChatGPTMessage(page, lastUserMessage)) {
-          fullResponse += chunk;
-        }
-
-        appendMessageToFile(logFile, 'CHATGPT RESPONSE', fullResponse);
-
-        const result = {
-          id: `chatcmpl-${Date.now()}`,
-          object: 'chat.completion',
-          created: Math.floor(Date.now() / 1000),
-          model: model || 'gpt-4o',
-          choices: [
-            {
-              index: 0,
-              message: { role: 'assistant', content: fullResponse },
-              finish_reason: 'stop'
-            }
-          ],
-          usage: {
-            prompt_tokens: 0,
-            completion_tokens: 0,
-            total_tokens: 0
-          }
-        };
-
-        res.json(result);
-      } catch (err) {
-        serverLogger.logSync(`ChatGPT error: ${err}`);
-        res.status(500).json({ error: { message: (err as Error).message } });
-      }
-    }
-  } catch (err) {
-    serverLogger.logSync(`ChatGPT handler error: ${err}`);
-    if (!res.headersSent) {
-      res.status(500).json({ error: { message: (err as Error).message || 'Internal server error' } });
-    } else {
-      res.end();
-    }
+  // Extract the last user message
+  const userMessages = (messages || []).filter((m: any) => m.role === 'user');
+  if (userMessages.length === 0) {
+    throw new Error('No user message provided');
   }
+
+  const lastUserMessage = userMessages[userMessages.length - 1].content;
+
+  serverLogger.log(
+    `ChatGPT request - Model: ${model}, Stream: ${stream}, Message: ${lastUserMessage.substring(0, 50)}...`
+  );
+  const logFile = logMessageToFile('CHATGPT REQUEST PROMPT', lastUserMessage);
+
+  // Get browser session
+  const { page } = await getBrowserSession();
+
+  if (stream) {
+    return {
+      type: 'stream',
+      pipe: async (res) => {
+        // Set SSE headers
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.flushHeaders();
+
+        try {
+          let fullResponse = '';
+          for await (const chunk of sendChatGPTMessage(page, lastUserMessage)) {
+            fullResponse += chunk;
+            const data = {
+              id: `chatcmpl-${Date.now()}`,
+              object: 'chat.completion.chunk',
+              created: Math.floor(Date.now() / 1000),
+              model: model || 'gpt-4o',
+              choices: [
+                {
+                  index: 0,
+                  delta: { content: chunk },
+                  finish_reason: null
+                }
+              ]
+            };
+
+            res.write(`data: ${JSON.stringify(data)}\n\n`);
+          }
+
+          appendMessageToFile(logFile, 'CHATGPT STREAMING RESPONSE', fullResponse);
+
+          // Send final chunk
+          res.write(
+            `data: ${JSON.stringify({
+              id: `chatcmpl-${Date.now()}`,
+              object: 'chat.completion.chunk',
+              created: Math.floor(Date.now() / 1000),
+              model: model || 'gpt-4o',
+              choices: [{ index: 0, delta: {}, finish_reason: 'stop' }]
+            })}\n\n`
+          );
+
+          res.write('data: [DONE]\n\n');
+        } catch (streamErr) {
+          serverLogger.logSync(`ChatGPT streaming error: ${streamErr}`);
+          if (!res.headersSent) {
+            res.write(`data: ${JSON.stringify({ error: { message: (streamErr as Error).message } })}\n\n`);
+          }
+        }
+        res.end();
+      }
+    };
+  }
+
+  // Non-streaming response
+  let fullResponse = '';
+
+  for await (const chunk of sendChatGPTMessage(page, lastUserMessage)) {
+    fullResponse += chunk;
+  }
+
+  appendMessageToFile(logFile, 'CHATGPT RESPONSE', fullResponse);
+
+  return {
+    type: 'json',
+    data: {
+      id: `chatcmpl-${Date.now()}`,
+      object: 'chat.completion',
+      created: Math.floor(Date.now() / 1000),
+      model: model || 'gpt-4o',
+      choices: [
+        {
+          index: 0,
+          message: { role: 'assistant', content: fullResponse },
+          finish_reason: 'stop'
+        }
+      ],
+      usage: {
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        total_tokens: 0
+      }
+    }
+  };
 }
 
 /**
  * Handle responses API for ChatGPT provider
  */
-export async function handleResponses(req: Request, res: Response) {
-  try {
-    const requestData = req.body as ResponsesRequest;
+export async function handleResponses(req: Request): Promise<ProviderResult> {
+  const requestData = req.body as ResponsesRequest;
 
-    // Transform to chat completions format
-    const chatReq = convertResponsesRequestToChatCompletions(requestData);
+  // Transform to chat completions format
+  const chatReq = convertResponsesRequestToChatCompletions(requestData);
 
-    // Extract the last user message (same logic as handleChatCompletion)
-    const userMessages = (chatReq.messages || []).filter((m: any) => m.role === 'user');
-    if (userMessages.length === 0) {
-      res.status(400).json({ error: { message: 'No user message provided' } });
-      return;
-    }
-
-    const lastUserMessage = userMessages[userMessages.length - 1].content;
-
-    serverLogger.log(
-      `ChatGPT Responses request - Model: ${requestData.model}, Stream: ${requestData.stream}, Message: ${lastUserMessage.substring(0, 50)}...`
-    );
-    const logFile = logMessageToFile('CHATGPT REQUEST PROMPT (Responses API)', lastUserMessage);
-
-    // Get browser session
-    const { page } = await getBrowserSession();
-
-    if (requestData.stream) {
-      // Set SSE headers
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
-      res.flushHeaders();
-
-      const responseId = `resp_${Date.now()}`;
-
-      // Emit the initial response created event
-      res.write(
-        `data: ${JSON.stringify({
-          type: 'response.created',
-          response: { id: responseId, object: 'response', status: 'in_progress', model: requestData.model || 'gpt-4o' }
-        })}\n\n`
-      );
-
-      try {
-        let fullResponse = '';
-        for await (const chunk of sendChatGPTMessage(page, lastUserMessage)) {
-          fullResponse += chunk;
-          // Send each chunk as a delta event
-          const deltaPayload = convertStreamingChunkToResponses({
-            id: responseId,
-            choices: [{ delta: { content: chunk } }]
-          });
-          res.write(`data: ${JSON.stringify(deltaPayload)}\n\n`);
-        }
-
-        appendMessageToFile(logFile, 'CHATGPT STREAMING RESPONSE (Responses API)', fullResponse);
-
-        // Send completion event
-        res.write(
-          `data: ${JSON.stringify({ type: 'response.done', response: { id: responseId, status: 'completed' } })}\n\n`
-        );
-        res.write('data: [DONE]\n\n');
-        res.end();
-      } catch (err) {
-        serverLogger.logSync(`ChatGPT Responses streaming error: ${err}`);
-        if (!res.headersSent) {
-          res.status(500).json({ error: { message: (err as Error).message } });
-        } else {
-          res.write(`data: ${JSON.stringify({ error: { message: (err as Error).message } })}\n\n`);
-          res.end();
-        }
-      }
-    } else {
-      // Non-streaming response
-      let fullResponse = '';
-
-      try {
-        for await (const chunk of sendChatGPTMessage(page, lastUserMessage)) {
-          fullResponse += chunk;
-        }
-
-        appendMessageToFile(logFile, 'CHATGPT RESPONSE (Responses API)', fullResponse);
-
-        // Convert to Responses API format
-        const chatCompletionsFormat = {
-          model: requestData.model,
-          choices: [
-            {
-              message: { role: 'assistant', content: fullResponse }
-            }
-          ]
-        };
-
-        const result = convertChatCompletionsToResponses(chatCompletionsFormat, requestData.model);
-        res.json(result);
-      } catch (err) {
-        serverLogger.logSync(`ChatGPT Responses error: ${err}`);
-        res.status(500).json({ error: { message: (err as Error).message } });
-      }
-    }
-  } catch (err) {
-    serverLogger.logSync(`ChatGPT Responses handler error: ${err}`);
-    if (!res.headersSent) {
-      res.status(500).json({ error: { message: (err as Error).message || 'Internal server error' } });
-    } else {
-      res.end();
-    }
+  // Extract the last user message (same logic as handleChatCompletion)
+  const userMessages = (chatReq.messages || []).filter((m: any) => m.role === 'user');
+  if (userMessages.length === 0) {
+    throw new Error('No user message provided');
   }
+
+  const lastUserMessage = userMessages[userMessages.length - 1].content;
+
+  serverLogger.log(
+    `ChatGPT Responses request - Model: ${requestData.model}, Stream: ${requestData.stream}, Message: ${lastUserMessage.substring(0, 50)}...`
+  );
+  const logFile = logMessageToFile('CHATGPT REQUEST PROMPT (Responses API)', lastUserMessage);
+
+  // Get browser session
+  const { page } = await getBrowserSession();
+
+  if (requestData.stream) {
+    return {
+      type: 'stream',
+      pipe: async (res) => {
+        // Set SSE headers
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.flushHeaders();
+
+        const responseId = `resp_${Date.now()}`;
+
+        // Emit the initial response created event
+        res.write(
+          `data: ${JSON.stringify({
+            type: 'response.created',
+            response: {
+              id: responseId,
+              object: 'response',
+              status: 'in_progress',
+              model: requestData.model || 'gpt-4o'
+            }
+          })}\n\n`
+        );
+
+        try {
+          let fullResponse = '';
+          for await (const chunk of sendChatGPTMessage(page, lastUserMessage)) {
+            fullResponse += chunk;
+            // Send each chunk as a delta event
+            const deltaPayload = convertStreamingChunkToResponses({
+              id: responseId,
+              choices: [{ delta: { content: chunk } }]
+            });
+            res.write(`data: ${JSON.stringify(deltaPayload)}\n\n`);
+          }
+
+          appendMessageToFile(logFile, 'CHATGPT STREAMING RESPONSE (Responses API)', fullResponse);
+
+          // Send completion event
+          res.write(
+            `data: ${JSON.stringify({ type: 'response.done', response: { id: responseId, status: 'completed' } })}\n\n`
+          );
+          res.write('data: [DONE]\n\n');
+        } catch (streamErr) {
+          serverLogger.logSync(`ChatGPT Responses streaming error: ${streamErr}`);
+          if (!res.headersSent) {
+            res.write(`data: ${JSON.stringify({ error: { message: (streamErr as Error).message } })}\n\n`);
+          }
+        }
+        res.end();
+      }
+    };
+  }
+
+  // Non-streaming response
+  let fullResponse = '';
+
+  for await (const chunk of sendChatGPTMessage(page, lastUserMessage)) {
+    fullResponse += chunk;
+  }
+
+  appendMessageToFile(logFile, 'CHATGPT RESPONSE (Responses API)', fullResponse);
+
+  // Convert to Responses API format
+  const chatCompletionsFormat = {
+    model: requestData.model,
+    choices: [
+      {
+        message: { role: 'assistant', content: fullResponse }
+      }
+    ]
+  };
+
+  const result = convertChatCompletionsToResponses(chatCompletionsFormat, requestData.model);
+  return { type: 'json', data: result };
 }
 
 /**

@@ -1,11 +1,12 @@
-import { Request, Response } from 'express';
-import { serverLogger, logMessageToFile, appendMessageToFile } from '../utils.js';
+import { Request } from 'express';
 import {
-  convertResponsesRequestToChatCompletions,
   convertChatCompletionsToResponses,
+  convertResponsesRequestToChatCompletions,
   convertStreamingChunkToResponses,
   type ResponsesRequest
 } from '../responses-adapter.js';
+import { appendMessageToFile, logMessageToFile, serverLogger } from '../utils.js';
+import type { ProviderResult } from './index.js';
 
 // Lazy-load the Puter provider to avoid token prompts at import time
 let puterInstance: any;
@@ -93,242 +94,201 @@ export const PUTER_MODEL_LIST = [
 /**
  * Handle listing models for Puter provider.
  */
-export async function handleModels(req: Request, res: Response) {
-  try {
-    const openaiModels = PUTER_MODEL_LIST.map((model) => ({
-      id: model.id,
-      object: 'model',
-      created: 1718380395,
-      owned_by: model.provider,
-      permission: [],
-      root: model.id,
-      parent: null
-    }));
+export async function handleModels(_req: Request): Promise<ProviderResult> {
+  const openaiModels = PUTER_MODEL_LIST.map((model) => ({
+    id: model.id,
+    object: 'model',
+    created: 1718380395,
+    owned_by: model.provider,
+    permission: [],
+    root: model.id,
+    parent: null
+  }));
 
-    res.json({
+  return {
+    type: 'json',
+    data: {
       object: 'list',
       data: openaiModels
-    });
-  } catch (err) {
-    console.error('Models endpoint error:', err);
-    res.status(500).json({ error: { message: (err as any).message || 'Internal server error' } });
-  }
+    }
+  };
 }
 
 /**
  * Handle chat completion for Puter provider.
  */
-export async function handleChatCompletion(req: Request, res: Response) {
-  try {
-    const { model, messages, stream, temperature, max_tokens } = req.body as any;
+export async function handleChatCompletion(req: Request): Promise<ProviderResult> {
+  const { model, messages, stream, temperature, max_tokens } = req.body as any;
 
-    // Simple prompt construction: concatenate messages with role prefixes
-    const prompt = (messages || []).map((m: any) => `${m.role?.toUpperCase() || 'USER'}: ${m.content}`).join('\n');
+  // Simple prompt construction: concatenate messages with role prefixes
+  const prompt = (messages || []).map((m: any) => `${m.role?.toUpperCase() || 'USER'}: ${m.content}`).join('\n');
 
-    const puter = await getPuter();
+  const puter = await getPuter();
 
-    // Resolve model: 'auto' → undefined (Puter default agent), otherwise use provided model
-    const resolvedModel = model === 'auto' ? undefined : (model ?? 'gpt-5-nano');
+  // Resolve model: 'auto' → undefined (Puter default agent), otherwise use provided model
+  const resolvedModel = model === 'auto' ? undefined : (model ?? 'gpt-5-nano');
 
-    const logFile = logMessageToFile('PUTER REQUEST PROMPT', prompt);
+  const logFile = logMessageToFile('PUTER REQUEST PROMPT', prompt);
 
-    const options: any = {
-      model: resolvedModel,
-      max_tokens,
-      stream: !!stream
-    };
+  const options: any = {
+    model: resolvedModel,
+    max_tokens,
+    stream: !!stream
+  };
 
-    // Only add temperature if it's explicitly provided and valid
-    if (temperature !== undefined) {
-      options.temperature = temperature;
-    }
-
-    const response = await puter.ai.chat(prompt, options);
-
-    if (stream) {
-      // Set SSE headers
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.flushHeaders();
-
-      let fullResponse = '';
-      for await (const chunk of response) {
-        if (chunk.text) {
-          fullResponse += chunk.text;
-          // Send each text chunk as an SSE data event
-          res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: chunk.text } }] })}\n\n`);
-        }
-      }
-      appendMessageToFile(logFile, 'PUTER STREAMING RESPONSE', fullResponse);
-      res.write('data: [DONE]\n\n');
-      res.end();
-    } else {
-      const content = response.message?.content ?? '';
-      appendMessageToFile(logFile, 'PUTER RESPONSE', content);
-      const result = {
-        id: `chatcmpl-${Date.now()}`,
-        object: 'chat.completion',
-        created: Math.floor(Date.now() / 1000),
-        model: model ?? 'auto',
-        choices: [
-          {
-            index: 0,
-            message: { role: 'assistant', content },
-            finish_reason: 'stop'
-          }
-        ]
-      };
-      res.json(result);
-    }
-  } catch (err: any) {
-    serverLogger.logSync(`Chat endpoint error: ${err}`);
-    // Determine the error message gracefully
-    let errorMessage = 'Internal server error';
-    if (err instanceof Error) {
-      errorMessage = err.message;
-    } else if (err && typeof err === 'object') {
-      // In case the error is a custom object without a message property but thrown anyway
-      errorMessage = err.message || err.toString();
-    } else if (typeof err === 'string') {
-      errorMessage = err;
-    }
-
-    // Check if it's a "no usage left" error
-    if (errorMessage.toLowerCase().includes('no usage left')) {
-      serverLogger.logSync('Puter: no usage left. Falling back to ChatGPT...');
-      try {
-        const chatgptProvider = await import('./chatgpt.js');
-        return await chatgptProvider.handleChatCompletion(req, res);
-      } catch (fallbackErr: any) {
-        serverLogger.logSync(`ChatGPT fallback error: ${fallbackErr}`);
-        errorMessage = `Puter: ${errorMessage}. ChatGPT fallback failed: ${fallbackErr.message || fallbackErr}`;
-      }
-    }
-
-    // Since we're in an async express handler, we shouldn't throw; we just end the response.
-    // If headers are already sent (like in SSE streaming), just end the stream.
-    if (!res.headersSent) {
-      res.status(500).json({ error: { message: errorMessage } });
-    } else {
-      res.write(`data: ${JSON.stringify({ error: { message: errorMessage } })}\n\n`);
-      res.end();
-    }
+  // Only add temperature if it's explicitly provided and valid
+  if (temperature !== undefined) {
+    options.temperature = temperature;
   }
+
+  const response = await puter.ai.chat(prompt, options);
+
+  if (stream) {
+    return {
+      type: 'stream',
+      pipe: async (res) => {
+        // Set SSE headers
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.flushHeaders();
+
+        let fullResponse = '';
+        try {
+          for await (const chunk of response) {
+            if (chunk.text) {
+              fullResponse += chunk.text;
+              res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: chunk.text } }] })}\n\n`);
+            }
+          }
+          appendMessageToFile(logFile, 'PUTER STREAMING RESPONSE', fullResponse);
+          res.write('data: [DONE]\n\n');
+        } catch (streamErr) {
+          serverLogger.logSync(`Puter streaming error: ${streamErr}`);
+          if (!res.headersSent) {
+            res.write(
+              `data: ${JSON.stringify({ error: { message: (streamErr as any)?.message || 'Stream error' } })}\n\n`
+            );
+          }
+        }
+        res.end();
+      }
+    };
+  }
+
+  const content = response.message?.content ?? '';
+  appendMessageToFile(logFile, 'PUTER RESPONSE', content);
+  const result = {
+    id: `chatcmpl-${Date.now()}`,
+    object: 'chat.completion',
+    created: Math.floor(Date.now() / 1000),
+    model: model ?? 'auto',
+    choices: [
+      {
+        index: 0,
+        message: { role: 'assistant', content },
+        finish_reason: 'stop'
+      }
+    ]
+  };
+
+  return { type: 'json', data: result };
 }
 
 /**
  * Handle responses API for Puter provider.
  */
-export async function handleResponses(req: Request, res: Response) {
-  try {
-    const requestData = req.body as ResponsesRequest;
+export async function handleResponses(req: Request): Promise<ProviderResult> {
+  const requestData = req.body as ResponsesRequest;
 
-    // Transform to chat completions format to leverage existing puter prompt logic
-    const chatReq = convertResponsesRequestToChatCompletions(requestData);
+  // Transform to chat completions format to leverage existing puter prompt logic
+  const chatReq = convertResponsesRequestToChatCompletions(requestData);
 
-    // Simple prompt construction: concatenate messages with role prefixes
-    const prompt = (chatReq.messages || [])
-      .map((m: any) => `${m.role?.toUpperCase() || 'USER'}: ${m.content}`)
-      .join('\n');
+  // Simple prompt construction: concatenate messages with role prefixes
+  const prompt = (chatReq.messages || [])
+    .map((m: any) => `${m.role?.toUpperCase() || 'USER'}: ${m.content}`)
+    .join('\n');
 
-    const puter = await getPuter();
+  const puter = await getPuter();
 
-    // Resolve model: 'auto' → undefined (Puter default agent), otherwise use provided model
-    const resolvedModel = chatReq.model === 'auto' ? undefined : (chatReq.model ?? 'gpt-5-nano');
+  // Resolve model: 'auto' → undefined (Puter default agent), otherwise use provided model
+  const resolvedModel = chatReq.model === 'auto' ? undefined : (chatReq.model ?? 'gpt-5-nano');
 
-    const logFile = logMessageToFile('PUTER REQUEST PROMPT (Responses API)', prompt);
+  const logFile = logMessageToFile('PUTER REQUEST PROMPT (Responses API)', prompt);
 
-    const options: any = {
-      model: resolvedModel,
-      max_tokens: chatReq.max_tokens,
-      stream: !!chatReq.stream
-    };
+  const options: any = {
+    model: resolvedModel,
+    max_tokens: chatReq.max_tokens,
+    stream: !!chatReq.stream
+  };
 
-    if (chatReq.temperature !== undefined) {
-      options.temperature = chatReq.temperature;
-    }
-
-    if (chatReq.stream) {
-      // Set SSE headers
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.flushHeaders();
-
-      const responseId = `resp_${Date.now()}`;
-
-      // Emit the initial response created event
-      res.write(
-        `data: ${JSON.stringify({
-          type: 'response.created',
-          response: { id: responseId, object: 'response', status: 'in_progress', model: resolvedModel || 'gpt-4o' }
-        })}\n\n`
-      );
-
-      let fullResponse = '';
-      const response = await puter.ai.chat(prompt, options);
-      for await (const chunk of response) {
-        if (chunk.text) {
-          fullResponse += chunk.text;
-          // Send each text chunk as an SSE data event
-          const deltaPayload = convertStreamingChunkToResponses({
-            id: responseId,
-            choices: [{ delta: { content: chunk.text } }]
-          });
-          res.write(`data: ${JSON.stringify(deltaPayload)}\n\n`);
-        }
-      }
-      appendMessageToFile(logFile, 'PUTER STREAMING RESPONSE (Responses API)', fullResponse);
-      res.write(
-        `data: ${JSON.stringify({ type: 'response.done', response: { id: responseId, status: 'completed' } })}\n\n`
-      );
-      res.write('data: [DONE]\n\n');
-      res.end();
-    } else {
-      const response = await puter.ai.chat(prompt, options);
-      const content = response.message?.content ?? '';
-      appendMessageToFile(logFile, 'PUTER RESPONSE (Responses API)', content);
-
-      // We mimic chatCompletions output first, then convert it
-      const chatCompletionsFormat = {
-        model: resolvedModel,
-        choices: [
-          {
-            message: { role: 'assistant', content }
-          }
-        ]
-      };
-
-      const result = convertChatCompletionsToResponses(chatCompletionsFormat, requestData.model);
-      res.json(result);
-    }
-  } catch (err: any) {
-    serverLogger.logSync(`Responses endpoint error: ${err}`);
-    let errorMessage = 'Internal server error';
-    if (err instanceof Error) {
-      errorMessage = err.message;
-    } else if (err && typeof err === 'object') {
-      errorMessage = err.message || err.toString();
-    } else if (typeof err === 'string') {
-      errorMessage = err;
-    }
-
-    // Check if it's a "no usage left" error
-    if (errorMessage.toLowerCase().includes('no usage left')) {
-      serverLogger.logSync('Puter (Responses API): no usage left. Falling back to ChatGPT...');
-      try {
-        const chatgptProvider = await import('./chatgpt.js');
-        return await chatgptProvider.handleResponses(req, res);
-      } catch (fallbackErr: any) {
-        serverLogger.logSync(`ChatGPT fallback error: ${fallbackErr}`);
-        errorMessage = `Puter: ${errorMessage}. ChatGPT fallback failed: ${fallbackErr.message || fallbackErr}`;
-      }
-    }
-
-    if (!res.headersSent) {
-      res.status(500).json({ error: { message: errorMessage } });
-    } else {
-      res.write(`data: ${JSON.stringify({ error: { message: errorMessage } })}\n\n`);
-      res.end();
-    }
+  if (chatReq.temperature !== undefined) {
+    options.temperature = chatReq.temperature;
   }
+
+  if (chatReq.stream) {
+    return {
+      type: 'stream',
+      pipe: async (res) => {
+        // Set SSE headers
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.flushHeaders();
+
+        const responseId = `resp_${Date.now()}`;
+
+        // Emit the initial response created event
+        res.write(
+          `data: ${JSON.stringify({
+            type: 'response.created',
+            response: { id: responseId, object: 'response', status: 'in_progress', model: resolvedModel || 'gpt-4o' }
+          })}\n\n`
+        );
+
+        let fullResponse = '';
+        try {
+          const response = await puter.ai.chat(prompt, options);
+          for await (const chunk of response) {
+            if (chunk.text) {
+              fullResponse += chunk.text;
+              const deltaPayload = convertStreamingChunkToResponses({
+                id: responseId,
+                choices: [{ delta: { content: chunk.text } }]
+              });
+              res.write(`data: ${JSON.stringify(deltaPayload)}\n\n`);
+            }
+          }
+          appendMessageToFile(logFile, 'PUTER STREAMING RESPONSE (Responses API)', fullResponse);
+          res.write(
+            `data: ${JSON.stringify({ type: 'response.done', response: { id: responseId, status: 'completed' } })}\n\n`
+          );
+          res.write('data: [DONE]\n\n');
+        } catch (streamErr) {
+          serverLogger.logSync(`Puter Responses streaming error: ${streamErr}`);
+          if (!res.headersSent) {
+            res.write(
+              `data: ${JSON.stringify({ error: { message: (streamErr as any)?.message || 'Stream error' } })}\n\n`
+            );
+          }
+        }
+        res.end();
+      }
+    };
+  }
+
+  const response = await puter.ai.chat(prompt, options);
+  const content = response.message?.content ?? '';
+  appendMessageToFile(logFile, 'PUTER RESPONSE (Responses API)', content);
+
+  // We mimic chatCompletions output first, then convert it
+  const chatCompletionsFormat = {
+    model: resolvedModel,
+    choices: [
+      {
+        message: { role: 'assistant', content }
+      }
+    ]
+  };
+
+  const result = convertChatCompletionsToResponses(chatCompletionsFormat, requestData.model);
+  return { type: 'json', data: result };
 }
