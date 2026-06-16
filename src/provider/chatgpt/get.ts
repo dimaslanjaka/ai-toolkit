@@ -41,11 +41,21 @@ async function getBrowserSession(): Promise<{ browser: Browser; page: Page }> {
 
   await page.bringToFront();
 
-  // Navigate to ChatGPT
-  const url = 'https://chat.openai.com';
   const { navigatePage } = await import('../../puppeteer/launcher.js');
-  const nav = await navigatePage(page, url);
-  await nav.waitForDomIdle(2000, 15000);
+
+  // Check if already on a ChatGPT page — skip navigation if so
+  const currentUrl = page.url();
+  const isOnChatGPT = currentUrl.includes('chat.openai.com') || currentUrl.includes('chatgpt.com');
+
+  if (!isOnChatGPT) {
+    // Navigate to ChatGPT
+    const url = 'https://chat.openai.com';
+    const nav = await navigatePage(page, url);
+    await nav.waitForDomIdle(2000, 15000);
+  } else {
+    // Already on ChatGPT — just ensure DOM is stable
+    await waitForDomIdle(page, 2000, 15000);
+  }
 
   // Check login status
   const loggedIn = await isLoggedIn(page);
