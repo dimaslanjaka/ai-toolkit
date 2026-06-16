@@ -20,9 +20,6 @@ async function getOpenCode(): Promise<OpenAI> {
 }
 
 export const OPENCODE_MODEL_LIST = [
-  // Default alias
-  { id: 'opencode-default', provider: 'opencode' },
-
   // Free models (opencode.ai/zen/v1 with apiKey='public')
   { id: 'deepseek-v4-flash-free', provider: 'opencode' },
   { id: 'big-pickle', provider: 'opencode' },
@@ -30,42 +27,7 @@ export const OPENCODE_MODEL_LIST = [
   { id: 'qwen3.6-plus-free', provider: 'opencode' },
   { id: 'minimax-m3-free', provider: 'opencode' },
   { id: 'nemotron-3-ultra-free', provider: 'opencode' },
-  { id: 'north-mini-code-free', provider: 'opencode' },
-
-  // Premium models (require apiKey)
-  { id: 'claude-fable-5', provider: 'opencode' },
-  { id: 'claude-opus-4-8', provider: 'opencode' },
-  { id: 'claude-opus-4-7', provider: 'opencode' },
-  { id: 'claude-opus-4-6', provider: 'opencode' },
-  { id: 'claude-opus-4-5', provider: 'opencode' },
-  { id: 'claude-sonnet-4-6', provider: 'opencode' },
-  { id: 'claude-sonnet-4-5', provider: 'opencode' },
-  { id: 'claude-haiku-4-5', provider: 'opencode' },
-  { id: 'gemini-3.5-flash', provider: 'opencode' },
-  { id: 'gemini-3.1-pro', provider: 'opencode' },
-  { id: 'gemini-3-flash', provider: 'opencode' },
-  { id: 'gpt-5.5', provider: 'opencode' },
-  { id: 'gpt-5.5-pro', provider: 'opencode' },
-  { id: 'gpt-5.4', provider: 'opencode' },
-  { id: 'gpt-5.4-pro', provider: 'opencode' },
-  { id: 'gpt-5.4-mini', provider: 'opencode' },
-  { id: 'gpt-5.4-nano', provider: 'opencode' },
-  { id: 'gpt-5.3-codex-spark', provider: 'opencode' },
-  { id: 'gpt-5.3-codex', provider: 'opencode' },
-  { id: 'gpt-5.2', provider: 'opencode' },
-  { id: 'gpt-5', provider: 'opencode' },
-  { id: 'gpt-5-nano', provider: 'opencode' },
-  { id: 'grok-build-0.1', provider: 'opencode' },
-  { id: 'deepseek-v4-pro', provider: 'opencode' },
-  { id: 'deepseek-v4-flash', provider: 'opencode' },
-  { id: 'minimax-m2.7', provider: 'opencode' },
-  { id: 'minimax-m2.5', provider: 'opencode' },
-  { id: 'qwen3.6-plus', provider: 'opencode' },
-  { id: 'qwen3.5-plus', provider: 'opencode' },
-  { id: 'kimi-k2.6', provider: 'opencode' },
-  { id: 'kimi-k2.5', provider: 'opencode' },
-  { id: 'glm-5.1', provider: 'opencode' },
-  { id: 'glm-5', provider: 'opencode' }
+  { id: 'north-mini-code-free', provider: 'opencode' }
 ];
 
 export async function handleModels(_req: Request): Promise<ProviderResult> {
@@ -97,18 +59,31 @@ export async function handleModels(_req: Request): Promise<ProviderResult> {
   }
 }
 
+function resolveModel(model: string | undefined): string {
+  // If caller passes undefined or 'auto', pick a random model from the provider list
+  if (!model || model === 'auto') {
+    const randomIdx = Math.floor(Math.random() * OPENCODE_MODEL_LIST.length);
+    return OPENCODE_MODEL_LIST[randomIdx].id;
+  }
+  return model;
+}
+
 export async function handleChatCompletion(req: Request): Promise<ProviderResult> {
   const { model, messages, stream, temperature, max_tokens } = req.body as any;
+  const resolvedModel = resolveModel(model);
 
   const promptPreview = (messages || [])
     .map((m: any) => `${m.role}: ${(m.content || '').toString().substring(0, 80)}`)
     .join(' | ');
-  serverLogger.log(`OpenCode Chat - Model: ${model}, Stream: ${!!stream}, Messages: ${promptPreview}`);
-  logMessageToFile('OPENCODE REQUEST', JSON.stringify({ model, messages, stream, temperature, max_tokens }, null, 2));
+  serverLogger.log(`OpenCode Chat - Model: ${resolvedModel}, Stream: ${!!stream}, Messages: ${promptPreview}`);
+  logMessageToFile(
+    'OPENCODE REQUEST',
+    JSON.stringify({ model: resolvedModel, messages, stream, temperature, max_tokens }, null, 2)
+  );
 
   const client = await getOpenCode();
   const baseBody = {
-    model: model || 'opencode-default',
+    model: resolvedModel,
     messages: messages as OpenAI.ChatCompletionMessageParam[],
     temperature,
     max_tokens
@@ -173,16 +148,17 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
   const requestData = req.body as ResponsesRequest;
   const chatReq = convertResponsesRequestToChatCompletions(requestData);
   const { model, messages, stream, temperature, max_tokens } = chatReq;
+  const resolvedModel = resolveModel(model);
 
   const promptPreview = (messages || [])
     .map((m: any) => `${m.role}: ${(m.content || '').toString().substring(0, 80)}`)
     .join(' | ');
-  serverLogger.log(`OpenCode Responses - Model: ${requestData.model}, Stream: ${!!stream}, Messages: ${promptPreview}`);
+  serverLogger.log(`OpenCode Responses - Model: ${resolvedModel}, Stream: ${!!stream}, Messages: ${promptPreview}`);
   logMessageToFile('OPENCODE RESPONSES REQUEST', JSON.stringify(requestData, null, 2));
 
   const client = await getOpenCode();
   const baseBody = {
-    model: model || 'opencode-default',
+    model: resolvedModel,
     messages: messages as OpenAI.ChatCompletionMessageParam[],
     temperature,
     max_tokens
