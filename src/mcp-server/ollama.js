@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import OpenAI from 'openai';
-import path from 'path';
+import path from 'upath';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
