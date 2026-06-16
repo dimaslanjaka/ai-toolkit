@@ -1,120 +1,13 @@
-import { Request } from 'express';
-import type { Browser, Page } from 'puppeteer';
+import { Request, Response } from 'express';
+import { serverLogger, logMessageToFile, appendMessageToFile } from '../utils.js';
 import {
-  convertChatCompletionsToResponses,
   convertResponsesRequestToChatCompletions,
+  convertChatCompletionsToResponses,
   convertStreamingChunkToResponses,
   type ResponsesRequest
 } from '../responses-adapter.js';
-import { appendMessageToFile, logMessageToFile, serverLogger } from '../utils.js';
 import type { ProviderResult } from './index.js';
-
-// Browser session management
-let browserInstance: Browser | null = null;
-let pageInstance: Page | null = null;
-
-/**
- * Get or create a persistent browser session for ChatGPT
- */
-async function getBrowserSession(): Promise<{ browser: Browser; page: Page }> {
-  if (browserInstance && pageInstance) {
-    try {
-      // Check if browser is still connected
-      await pageInstance.evaluate(() => true);
-      return { browser: browserInstance, page: pageInstance };
-    } catch {
-      // Browser disconnected, recreate
-      browserInstance = null;
-      pageInstance = null;
-    }
-  }
-
-  // Import dynamically to avoid loading Puppeteer at startup
-  const { connectBrowser, navigatePage } = await import('../../puppeteer/launcher.js');
-  const { default: isLoggedIn } = await import('../../puppeteer/chatgpt/isLoggedIn.js');
-
-  serverLogger.log('Creating new browser session for ChatGPT...');
-
-  const browser = await connectBrowser();
-  const [existingPage] = await browser.pages();
-  const page = existingPage || (await browser.newPage());
-
-  await page.bringToFront();
-
-  // Navigate to ChatGPT
-  const url = 'https://chat.openai.com';
-  const navigate = await navigatePage(page, url);
-  await navigate.waitForDomIdle(2000, 15000);
-
-  // Check login status
-  const loggedIn = await isLoggedIn(page);
-  if (!loggedIn) {
-    serverLogger.log('Not logged in to ChatGPT. Please log in manually in the browser window.');
-    throw new Error('ChatGPT login required. Please log in manually and retry.');
-  }
-
-  serverLogger.log('ChatGPT browser session ready');
-
-  // Store for reuse
-  browserInstance = browser;
-  pageInstance = page;
-
-  return { browser, page };
-}
-
-/**
- * Send a message to ChatGPT and capture streaming response
- */
-async function* sendChatGPTMessage(page: Page, message: string): AsyncGenerator<string> {
-  const { default: writeQuestion } = await import('../../puppeteer/chatgpt/writeQuestion.js');
-  const { default: clickSubmitButton } = await import('../../puppeteer/chatgpt/clickSubmitButton.js');
-  const { default: waitForInitialResponse } = await import('../../puppeteer/chatgpt/waitForInitialResponse.js');
-  const { delay } = await import('sbg-utility');
-  const { navigatePage } = await import('../../puppeteer/launcher.js');
-
-  // Ensure DOM is ready
-  const navigate = await navigatePage(page, page.url());
-  await navigate.waitForDomIdle(500, 5000);
-
-  // Write and submit question
-  await writeQuestion(page, message);
-  const submitted = await clickSubmitButton(page);
-
-  if (!submitted) {
-    throw new Error('Failed to submit message to ChatGPT');
-  }
-
-  await navigate.waitForDomIdle(1000, 30000);
-  await waitForInitialResponse(page);
-
-  // Stream response chunks
-  let previousText = '';
-  let streaming = true;
-
-  while (streaming) {
-    const assistantMessages = await page.$$('[data-message-author-role="assistant"]');
-
-    if (assistantMessages.length > 0) {
-      const lastMessage = assistantMessages[assistantMessages.length - 1];
-      const currentText = await page.evaluate((element) => element.textContent, lastMessage);
-
-      if (currentText !== previousText) {
-        const newChunk = currentText.slice(previousText.length);
-        if (newChunk) {
-          yield newChunk;
-        }
-        previousText = currentText;
-      }
-
-      const isStreaming = await lastMessage.$('.result-streaming');
-      if (!isStreaming) {
-        streaming = false;
-      }
-    }
-
-    await delay(100);
-  }
-}
+import { chatgptProvider } from '../../provider/chatgpt/get.js';
 
 /**
  * Handle listing models for ChatGPT provider
@@ -169,23 +62,22 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
   );
   const logFile = logMessageToFile('CHATGPT REQUEST PROMPT', lastUserMessage);
 
-  // Get browser session
-  const { page } = await getBrowserSession();
+  // Obtain the generic ChatGPT provider (handles Puppeteer session)
+  const provider = await chatgptProvider();
 
   if (stream) {
     return {
       type: 'stream',
-      pipe: async (res) => {
-        // Set SSE headers
+      pipe: async (res: Response) => {
+        // SSE headers
         res.setHeader('Content-Type', 'text/event-stream');
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
         res.flushHeaders();
 
         try {
-          let fullResponse = '';
-          for await (const chunk of sendChatGPTMessage(page, lastUserMessage)) {
-            fullResponse += chunk;
+          // Use provider's streaming API
+          await provider.stream(lastUserMessage, (chunk) => {
             const data = {
               id: `chatcmpl-${Date.now()}`,
               object: 'chat.completion.chunk',
@@ -199,23 +91,20 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
                 }
               ]
             };
-
             res.write(`data: ${JSON.stringify(data)}\n\n`);
-          }
+          });
 
-          appendMessageToFile(logFile, 'CHATGPT STREAMING RESPONSE', fullResponse);
-
-          // Send final chunk
-          res.write(
-            `data: ${JSON.stringify({
-              id: `chatcmpl-${Date.now()}`,
-              object: 'chat.completion.chunk',
-              created: Math.floor(Date.now() / 1000),
-              model: model || 'gpt-4o',
-              choices: [{ index: 0, delta: {}, finish_reason: 'stop' }]
-            })}\n\n`
-          );
-
+          // Append full response after streaming completes
+          // (provider.stream returns full response, but we already logged chunks incrementally)
+          // final chunk: finished
+          const finalChunk = {
+            id: `chatcmpl-${Date.now()}`,
+            object: 'chat.completion.chunk',
+            created: Math.floor(Date.now() / 1000),
+            model: model || 'gpt-4o',
+            choices: [{ index: 0, delta: {}, finish_reason: 'stop' }]
+          };
+          res.write(`data: ${JSON.stringify(finalChunk)}\n\n`);
           res.write('data: [DONE]\n\n');
         } catch (streamErr) {
           serverLogger.logSync(`ChatGPT streaming error: ${streamErr}`);
@@ -228,36 +117,30 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
     };
   }
 
-  // Non-streaming response
-  let fullResponse = '';
-
-  for await (const chunk of sendChatGPTMessage(page, lastUserMessage)) {
-    fullResponse += chunk;
-  }
-
+  // Non‑streaming response
+  const fullResponse = await provider.chat(lastUserMessage);
   appendMessageToFile(logFile, 'CHATGPT RESPONSE', fullResponse);
 
-  return {
-    type: 'json',
-    data: {
-      id: `chatcmpl-${Date.now()}`,
-      object: 'chat.completion',
-      created: Math.floor(Date.now() / 1000),
-      model: model || 'gpt-4o',
-      choices: [
-        {
-          index: 0,
-          message: { role: 'assistant', content: fullResponse },
-          finish_reason: 'stop'
-        }
-      ],
-      usage: {
-        prompt_tokens: 0,
-        completion_tokens: 0,
-        total_tokens: 0
+  const result = {
+    id: `chatcmpl-${Date.now()}`,
+    object: 'chat.completion',
+    created: Math.floor(Date.now() / 1000),
+    model: model || 'gpt-4o',
+    choices: [
+      {
+        index: 0,
+        message: { role: 'assistant', content: fullResponse },
+        finish_reason: 'stop'
       }
+    ],
+    usage: {
+      prompt_tokens: 0,
+      completion_tokens: 0,
+      total_tokens: 0
     }
   };
+
+  return { type: 'json', data: result };
 }
 
 /**
@@ -266,15 +149,14 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
 export async function handleResponses(req: Request): Promise<ProviderResult> {
   const requestData = req.body as ResponsesRequest;
 
-  // Transform to chat completions format
+  // Transform to ChatCompletions format
   const chatReq = convertResponsesRequestToChatCompletions(requestData);
 
-  // Extract the last user message (same logic as handleChatCompletion)
+  // Extract last user message
   const userMessages = (chatReq.messages || []).filter((m: any) => m.role === 'user');
   if (userMessages.length === 0) {
     throw new Error('No user message provided');
   }
-
   const lastUserMessage = userMessages[userMessages.length - 1].content;
 
   serverLogger.log(
@@ -282,22 +164,20 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
   );
   const logFile = logMessageToFile('CHATGPT REQUEST PROMPT (Responses API)', lastUserMessage);
 
-  // Get browser session
-  const { page } = await getBrowserSession();
+  const provider = await chatgptProvider();
 
   if (requestData.stream) {
     return {
       type: 'stream',
-      pipe: async (res) => {
-        // Set SSE headers
+      pipe: async (res: Response) => {
+        // SSE headers
         res.setHeader('Content-Type', 'text/event-stream');
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
         res.flushHeaders();
 
         const responseId = `resp_${Date.now()}`;
-
-        // Emit the initial response created event
+        // Initial response.created event
         res.write(
           `data: ${JSON.stringify({
             type: 'response.created',
@@ -311,20 +191,15 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
         );
 
         try {
-          let fullResponse = '';
-          for await (const chunk of sendChatGPTMessage(page, lastUserMessage)) {
-            fullResponse += chunk;
-            // Send each chunk as a delta event
+          // Stream via generic provider
+          await provider.stream(lastUserMessage, (chunk) => {
             const deltaPayload = convertStreamingChunkToResponses({
               id: responseId,
               choices: [{ delta: { content: chunk } }]
             });
             res.write(`data: ${JSON.stringify(deltaPayload)}\n\n`);
-          }
-
-          appendMessageToFile(logFile, 'CHATGPT STREAMING RESPONSE (Responses API)', fullResponse);
-
-          // Send completion event
+          });
+          // Completion event
           res.write(
             `data: ${JSON.stringify({ type: 'response.done', response: { id: responseId, status: 'completed' } })}\n\n`
           );
@@ -340,25 +215,14 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
     };
   }
 
-  // Non-streaming response
-  let fullResponse = '';
-
-  for await (const chunk of sendChatGPTMessage(page, lastUserMessage)) {
-    fullResponse += chunk;
-  }
-
+  // Non‑streaming response
+  const fullResponse = await provider.chat(lastUserMessage);
   appendMessageToFile(logFile, 'CHATGPT RESPONSE (Responses API)', fullResponse);
 
-  // Convert to Responses API format
   const chatCompletionsFormat = {
     model: requestData.model,
-    choices: [
-      {
-        message: { role: 'assistant', content: fullResponse }
-      }
-    ]
+    choices: [{ message: { role: 'assistant', content: fullResponse } }]
   };
-
   const result = convertChatCompletionsToResponses(chatCompletionsFormat, requestData.model);
   return { type: 'json', data: result };
 }
@@ -367,14 +231,10 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
  * Cleanup browser session (call on server shutdown)
  */
 export async function cleanup() {
-  if (browserInstance) {
-    try {
-      await browserInstance.close();
-      serverLogger.log('ChatGPT browser session closed');
-    } catch (err) {
-      serverLogger.logSync(`Error closing browser: ${err}`);
-    }
-    browserInstance = null;
-    pageInstance = null;
+  // Obtain provider and close its Puppeteer session
+  const provider = await chatgptProvider();
+  if (provider && typeof provider.close === 'function') {
+    await provider.close();
+    serverLogger.log('ChatGPT browser session closed via generic provider');
   }
 }
