@@ -207,3 +207,12 @@ export async function createBrowser(browserOptions = {}) {
     }
   }
 }
+
+/**
+ * Reuse browser ws endpoint method
+ */
+export async function connectBrowser() {
+  const browser_automation = await import('browser-automation');
+  const { browser } = await browser_automation.connectEndpoint();
+  return browser;
+}
