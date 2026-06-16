@@ -115,6 +115,21 @@ class PersistentLogger {
   }
 
   /**
+   * Reset/clear the log file
+   * Useful for clearing logs on application startup
+   */
+  reset() {
+    try {
+      // Ensure the directory exists
+      fs.ensureDirSync(path.dirname(this.filePath));
+      // Truncate the file (creates if doesn't exist)
+      fs.writeFileSync(this.filePath, '', { encoding: 'utf8' });
+    } catch (error) {
+      console.error(`[PersistentLogger] Failed to reset ${this.filePath}:`, error.message);
+    }
+  }
+
+  /**
    * Close the log stream (if using stream mode)
    * Call this on graceful shutdown
    */
