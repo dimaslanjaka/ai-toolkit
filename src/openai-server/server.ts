@@ -15,19 +15,8 @@ app.use((req, res, next) => {
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
-// Body logging middleware (after JSON parsing)
-app.use((req, res, next) => {
-  if (req.body && Object.keys(req.body).length > 0) {
-    // Strip messages from body to keep logs clean (messages are logged separately to file)
-    const { messages, ...rest } = req.body;
-    const logBody = messages ? { ...rest, messages: `[${messages.length} messages - see message log file]` } : rest;
-    serverLogger.log(JSON.stringify({ body: logBody }));
-  }
-  next();
-});
-
 // Optional API‑key authorization middleware (accept any bearer token)
-app.use((req, res, next) => {
+app.use((req, _res, next) => {
   const auth = req.headers['authorization'];
   if (typeof auth === 'string' && auth.startsWith('Bearer ')) {
     // Store the key on the request object for later use (if needed)

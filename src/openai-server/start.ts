@@ -26,7 +26,7 @@ app.use((err: any, _req: any, res: any, _next: any) => {
   }
 });
 
-startServer(app, 5758).then((state) => {
+startServer(app, 5758).then(({ state }) => {
   const message = `POST ${state.url}/v1/chat/completions to send chat requests`;
   console.log(message);
   serverLogger.log(message);

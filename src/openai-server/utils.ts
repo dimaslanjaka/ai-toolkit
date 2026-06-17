@@ -54,6 +54,7 @@ export interface ServerState {
   pid: number;
   startedAt: string;
   url: string;
+  server?: net.Server;
 }
 
 /**
@@ -80,10 +81,11 @@ export function findFreePort(startPort: number = 5758): Promise<number> {
 }
 
 /**
- * Save server state to a persistent file
+ * Save server state to a persistent file (excludes server instance)
  */
 export function saveServerState(state: ServerState) {
-  writefile(STATE_FILE, JSON.stringify(state, null, 2));
+  const { server: _server, ...serializableState } = state;
+  writefile(STATE_FILE, JSON.stringify(serializableState, null, 2));
 }
 
 /**
@@ -102,19 +104,23 @@ export function getServerState(): ServerState | null {
 /**
  * Start the OpenAI-compatible server on a free port and save state
  */
-export async function startServer(app: any, preferredPort: number = 5758) {
+export async function startServer(
+  app: any,
+  preferredPort: number = 5758
+): Promise<{ state: ServerState; server: net.Server }> {
   // Reset log on startup
   serverLogger.reset();
 
   const port = await findFreePort(preferredPort);
 
-  return new Promise<ServerState>((resolve) => {
+  return new Promise<{ state: ServerState; server: net.Server }>((resolve) => {
     const server = app.listen(port, '0.0.0.0', () => {
       const state: ServerState = {
         port,
         pid: process.pid,
         startedAt: new Date().toISOString(),
-        url: `http://localhost:${port}`
+        url: `http://localhost:${port}`,
+        server: server // Add the server instance to the state
       };
 
       saveServerState(state);
@@ -123,12 +129,29 @@ export async function startServer(app: any, preferredPort: number = 5758) {
       serverLogger.log(`State saved to ${STATE_FILE}`);
       serverLogger.log(`Provider: ${process.env.PROVIDER || 'puter'}`);
 
-      resolve(state);
+      resolve({ state, server });
 
       // Setup cleanup on server close
       server.on('close', () => {
         serverLogger.log('Server shutting down');
       });
+    });
+  });
+}
+
+/**
+ * Stop the OpenAI-compatible server gracefully
+ */
+export async function stopServer(server: net.Server): Promise<void> {
+  return new Promise((resolve, reject) => {
+    server.close((err?: Error) => {
+      if (err) {
+        serverLogger.log(`Error stopping server: ${err.message}`);
+        reject(err);
+        return;
+      }
+      serverLogger.log('Server stopped gracefully');
+      resolve();
     });
   });
 }
