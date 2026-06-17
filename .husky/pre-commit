@@ -24,13 +24,17 @@ else
   fi
 fi
 
-# Run lint-staged through Yarn so the local binary is resolved consistently
-staged_files=$(git diff --cached --name-only)
-if echo "$staged_files" | grep -qE '\.(php|cjs|mjs|js|ts|jsx|tsx|py|yml|yaml|json|css|scss|less|sql)$'; then
-  export GIT_DISABLE_UNTRACKED_CACHE=1
-  corepack yarn exec lint-staged --config lint-staged.config.js --no-stash
+# Run lint-staged through Yarn so the local binary is resolved consistently (skips on CI)
+if [ -n "$GITHUB_ACTIONS" ] || [ -n "$CI" ]; then
+  echo "CI environment detected — skipping lint-staged"
 else
-  echo "No lintable files staged — skipping lint-staged"
+  staged_files=$(git diff --cached --name-only)
+  if echo "$staged_files" | grep -qE '\.(php|cjs|mjs|js|ts|jsx|tsx|py|yml|yaml|json|css|scss|less|sql)$'; then
+    export GIT_DISABLE_UNTRACKED_CACHE=1
+    corepack yarn exec lint-staged --config lint-staged.config.js --no-stash
+  else
+    echo "No lintable files staged — skipping lint-staged"
+  fi
 fi
 
 # ---- git merge driver setup (idempotent) ----
