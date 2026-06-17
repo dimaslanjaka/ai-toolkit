@@ -1,4 +1,7 @@
-import { BinaryCollectionsConfig, opencodeFindWorkingKey, getOpenCodeAuth, OpenCodeAuthData } from 'binary-collections';
+import type { BinaryCollectionsConfig, OpenCodeAuthData } from 'binary-collections';
+import { createRequire } from 'node:module';
+const binaryCollectionsRequire = createRequire(import.meta.url);
+const { opencodeFindWorkingKey, getOpenCodeAuth } = binaryCollectionsRequire('binary-collections');
 import OpenAI from 'openai';
 import { ProxyAgent } from 'undici';
 

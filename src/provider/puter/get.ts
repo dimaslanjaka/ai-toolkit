@@ -1,6 +1,10 @@
-import * as puter from '@heyputer/puter.js/src/init.cjs';
+import { createRequire } from 'node:module';
 import { readfile, writefile } from 'sbg-utility';
 import path from 'upath';
+
+const require = createRequire(import.meta.url);
+
+const { init, getAuthToken } = require('@heyputer/puter.js/src/init.cjs');
 
 const TOKEN_FILE = path.join(process.cwd(), 'tmp/data/puter.txt');
 
@@ -16,10 +20,10 @@ function readToken() {
 export default async function get() {
   let token = readToken();
   if (!token) {
-    await puter.getAuthToken().then(saveToken);
+    await getAuthToken().then(saveToken);
     token = readToken();
   }
-  return puter.init(token!);
+  return init(token!);
 }
 
 export const puterProvider = get;
