@@ -23,7 +23,7 @@ function removeExtension(file) {
   return file.replace(/\.(cjs|mjs|js)$/, '');
 }
 
-const input = normalizePath(process.env.ROLLUP_INPUT ?? 'src/server-memory.ts');
+const input = normalizePath(process.env.ROLLUP_INPUT ?? 'src/mcp-server/server-memory.ts');
 
 const outputBase = removeExtension(process.env.ROLLUP_OUTPUT_FILE ?? 'dist/server-memory');
 
