@@ -13,7 +13,7 @@ import type { ProviderResult } from './index.js';
 let opencodeClient: OpenAI | null = null;
 async function getOpenCode(): Promise<OpenAI> {
   if (!opencodeClient) {
-    const { opencodeProvider } = await import('../../provider');
+    const { opencodeProvider } = await import('../../provider/opencode/get.js');
     opencodeClient = await opencodeProvider();
   }
   return opencodeClient;

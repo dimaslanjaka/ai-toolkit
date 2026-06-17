@@ -12,7 +12,7 @@ import type { ProviderResult } from './index.js';
 let puterInstance: any;
 async function getPuter() {
   if (!puterInstance) {
-    const { puterProvider } = await import('../../provider');
+    const { puterProvider } = await import('../../provider/puter/get.js');
     puterInstance = await puterProvider();
   }
   return puterInstance;
