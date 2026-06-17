@@ -6,7 +6,7 @@ import {
   convertStreamingChunkToResponses,
   type ResponsesRequest
 } from '../responses-adapter.js';
-import { logMessageToFile, serverLogger } from '../utils.js';
+import { logMessageToFile, appendMessageToFile, serverLogger } from '../utils.js';
 import type { ProviderResult } from './index.js';
 
 // Lazy-load the OpenCode provider to avoid SDK init at import time
@@ -62,8 +62,10 @@ export async function handleModels(_req: Request): Promise<ProviderResult> {
 function resolveModel(model: string | undefined): string {
   // If caller passes undefined or 'auto', pick a random model from the provider list
   if (!model || model === 'auto') {
-    const randomIdx = Math.floor(Math.random() * OPENCODE_MODEL_LIST.length);
-    return OPENCODE_MODEL_LIST[randomIdx].id;
+    // const randomIdx = Math.floor(Math.random() * OPENCODE_MODEL_LIST.length);
+    // return OPENCODE_MODEL_LIST[randomIdx].id;
+    // make deepsek by default
+    return 'deepseek-v4-flash-free';
   }
   return model;
 }
@@ -76,7 +78,7 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
     .map((m: any) => `${m.role}: ${(m.content || '').toString().substring(0, 80)}`)
     .join(' | ');
   serverLogger.log(`OpenCode Chat - Model: ${resolvedModel}, Stream: ${!!stream}, Messages: ${promptPreview}`);
-  logMessageToFile(
+  const logFile = logMessageToFile(
     'OPENCODE REQUEST',
     JSON.stringify({ model: resolvedModel, messages, stream, temperature, max_tokens }, null, 2)
   );
@@ -112,7 +114,7 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
           }
           res.write(`data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] })}\n\n`);
           res.write('data: [DONE]\n\n');
-          logMessageToFile('OPENCODE STREAMING RESPONSE', fullResponse);
+          appendMessageToFile(logFile, 'OPENCODE STREAMING RESPONSE', fullResponse);
         } catch (streamErr: any) {
           serverLogger.logSync(`OpenCode streaming error: ${streamErr}`);
           if (!res.headersSent) {
@@ -129,7 +131,7 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
     stream: false as const
   });
   const content = completion.choices?.[0]?.message?.content || '';
-  logMessageToFile('OPENCODE RESPONSE', content);
+  appendMessageToFile(logFile, 'OPENCODE RESPONSE', content);
 
   return {
     type: 'json',
@@ -154,7 +156,7 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
     .map((m: any) => `${m.role}: ${(m.content || '').toString().substring(0, 80)}`)
     .join(' | ');
   serverLogger.log(`OpenCode Responses - Model: ${resolvedModel}, Stream: ${!!stream}, Messages: ${promptPreview}`);
-  logMessageToFile('OPENCODE RESPONSES REQUEST', JSON.stringify(requestData, null, 2));
+  const responsesLogFile = logMessageToFile('OPENCODE RESPONSES REQUEST', JSON.stringify(requestData, null, 2));
 
   const client = await getOpenCode();
   const baseBody = {
@@ -201,7 +203,7 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
             `data: ${JSON.stringify({ type: 'response.done', response: { id: responseId, status: 'completed' } })}\n\n`
           );
           res.write('data: [DONE]\n\n');
-          logMessageToFile('OPENCODE RESPONSES STREAMING RESPONSE', fullResponse);
+          appendMessageToFile(responsesLogFile, 'OPENCODE RESPONSES STREAMING RESPONSE', fullResponse);
         } catch (streamErr: any) {
           serverLogger.logSync(`OpenCode Responses streaming error: ${streamErr}`);
           if (!res.headersSent) {
@@ -218,7 +220,7 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
     stream: false as const
   });
   const content = completion.choices?.[0]?.message?.content || '';
-  logMessageToFile('OPENCODE RESPONSES RESPONSE', content);
+  appendMessageToFile(responsesLogFile, 'OPENCODE RESPONSES RESPONSE', content);
 
   const chatCompletionsFormat = {
     model: requestData.model,

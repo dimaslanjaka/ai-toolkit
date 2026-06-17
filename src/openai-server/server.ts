@@ -1,6 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import fs from 'fs-extra';
 import * as provider from './provider/index.js';
 import { serverLogger } from './utils.js';
 
@@ -13,23 +12,16 @@ app.use((req, res, next) => {
   next();
 });
 
-// Clear messages log folder on server restart
-app.use((req, res, next) => {
-  if (req.path === '/v1/chat/completions' || req.path === '/v1/responses') {
-    const logDir = 'tmp/logs/openai-compatible/messages';
-    fs.rmSync(logDir, { recursive: true, force: true });
-    fs.mkdirSync(logDir, { recursive: true });
-  }
-  next();
-});
-
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
 // Body logging middleware (after JSON parsing)
 app.use((req, res, next) => {
   if (req.body && Object.keys(req.body).length > 0) {
-    serverLogger.log(JSON.stringify({ body: req.body }));
+    // Strip messages from body to keep logs clean (messages are logged separately to file)
+    const { messages, ...rest } = req.body;
+    const logBody = messages ? { ...rest, messages: `[${messages.length} messages - see message log file]` } : rest;
+    serverLogger.log(JSON.stringify({ body: logBody }));
   }
   next();
 });
