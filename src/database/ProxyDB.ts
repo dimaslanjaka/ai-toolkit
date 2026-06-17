@@ -279,7 +279,13 @@ export class ProxyDB {
       findByProxy: (proxy: string) => this.select<Proxy>('proxies', { proxy }),
       findByStatus: (status: string) => this.select<Proxy>('proxies', { status }),
       findByCountry: (country: string) => this.select<Proxy>('proxies', { country }),
-      findByRegion: (region: string) => this.select<Proxy>('proxies', { region })
+      findByRegion: (region: string) => this.select<Proxy>('proxies', { region }),
+      getWorking: (limit?: number, randomize: boolean = true) => {
+        const order = randomize ? (this._config.db_type === 'sqlite' ? ' ORDER BY RANDOM()' : ' ORDER BY RAND()') : '';
+        return this.query<Proxy>(
+          `SELECT * FROM \`proxies\` WHERE \`status\` IN ('active', 'working')${order}${limit ? ` LIMIT ${limit}` : ''}`
+        );
+      }
     };
   }
 

@@ -1,7 +1,7 @@
 import * as mariadb from 'mariadb';
 import type { Pool, PoolConnection } from 'mariadb';
 import fs from 'fs-extra';
-import path from 'path';
+import path from 'upath';
 
 export interface MySQLConfig {
   host: string;

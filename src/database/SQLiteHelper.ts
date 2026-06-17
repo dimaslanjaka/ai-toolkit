@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import type { RunResult } from 'better-sqlite3';
 import fs from 'fs-extra';
-import path from 'path';
+import path from 'upath';
 
 export interface SQLiteConfig {
   filename: string;
@@ -33,7 +33,7 @@ export class SQLiteHelper {
 
       this.db = new Database(this.config.filename, {
         readonly: this.config.readonly ?? false,
-        fileMustExist: this.config.fileMustExist ?? false,
+        fileMustExist: this.config.fileMustExist ?? false
       });
 
       if (this.config.verbose) {
