@@ -6,9 +6,9 @@ import { ProxyEntry, SQLiteProxy } from '../database/SQLiteProxy.js';
 import { checkProxy, CheckProxyResult } from './checker.js';
 
 const database = createProductionMySQL();
-const DB_PATH = path.join(process.cwd(), 'tmp', 'database', 'opencode-checker.db');
-const marker = new SQLiteMarker(DB_PATH);
-const proxyDb = new SQLiteProxy({ db_type: 'sqlite', sqlite_filename: DB_PATH });
+export const OPENCODE_PROXY_DB_PATH = path.join(process.cwd(), 'tmp', 'database', 'opencode-checker.db');
+const marker = new SQLiteMarker(OPENCODE_PROXY_DB_PATH);
+const proxyDb = new SQLiteProxy({ db_type: 'sqlite', sqlite_filename: OPENCODE_PROXY_DB_PATH });
 
 // Marker durations (in days)
 const WORKING_PROXY_HOURS = 1 / 24; // 1 hour
@@ -25,25 +25,30 @@ async function getRemoteWorkingProxies() {
   return filtered;
 }
 
-async function checkSingle(item: Proxy) {
-  const protocols = ['http', 'socks4', 'socks5'];
-
-  // Filter out invalid credentials (e.g., "-", "-:-", empty)
-  const hasValidCredentials =
+export function hasValidCredentials(item: Proxy) {
+  return (
     item.username &&
     item.password &&
     item.username !== '-' &&
     item.password !== '-' &&
     !item.username.includes('-:') &&
-    !item.password.includes('-:');
+    !item.password.includes('-:')
+  );
+}
 
-  if (!hasValidCredentials) {
+async function checkSingle(item: Proxy) {
+  const protocols = ['http', 'socks4', 'socks5'];
+
+  // Filter out invalid credentials (e.g., "-", "-:-", empty)
+  const valid = hasValidCredentials(item);
+
+  if (!valid) {
     await database.update('proxies', { username: '', password: '' }, { proxy: item.proxy });
   }
 
   let result: CheckProxyResult | undefined = undefined;
   for (const protocol of protocols) {
-    const built = `${protocol}://${hasValidCredentials ? `${item.username}:${item.password}@` : ''}${item.proxy}`;
+    const built = `${protocol}://${valid ? `${item.username}:${item.password}@` : ''}${item.proxy}`;
     console.log(`Checking proxy: ${built}`);
     result = await checkProxy({
       proxy: built,
