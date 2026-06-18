@@ -21,6 +21,9 @@ jobs:
     steps:
       - name: ⬇️ Checkout workflow repository
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          submodules: recursive
       - name: ⬇️ Setup CI Environment
         uses: ./.github/actions/setup-environments
         with:
@@ -41,3 +44,30 @@ jobs:
           binary-collections@https://raw.githubusercontent.com/dimaslanjaka/bin/master/releases/bin.tgz
           clean-github-actions-caches --repo "${{ github.repository }}" --sha
           "${{ github.sha }}"
+      - name: 🧪 Run tests in test/database/SQLiteMarker.test.ts
+        id: run-test-database-SQLiteMarker-test-ts
+        shell: bash
+        run: >-
+          if [ -f "test/database/SQLiteMarker.test.ts" ]; then
+            node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --forceExit --testTimeout=120000 --detectOpenHandles --bail=1 --testPathPatterns="database/SQLiteMarker.test.ts"
+          else
+            echo "Skipping missing test file: test/database/SQLiteMarker.test.ts"
+          fi
+      - name: 🧪 Run tests in test/database/proxydb-mysql.test.ts
+        id: run-test-database-proxydb-mysql-test-ts
+        shell: bash
+        run: >-
+          if [ -f "test/database/proxydb-mysql.test.ts" ]; then
+            node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --forceExit --testTimeout=120000 --detectOpenHandles --bail=1 --testPathPatterns="database/proxydb-mysql.test.ts"
+          else
+            echo "Skipping missing test file: test/database/proxydb-mysql.test.ts"
+          fi
+      - name: 🧪 Run tests in test/database/proxydb-sqlite.test.ts
+        id: run-test-database-proxydb-sqlite-test-ts
+        shell: bash
+        run: >-
+          if [ -f "test/database/proxydb-sqlite.test.ts" ]; then
+            node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --forceExit --testTimeout=120000 --detectOpenHandles --bail=1 --testPathPatterns="database/proxydb-sqlite.test.ts"
+          else
+            echo "Skipping missing test file: test/database/proxydb-sqlite.test.ts"
+          fi
