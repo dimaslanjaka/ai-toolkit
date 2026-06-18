@@ -5,6 +5,21 @@ name: Project Config
 version: 1.0.0
 schema: v1
 
+mcpServers:
+  # - name: "sqlite-database"
+  #   command: "npx"
+  #   args:
+  #     - "-y"
+  #     - "@modelcontextprotocol/server-sqlite"
+  #     - "tmp/database/opencode-checker.db"
+
+  # https://alphaonedev.github.io/ai-memory-mcp/#install
+  # https://github.com/alphaonedev/ai-memory-mcp/tree/main
+  - name: AI Memory
+    type: stdio
+    command: 'ai-memory'
+    args: ['--db', '.continue/ai-memory.db', 'mcp', '--tier', 'smart']
+
 # Define which models can be used
 # https://docs.continue.dev/customization/models
 models:
