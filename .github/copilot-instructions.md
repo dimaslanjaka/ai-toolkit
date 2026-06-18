@@ -61,6 +61,16 @@ When editing multiple files:
 5. **Prefer targeted edits over full rewrites** — preserve existing structure.
 6. **Respect file syntax** — ensure valid output for the file type.
 7. **Ask before destructive operations** — confirm before deleting files or large sections.
+8. **Memory Rule**: After any edit, create `.opencode/memory/<sanitized-path>.md` with YAML front-matter (`description`, `label`, `limit`, `read_only: false`). (Letta-Compatible memory markdown format: https://github.com/joshuadavidthomas/opencode-agent-memory#block-format)
+
+**Memory Block Format:**
+- **Location**: `.opencode/memory/<sanitized-filepath>.md` (replace `/` and `\` with `_`)
+- **Front-matter** (required):
+  - `description`: Accurate purpose of this block — what file/feature it tracks
+  - `label`: Unique identifier = sanitized filepath
+  - `limit`: Character budget (default: 5000)
+  - `read_only`: `false` (allow updates)
+- **Content**: Plain prose or bullets — what changed, why, migration notes
 
 ## Key Principles
 
