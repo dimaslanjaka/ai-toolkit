@@ -209,7 +209,7 @@ PROVIDER=chatgpt node dist/openai-server/start.mjs
 - `src/openai-server/start.ts` — Server entry point
 - `src/puppeteer/chatgpt/` — ChatGPT automation logic
 - `tmp/logs/openai-compatible/server.log` — Server logs
-- `tmp/data/openai-server.json` — Server state (port, PID, URL)
+- `tmp/database/openai-server.json` — Server state (port, PID, URL)
 
 ## See Also
 

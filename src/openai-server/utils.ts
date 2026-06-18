@@ -4,7 +4,7 @@ import path from 'upath';
 import moment from 'moment';
 import { PersistentLogger } from '../utils/logs.cjs';
 
-const STATE_FILE = path.join(process.cwd(), 'tmp/data/openai-server.json');
+const STATE_FILE = path.join(process.cwd(), 'tmp/database/openai-server.json');
 const LOG_FILE = path.join(process.cwd(), 'tmp/logs/openai-compatible/server.log');
 export const serverLogger = new PersistentLogger(LOG_FILE);
 

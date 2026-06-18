@@ -6,7 +6,7 @@ const require = createRequire(import.meta.url);
 
 const { init, getAuthToken } = require('@heyputer/puter.js/src/init.cjs');
 
-const TOKEN_FILE = path.join(process.cwd(), 'tmp/data/puter.txt');
+const TOKEN_FILE = path.join(process.cwd(), 'tmp/database/puter.txt');
 
 function saveToken(data?: string) {
   if (!data) return;
