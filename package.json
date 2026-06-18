@@ -18,7 +18,7 @@
   "scripts": {
     "build-cli": "node build-cli.mjs",
     "build-declaration": "tsc -p tsconfig.dts.json",
-    "build": "rollup -c && npm run build-cli && npm run build-declaration",
+    "build": "tsc -p tsconfig.build.json && rollup -c && npm run build-cli && npm run build-declaration",
     "clean": "npx -y rimraf tmp/dist dist",
     "pack": "npx -y tarball-packer --yarn --filename ai-toolkit --normalize-resolutions",
     "prepare": "husky",
@@ -79,6 +79,7 @@
     "puppeteer-extra-plugin-stealth": "^2.11.2",
     "sbg-utility": "^2.0.11",
     "socks-proxy-agent": "^10.1.0",
+    "undici": "^8.5.0",
     "upath": "^3.0.7"
   },
   "devDependencies": {

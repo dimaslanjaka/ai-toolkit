@@ -3,9 +3,13 @@ import commonjs from '@rollup/plugin-commonjs';
 import json from '@rollup/plugin-json';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 import * as glob from 'glob';
+import { fileURLToPath } from 'node:url';
 import { isEmpty } from 'sbg-utility';
 import path from 'upath';
 import { chunkFileNamesWithExt, entryFileNamesWithExt, externalPackagesFilter } from './rollup-utils.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * @type {import('rollup').RollupOptions[]}
@@ -22,9 +26,21 @@ if (!isEmpty(process.env.ROLLUP_ENTRIES)) {
     return resolved;
   });
 }
+inputs = inputs.map((p) => {
+  p = path.toUnix(p);
+  if (path.isAbsolute(p)) p = path.relative(__dirname, p);
+  p = `tmp/dist/${p}`;
+  p = p.replace(/.ts$/, '.js');
+  return p;
+});
+console.log('inputs', inputs);
 
 for (let input of inputs) {
   input = path.toUnix(input);
+  /**
+   * @type {import('rollup').OutputOptions}
+   */
+  const sharedOutputOptions = { preserveModulesRoot: 'tmp/dist/src', preserveModules: true };
   /**
    * @type {import('rollup').RollupOptions}
    */
@@ -34,12 +50,14 @@ for (let input of inputs) {
       {
         format: 'esm',
         dir: 'dist',
+        ...sharedOutputOptions,
         entryFileNames: entryFileNamesWithExt('mjs'),
         chunkFileNames: chunkFileNamesWithExt('mjs')
       },
       {
         format: 'cjs',
         dir: 'dist',
+        ...sharedOutputOptions,
         entryFileNames: entryFileNamesWithExt('cjs'),
         chunkFileNames: chunkFileNamesWithExt('cjs')
       }
