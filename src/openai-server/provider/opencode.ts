@@ -1,8 +1,8 @@
 import { Request } from 'express';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { readFile, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import type OpenAI from 'openai';
-import { isEmpty } from 'sbg-utility';
+import { isEmpty, writefile } from 'sbg-utility';
 import { ProxyAgent } from 'undici';
 import SQLiteProxy from '../../database/SQLiteProxy.js';
 import { OPENCODE_PROXY_DB_PATH } from '../../proxy/opencode-checker.js';
@@ -76,8 +76,7 @@ async function cacheWorkingProxy(proxyUrl: string | undefined): Promise<void> {
   if (!proxyUrl) return;
 
   try {
-    await mkdir(path.dirname(LAST_OPENCODE_PROXY_PATH), { recursive: true });
-    await writeFile(LAST_OPENCODE_PROXY_PATH, `${proxyUrl}\n`, 'utf8');
+    writefile(LAST_OPENCODE_PROXY_PATH, `${proxyUrl}\n`);
     serverLogger.log(`Cached working OpenCode proxy: ${getProxyLabel(proxyUrl)}`);
   } catch (error) {
     serverLogger.logSync(`Unable to cache working OpenCode proxy: ${error}`);
@@ -153,6 +152,44 @@ function resolveModel(model: string | undefined): string {
   return model;
 }
 
+function isConnectionError(error: any): boolean {
+  const message = error?.message?.toLowerCase() || '';
+  const code = error?.code || '';
+
+  // Check for connection-related error indicators
+  return (
+    message.includes('connection') ||
+    message.includes('econnrefused') ||
+    message.includes('etimedout') ||
+    message.includes('enotfound') ||
+    message.includes('network') ||
+    code === 'ECONNREFUSED' ||
+    code === 'ETIMEDOUT' ||
+    code === 'ENOTFOUND' ||
+    code === 'ENETUNREACH'
+  );
+}
+
+async function markProxyDeadSafely(proxyUrl: string): Promise<void> {
+  try {
+    // Extract proxy address from URL (remove protocol and auth)
+    const url = new URL(proxyUrl);
+    const proxyAddress = `${url.hostname}:${url.port}`;
+
+    await proxyDb.markProxyDead(proxyAddress);
+    serverLogger.log(`Marked dead proxy: ${getProxyLabel(proxyUrl)}`);
+
+    // Clear the cached proxy file since it's no longer working
+    try {
+      await unlink(LAST_OPENCODE_PROXY_PATH);
+    } catch {
+      // File may not exist, which is fine
+    }
+  } catch (error) {
+    serverLogger.logSync(`Failed to mark proxy dead: ${error}`);
+  }
+}
+
 async function createProxyDispatcher(): Promise<{ dispatcher?: ProxyAgent; proxyUrl?: string }> {
   const proxyUrl = await selectProxyUrl();
   return {
@@ -214,6 +251,10 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
           appendMessageToFile(logFile, 'OPENCODE STREAMING RESPONSE', fullResponse);
         } catch (streamErr: any) {
           serverLogger.logSync(`OpenCode streaming error: ${streamErr}`);
+          // Mark proxy as dead on connection error
+          if (proxyUrl && isConnectionError(streamErr)) {
+            await markProxyDeadSafely(proxyUrl);
+          }
           if (!res.headersSent) {
             res.write(`data: ${JSON.stringify({ error: { message: streamErr.message || 'Stream error' } })}\n\n`);
           }
@@ -223,28 +264,37 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
     };
   }
 
-  const completion = await client.chat.completions.create(
-    {
-      ...baseBody,
-      stream: false as const
-    },
-    { fetchOptions: { dispatcher } }
-  );
-  await cacheWorkingProxy(proxyUrl);
-  const content = completion.choices?.[0]?.message?.content || '';
-  appendMessageToFile(logFile, 'OPENCODE RESPONSE', content);
+  try {
+    const completion = await client.chat.completions.create(
+      {
+        ...baseBody,
+        stream: false as const
+      },
+      { fetchOptions: { dispatcher } }
+    );
+    await cacheWorkingProxy(proxyUrl);
+    const content = completion.choices?.[0]?.message?.content || '';
+    appendMessageToFile(logFile, 'OPENCODE RESPONSE', content);
 
-  return {
-    type: 'json',
-    data: {
-      id: `chatcmpl-${Date.now()}`,
-      object: 'chat.completion',
-      created: Math.floor(Date.now() / 1000),
-      model: model ?? 'opencode-default',
-      choices: [{ index: 0, message: { role: 'assistant', content }, finish_reason: 'stop' }],
-      usage: completion.usage || {}
+    return {
+      type: 'json',
+      data: {
+        id: `chatcmpl-${Date.now()}`,
+        object: 'chat.completion',
+        created: Math.floor(Date.now() / 1000),
+        model: model ?? 'opencode-default',
+        choices: [{ index: 0, message: { role: 'assistant', content }, finish_reason: 'stop' }],
+        usage: completion.usage || {}
+      }
+    };
+  } catch (err: any) {
+    serverLogger.logSync(`OpenCode chat completion error: ${err}`);
+    // Mark proxy as dead on connection error
+    if (proxyUrl && isConnectionError(err)) {
+      await markProxyDeadSafely(proxyUrl);
     }
-  };
+    throw err;
+  }
 }
 
 export async function handleResponses(req: Request): Promise<ProviderResult> {
@@ -312,6 +362,10 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
           appendMessageToFile(responsesLogFile, 'OPENCODE RESPONSES STREAMING RESPONSE', fullResponse);
         } catch (streamErr: any) {
           serverLogger.logSync(`OpenCode Responses streaming error: ${streamErr}`);
+          // Mark proxy as dead on connection error
+          if (proxyUrl && isConnectionError(streamErr)) {
+            await markProxyDeadSafely(proxyUrl);
+          }
           if (!res.headersSent) {
             res.write(`data: ${JSON.stringify({ error: { message: streamErr.message || 'Stream error' } })}\n\n`);
           }
@@ -321,21 +375,30 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
     };
   }
 
-  const completion = await client.chat.completions.create(
-    {
-      ...baseBody,
-      stream: false as const
-    },
-    { fetchOptions: { dispatcher } }
-  );
-  await cacheWorkingProxy(proxyUrl);
-  const content = completion.choices?.[0]?.message?.content || '';
-  appendMessageToFile(responsesLogFile, 'OPENCODE RESPONSES RESPONSE', content);
+  try {
+    const completion = await client.chat.completions.create(
+      {
+        ...baseBody,
+        stream: false as const
+      },
+      { fetchOptions: { dispatcher } }
+    );
+    await cacheWorkingProxy(proxyUrl);
+    const content = completion.choices?.[0]?.message?.content || '';
+    appendMessageToFile(responsesLogFile, 'OPENCODE RESPONSES RESPONSE', content);
 
-  const chatCompletionsFormat = {
-    model: requestData.model,
-    choices: [{ message: { role: 'assistant', content } }]
-  };
-  const result = convertChatCompletionsToResponses(chatCompletionsFormat, requestData.model);
-  return { type: 'json', data: result };
+    const chatCompletionsFormat = {
+      model: requestData.model,
+      choices: [{ message: { role: 'assistant', content } }]
+    };
+    const result = convertChatCompletionsToResponses(chatCompletionsFormat, requestData.model);
+    return { type: 'json', data: result };
+  } catch (err: any) {
+    serverLogger.logSync(`OpenCode Responses completion error: ${err}`);
+    // Mark proxy as dead on connection error
+    if (proxyUrl && isConnectionError(err)) {
+      await markProxyDeadSafely(proxyUrl);
+    }
+    throw err;
+  }
 }
