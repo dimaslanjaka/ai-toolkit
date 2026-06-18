@@ -22,13 +22,13 @@ async function main() {
     headers: { 'Content-Type': 'application/json', 'X-Request-Provider': 'opencode' },
     body: JSON.stringify({
       model: 'deepseek-v4-flash-free',
-      messages: [{ role: 'user', content: 'Say hello in one word' }],
+      messages: [{ role: 'user', content: 'Hello! Respond with a greeting and tell me what model you are.' }],
       stream: false
     })
   });
 
   const data = await res.json();
-  console.log('Response:', JSON.stringify(data).substring(0, 120) + '...');
+  console.log('Response:', data);
 
   // Check messages dir
   const files = fs.readdirSync(logDir);
