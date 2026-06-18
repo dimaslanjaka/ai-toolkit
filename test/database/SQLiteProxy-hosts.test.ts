@@ -130,4 +130,78 @@ describe('SQLiteProxy - Hosts and Proxies', () => {
     expect(webProxies).toHaveLength(1);
     expect(webProxies[0].proxy).toBe('20.0.0.1:9090');
   });
+
+  test('getProxyForHost should return first active proxy for a host', async () => {
+    // Add test proxies
+    const proxies = await db.proxy_entries();
+    const hosts = await db.hosts();
+    const proxyHosts = await db.proxy_hosts();
+
+    const p1Res = await proxies.insert({ proxy: '30.0.0.1:7070', type: 'http', status: 'active' });
+    const p2Res = await proxies.insert({ proxy: '30.0.0.2:7070', type: 'socks5', status: 'active' });
+
+    const hRes = await hosts.insert({ host: 'proxy.test.com' });
+
+    const proxy1_id = p1Res.insertId!;
+    const proxy2_id = p2Res.insertId!;
+    const host_id = hRes.insertId!;
+
+    // Add active proxy relationships
+    await proxyHosts.insert({
+      proxy_id: proxy1_id,
+      host_id: host_id,
+      status: 'active'
+    });
+    await proxyHosts.insert({
+      proxy_id: proxy2_id,
+      host_id: host_id,
+      status: 'active'
+    });
+
+    // Test getProxyForHost - should return first active proxy
+    const result = await db.getProxyForHost('proxy.test.com');
+    expect(result).toBeDefined();
+    expect(result).toBe('30.0.0.1:7070');
+
+    // Cleanup
+    await proxyHosts.delete({ proxy_id: proxy1_id, host_id: host_id });
+    await proxyHosts.delete({ proxy_id: proxy2_id, host_id: host_id });
+    await proxies.delete({ id: proxy1_id });
+    await proxies.delete({ id: proxy2_id });
+    await hosts.delete({ id: host_id });
+  });
+
+  test('getProxyForHost should return undefined for non-existent host', async () => {
+    const result = await db.getProxyForHost('non.existent.host');
+    expect(result).toBeUndefined();
+  });
+
+  test('getProxyForHost should return undefined when host has no active proxies', async () => {
+    // Add test proxy and host
+    const proxies = await db.proxy_entries();
+    const hosts = await db.hosts();
+    const proxyHosts = await db.proxy_hosts();
+
+    const pRes = await proxies.insert({ proxy: '40.0.0.1:6060', type: 'http', status: 'dead' });
+    const hRes = await hosts.insert({ host: 'dead.proxy.com' });
+
+    const proxy_id = pRes.insertId!;
+    const host_id = hRes.insertId!;
+
+    // Add failed proxy relationship (not active)
+    await proxyHosts.insert({
+      proxy_id: proxy_id,
+      host_id: host_id,
+      status: 'failed'
+    });
+
+    // Test getProxyForHost - should return undefined (no active proxies)
+    const result = await db.getProxyForHost('dead.proxy.com');
+    expect(result).toBeUndefined();
+
+    // Cleanup
+    await proxyHosts.delete({ proxy_id: proxy_id, host_id: host_id });
+    await proxies.delete({ id: proxy_id });
+    await hosts.delete({ id: host_id });
+  });
 });

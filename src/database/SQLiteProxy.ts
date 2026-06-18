@@ -163,6 +163,41 @@ export class SQLiteProxy extends ProxyDB {
     // Mark the proxy as dead in the proxies table
     await proxyTable.update({ status: 'dead' }, { proxy });
   }
+
+  /**
+   * Get a working proxy for a given host
+   * @param host - Target host/domain to find a proxy for
+   * @returns Proxy address or undefined if no active proxy found
+   */
+  async getProxyForHost(host: string): Promise<string | undefined> {
+    // Find proxies associated with the host and that are marked as 'active' or 'working'
+    // This assumes the 'proxies' and 'proxy_hosts' tables are set up and populated.
+    // We'll look for proxies linked to the host and return the first one found that is 'active' or 'working'.
+    const hostEntry = await (await this.hosts()).findOne({ host });
+    if (!hostEntry) {
+      console.warn(`Host '${host}' not found in proxy database.`);
+      return undefined;
+    }
+
+    const activeProxyHostEntries = await (
+      await this.proxy_hosts()
+    ).find({
+      host_id: hostEntry.id,
+      status: 'active' // Or consider 'working' if that's a separate status
+    });
+
+    if (activeProxyHostEntries.length > 0) {
+      // Get proxy details for the first active entry
+      const proxyEntry = await (await this.proxy_entries()).findOne({ id: activeProxyHostEntries[0].proxy_id });
+      if (proxyEntry && proxyEntry.proxy) {
+        console.log(`Using proxy: ${proxyEntry.proxy} for host: ${host}`);
+        return proxyEntry.proxy;
+      }
+    }
+
+    console.warn(`No active proxies found for host: ${host}`);
+    return undefined;
+  }
 }
 
 export default SQLiteProxy;
