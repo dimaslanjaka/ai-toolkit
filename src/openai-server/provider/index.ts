@@ -378,6 +378,7 @@ export async function handleCompletion(req: Request, res: Response) {
     const model = body.model ?? 'local-completion';
     const prompt = normalizePrompt(body.prompt);
     const created = Math.floor(Date.now() / 1000);
+    const isStream = body.stream === true || body.stream === 'true';
 
     const chatBody = {
       model,
@@ -396,8 +397,52 @@ export async function handleCompletion(req: Request, res: Response) {
       temperature: body.temperature ?? 0.2,
       top_p: body.top_p,
       stop: body.stop,
-      stream: false
+      stream: isStream
     };
+
+    // Streaming support for VSCode inline suggestions
+    if (isStream) {
+      const chatReqStream = createRequestWithBody(req, chatBody);
+      const streamResult = await callWithFallback(chatReqStream, 'handleChatCompletion');
+
+      if (streamResult.type === 'stream') {
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.flushHeaders();
+
+        await streamResult.pipe(res);
+
+        // Note: The pipe already handles streaming.
+        // If provider returns JSON with stream wrapper, convert here.
+        return;
+      }
+
+      // Fallback: convert JSON stream result to completion format
+      const extracted = extractTextFromProviderResult(streamResult);
+      const text = extracted.text ?? '';
+
+      res.json({
+        id: `cmpl-${crypto.randomUUID()}`,
+        object: 'text_completion',
+        created,
+        model: extracted.model ?? model,
+        choices: [
+          {
+            text,
+            index: 0,
+            logprobs: null,
+            finish_reason: extracted.finishReason ?? 'stop'
+          }
+        ],
+        usage: extracted.usage ?? {
+          prompt_tokens: estimateTokens(prompt),
+          completion_tokens: estimateTokens(text),
+          total_tokens: estimateTokens(prompt) + estimateTokens(text)
+        }
+      });
+      return;
+    }
 
     const chatReq = createRequestWithBody(req, chatBody);
     const chatResult = await callWithFallback(chatReq, 'handleChatCompletion');
