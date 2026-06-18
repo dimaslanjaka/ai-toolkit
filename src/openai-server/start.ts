@@ -1,6 +1,7 @@
 import fs from 'fs-extra';
 import { app } from './server.js';
 import { serverLogger, startServer } from './utils.js';
+import { startProxyChecker } from './proxy/start-proxy-checker.js';
 
 // Clear messages log folder on server startup
 const logDir = 'tmp/logs/openai-compatible/messages';
@@ -27,7 +28,24 @@ app.use((err: any, _req: any, res: any, _next: any) => {
 });
 
 startServer(app, 5758).then(({ state }) => {
-  const message = `POST ${state.url}/v1/chat/completions to send chat requests`;
+  const endpoints = [
+    ['GET', '/v1/models'],
+    ['POST', '/v1/chat/completions'],
+    ['POST', '/v1/responses'],
+    ['POST', '/v1/completions'],
+    ['POST', '/v1/embeddings'],
+    ['ALL', '/proxy-checker/start'],
+    ['ALL', '/proxy-checker/stop'],
+    ['GET', '/proxy-checker/status'],
+    ['GET', '/proxy-checker/logs']
+  ];
+  const message = [
+    'Available endpoints:',
+    ...endpoints.map(([method, route]) => `  ${method} ${state.url}${route}`)
+  ].join('\n');
+
   console.log(message);
   serverLogger.log(message);
+  console.log('starting proxy checker...');
+  startProxyChecker([], true);
 });
