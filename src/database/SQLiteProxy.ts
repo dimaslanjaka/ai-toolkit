@@ -1,4 +1,4 @@
-import path from 'path';
+import path from 'upath';
 import { ProxyDB } from './ProxyDB.js';
 import { fileURLToPath } from 'url';
 import { ProxyEntry, HostEntry, ProxyHostEntry } from './types.js';

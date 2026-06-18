@@ -1,9 +1,9 @@
 import { Request } from 'express';
-import { readFile, unlink } from 'node:fs/promises';
-import path from 'node:path';
+import fs from 'fs-extra';
 import type OpenAI from 'openai';
 import { isEmpty, writefile } from 'sbg-utility';
 import { ProxyAgent } from 'undici';
+import path from 'upath';
 import SQLiteProxy from '../../database/SQLiteProxy.js';
 import { OPENCODE_PROXY_DB_PATH } from '../../proxy/opencode-checker.js';
 import {
@@ -46,7 +46,7 @@ function getProxyLabel(proxyUrl: string): string {
 
 async function readLastWorkingProxy(): Promise<string | undefined> {
   try {
-    const proxyUrl = (await readFile(LAST_OPENCODE_PROXY_PATH, 'utf8')).trim();
+    const proxyUrl = (await fs.readFile(LAST_OPENCODE_PROXY_PATH, 'utf8')).trim();
     if (!proxyUrl) return undefined;
 
     const parsed = new URL(proxyUrl);
@@ -181,7 +181,7 @@ async function markProxyDeadSafely(proxyUrl: string): Promise<void> {
 
     // Clear the cached proxy file since it's no longer working
     try {
-      await unlink(LAST_OPENCODE_PROXY_PATH);
+      await fs.unlink(LAST_OPENCODE_PROXY_PATH);
     } catch {
       // File may not exist, which is fine
     }

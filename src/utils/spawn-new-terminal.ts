@@ -1,6 +1,6 @@
 // src/utils/spawn-new-terminal.ts
 import { spawn, type ChildProcess } from 'node:child_process';
-import path from 'node:path';
+import path from 'upath';
 
 export type TerminalRuntime = 'node' | 'python' | 'custom';
 
