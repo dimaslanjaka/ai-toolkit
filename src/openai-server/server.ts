@@ -43,6 +43,18 @@ app.post('/v1/chat/completions', provider.handleChatCompletion);
  */
 app.post('/v1/responses', provider.handleResponses);
 
+/**
+ * OpenAI-compatible Legacy Completion endpoint.
+ * Usually used by autocomplete / inline suggestions.
+ */
+app.post('/v1/completions', provider.handleCompletion);
+
+/**
+ * OpenAI-compatible Embeddings endpoint.
+ * Usually used by semantic search / codebase indexing.
+ */
+app.post('/v1/embeddings', provider.handleEmbeddings);
+
 app.all('/proxy-checker/start', async (_req, res) => {
   try {
     const result = await proxyChecker.start();
