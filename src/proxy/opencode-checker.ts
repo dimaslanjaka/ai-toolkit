@@ -2,7 +2,8 @@ import path from 'upath';
 import { Proxy } from '../database/ProxyDB.js';
 import SQLiteMarker from '../database/SQLiteMarker.js';
 import { createProductionMySQL } from '../database/shared.js';
-import { ProxyEntry, SQLiteProxy } from '../database/SQLiteProxy.js';
+import { ProxyEntry } from '../database/types.js';
+import { SQLiteProxy } from '../database/SQLiteProxy.js';
 import { checkProxy, CheckProxyResult } from './checker.js';
 
 const database = createProductionMySQL();

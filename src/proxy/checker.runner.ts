@@ -20,10 +20,10 @@ async function _check() {
     if (protocols.length === 0) protocols = ['http', 'https', 'socks4', 'socks5'];
     let shouldBreak = false;
     for (const protocol of protocols) {
-      const built = `${protocol}://${proxy.username ? `${proxy.username}:${proxy.password}@` : ''}${proxy.proxy}`;
-      console.log(`Checking proxy: ${built}`);
+      const proxyUrl = `${protocol}://${proxy.username ? `${proxy.username}:${proxy.password}@` : ''}${proxy.proxy}`;
+      console.log(`Checking proxy: ${proxyUrl}`);
       result = await checkProxy({
-        proxy: built,
+        proxy: proxyUrl,
         callback: (proxy, _endpoint, response) => {
           if (response.status >= 200 && response.status < 300) {
             return {
