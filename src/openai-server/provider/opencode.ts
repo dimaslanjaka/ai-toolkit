@@ -1,4 +1,6 @@
 import { Request } from 'express';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 import type OpenAI from 'openai';
 import { isEmpty } from 'sbg-utility';
 import { ProxyAgent } from 'undici';
@@ -15,30 +17,85 @@ import type { ProviderResult } from './index.js';
 
 // Lazy-load the OpenCode provider to avoid SDK init at import time
 let opencodeClient: OpenAI | null = null;
+let opencodeClientProxy: string | undefined;
+const LAST_OPENCODE_PROXY_PATH = path.join(process.cwd(), 'tmp', 'database', 'last-opencode-proxy.txt');
 const proxyDb = new SQLiteProxy({
   db_type: 'sqlite',
   sqlite_filename: OPENCODE_PROXY_DB_PATH
 });
+
+function getProxyUrl(item: {
+  password?: string | null;
+  proxy: string;
+  type?: string | null;
+  username?: string | null;
+}): string {
+  let protocol = item.type?.split(/,-/)[0];
+  if (isEmpty(protocol)) protocol = 'http';
+  return `${protocol}://${item.username ? `${item.username}:${item.password}@` : ''}${item.proxy}`;
+}
+
+function getProxyLabel(proxyUrl: string): string {
+  try {
+    const parsed = new URL(proxyUrl);
+    return `${parsed.hostname}:${parsed.port}`;
+  } catch {
+    return proxyUrl;
+  }
+}
+
+async function readLastWorkingProxy(): Promise<string | undefined> {
+  try {
+    const proxyUrl = (await readFile(LAST_OPENCODE_PROXY_PATH, 'utf8')).trim();
+    if (!proxyUrl) return undefined;
+
+    const parsed = new URL(proxyUrl);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return undefined;
+    }
+
+    serverLogger.log(`Reusing cached OpenCode proxy: ${getProxyLabel(proxyUrl)}`);
+    return proxyUrl;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      serverLogger.logSync(`Unable to read cached OpenCode proxy: ${error}`);
+    }
+    return undefined;
+  }
+}
+
+async function selectProxyUrl(): Promise<string | undefined> {
+  const cachedProxy = await readLastWorkingProxy();
+  if (cachedProxy) return cachedProxy;
+
+  const item = await proxyDb.getProxyForHost('opencode.ai', { type: 'http' });
+  return item ? getProxyUrl(item) : undefined;
+}
+
+async function cacheWorkingProxy(proxyUrl: string | undefined): Promise<void> {
+  if (!proxyUrl) return;
+
+  try {
+    await mkdir(path.dirname(LAST_OPENCODE_PROXY_PATH), { recursive: true });
+    await writeFile(LAST_OPENCODE_PROXY_PATH, `${proxyUrl}\n`, 'utf8');
+    serverLogger.log(`Cached working OpenCode proxy: ${getProxyLabel(proxyUrl)}`);
+  } catch (error) {
+    serverLogger.logSync(`Unable to cache working OpenCode proxy: ${error}`);
+  }
+}
 
 async function getOpenCode(): Promise<OpenAI> {
   if (!opencodeClient) {
     const { opencodeProvider } = await import('../../provider/opencode/get.js');
     await proxyDb.initialize();
 
-    // Get the proxy for opencode.ai to initialize the client with it
-    // Filter for HTTP proxies only since undici ProxyAgent doesn't support SOCKS5
-    const item = await proxyDb.getProxyForHost('opencode.ai', { type: 'http' });
-    let proxy: string | undefined;
-    if (item) {
-      let protocol = item.type?.split(/,-/)[0];
-      if (isEmpty(protocol)) protocol = 'http';
-      proxy = `${protocol}://${item.username ? `${item.username}:${item.password}@` : ''}${item.proxy}`;
-    }
+    // Filter for HTTP proxies only since undici ProxyAgent doesn't support SOCKS5.
+    opencodeClientProxy = await selectProxyUrl();
 
     opencodeClient = await opencodeProvider({
       model: 'deepseek-v4-flash-free',
       provider: 'opencode',
-      proxy
+      proxy: opencodeClientProxy
     });
   }
   return opencodeClient;
@@ -59,6 +116,7 @@ export async function handleModels(_req: Request): Promise<ProviderResult> {
   try {
     const client = await getOpenCode();
     const models = await client.models.list();
+    await cacheWorkingProxy(opencodeClientProxy);
     const data = models.data.map((m: any) => ({
       id: m.id,
       object: 'model',
@@ -95,24 +153,12 @@ function resolveModel(model: string | undefined): string {
   return model;
 }
 
-async function createProxyDispatcher(): Promise<{ dispatcher?: ProxyAgent }> {
-  const item = await proxyDb.getProxyForHost('opencode.ai', { type: 'http' });
-
-  if (!item) {
-    return { dispatcher: undefined };
-  }
-
-  let protocol = item.type?.split(/,-/)[0];
-
-  if (isEmpty(protocol)) {
-    protocol = 'http';
-  }
-
-  const proxyUrl = `${protocol}://${item.username ? `${item.username}:${item.password}@` : ''}${item.proxy}`;
-
-  const proxyAgent = new ProxyAgent(proxyUrl);
-
-  return { dispatcher: proxyAgent };
+async function createProxyDispatcher(): Promise<{ dispatcher?: ProxyAgent; proxyUrl?: string }> {
+  const proxyUrl = await selectProxyUrl();
+  return {
+    dispatcher: proxyUrl ? new ProxyAgent(proxyUrl) : undefined,
+    proxyUrl
+  };
 }
 
 export async function handleChatCompletion(req: Request): Promise<ProviderResult> {
@@ -136,7 +182,7 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
     max_tokens
   };
 
-  const { dispatcher } = await createProxyDispatcher();
+  const { dispatcher, proxyUrl } = await createProxyDispatcher();
 
   if (stream) {
     return {
@@ -162,6 +208,7 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
               res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: delta } }] })}\n\n`);
             }
           }
+          await cacheWorkingProxy(proxyUrl);
           res.write(`data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] })}\n\n`);
           res.write('data: [DONE]\n\n');
           appendMessageToFile(logFile, 'OPENCODE STREAMING RESPONSE', fullResponse);
@@ -183,6 +230,7 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
     },
     { fetchOptions: { dispatcher } }
   );
+  await cacheWorkingProxy(proxyUrl);
   const content = completion.choices?.[0]?.message?.content || '';
   appendMessageToFile(logFile, 'OPENCODE RESPONSE', content);
 
@@ -218,6 +266,7 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
     temperature,
     max_tokens
   };
+  const { dispatcher, proxyUrl } = await createProxyDispatcher();
 
   if (stream) {
     return {
@@ -241,8 +290,8 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
             {
               ...baseBody,
               stream: true as const
-            }
-            // { fetchOptions: { dispatcher: (await createProxyDispatcher()).fetchOptions?.dispatcher } }
+            },
+            { fetchOptions: { dispatcher } }
           );
           for await (const chunk of streamResponse) {
             const delta = chunk.choices?.[0]?.delta?.content || '';
@@ -255,6 +304,7 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
               res.write(`data: ${JSON.stringify(deltaPayload)}\n\n`);
             }
           }
+          await cacheWorkingProxy(proxyUrl);
           res.write(
             `data: ${JSON.stringify({ type: 'response.done', response: { id: responseId, status: 'completed' } })}\n\n`
           );
@@ -271,10 +321,14 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
     };
   }
 
-  const completion = await client.chat.completions.create({
-    ...baseBody,
-    stream: false as const
-  });
+  const completion = await client.chat.completions.create(
+    {
+      ...baseBody,
+      stream: false as const
+    },
+    { fetchOptions: { dispatcher } }
+  );
+  await cacheWorkingProxy(proxyUrl);
   const content = completion.choices?.[0]?.message?.content || '';
   appendMessageToFile(responsesLogFile, 'OPENCODE RESPONSES RESPONSE', content);
 
