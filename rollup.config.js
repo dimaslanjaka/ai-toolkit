@@ -12,9 +12,24 @@ import { isEmpty } from 'sbg-utility';
 const { dependencies = {}, devDependencies = {} } = pkgJson;
 
 // Packages that should be bundled (from tsup config)
-export const bundledPackages = ['p-limit', 'deepmerge-ts', 'is-stream', 'markdown-it', 'node-cache', 'glob'];
+export const bundledPackages = [
+  'p-limit',
+  'deepmerge-ts',
+  'is-stream',
+  'markdown-it',
+  'node-cache',
+  'glob',
+  'proxy-agent',
+  'http-proxy-agent',
+  'https-proxy-agent',
+  'socks-proxy-agent'
+];
 
-export const externalPackages = [...Object.keys(dependencies), ...Object.keys(devDependencies)].filter((pkgName) => {
+export const externalPackages = [
+  ...Object.keys(dependencies),
+  ...Object.keys(devDependencies),
+  'proxy-agent-negotiate'
+].filter((pkgName) => {
   return !bundledPackages.includes(pkgName);
 });
 

@@ -16,9 +16,10 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
+    "build-cli": "node build-cli.mjs",
     "build-declaration": "tsc -p tsconfig.dts.json",
-    "build": "rollup -c && npm run build-declaration",
-    "clean": "npx -y rimraf tmp dist",
+    "build": "rollup -c && npm run build-cli && npm run build-declaration",
+    "clean": "npx -y rimraf tmp/dist dist",
     "pack": "npx -y tarball-packer --yarn --filename ai-toolkit --normalize-resolutions",
     "prepare": "husky",
     "test": "node --disable-warning=ExperimentalWarning --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --detectOpenHandles --config jest.config.mjs",
@@ -28,6 +29,9 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "opc-check-proxy": "dist/proxy/opencode-checker.runner.mjs"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -63,6 +67,7 @@
     "fuse.js": "^7.3.0",
     "glob": "^13.0.6",
     "http-proxy-agent": "^9.1.0",
+    "https-proxy-agent": "^9.1.0",
     "jsonc-parser": "3.3.1",
     "mariadb": "^3.5.3",
     "moment": "^2.30.1",
