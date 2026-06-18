@@ -47,5 +47,6 @@ startServer(app, 5758).then(({ state }) => {
   console.log(message);
   serverLogger.log(message);
   console.log('starting proxy checker...');
-  startProxyChecker([], true);
+  // startProxyChecker([], true); // for debug
+  startProxyChecker();
 });
