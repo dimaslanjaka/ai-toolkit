@@ -1,8 +1,8 @@
-import express from 'express';
 import cors from 'cors';
+import express from 'express';
 import * as provider from './provider/index.js';
-import { serverLogger } from './utils.js';
 import { ProxyCheckerManager } from './proxy/proxy-checker-manager.js';
+import { serverLogger } from './utils.js';
 
 const proxyChecker = new ProxyCheckerManager();
 const app = express();

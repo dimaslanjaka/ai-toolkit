@@ -1,6 +1,6 @@
-import { app } from './server.js';
-import { startServer, serverLogger } from './utils.js';
 import fs from 'fs-extra';
+import { app } from './server.js';
+import { serverLogger, startServer } from './utils.js';
 
 // Clear messages log folder on server startup
 const logDir = 'tmp/logs/openai-compatible/messages';
