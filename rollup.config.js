@@ -1,4 +1,3 @@
-import babel from '@rollup/plugin-babel';
 import commonjs from '@rollup/plugin-commonjs';
 import json from '@rollup/plugin-json';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
@@ -11,93 +10,81 @@ import { chunkFileNamesWithExt, entryFileNamesWithExt, externalPackagesFilter } 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-/**
- * @type {import('rollup').RollupOptions[]}
- */
-const configs = [];
 let inputs = glob.sync('src/**/*.{ts,js,mjs,cjs}', {
   ignore: ['**/*.runner.*', '**/*test*']
 });
 if (!isEmpty(process.env.ROLLUP_ENTRIES)) {
-  inputs = process.env.ROLLUP_ENTRIES.split(',').map((p) => {
-    const trimmed = p.trim();
-    const resolved = path.resolve(trimmed);
-    console.log(`Custom input: "${trimmed}" → "${resolved}"`);
-    return resolved;
-  });
+  const customInputs = process.env.ROLLUP_ENTRIES.split(',')
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((input) => {
+      const resolved = path.resolve(input);
+      console.log(`Custom input: "${input}" → "${resolved}"`);
+      return resolved;
+    });
+
+  inputs.push(...customInputs);
 }
-inputs = inputs.map((p) => {
-  p = path.toUnix(p);
-  if (path.isAbsolute(p)) p = path.relative(__dirname, p);
-  p = `tmp/dist/${p}`;
-  p = p.replace(/.ts$/, '.js');
-  return p;
-});
+
+inputs = [
+  ...new Set(
+    inputs.map((input) => {
+      input = path.toUnix(input);
+      if (path.isAbsolute(input)) input = path.relative(__dirname, input);
+      input = `tmp/dist/${input}`;
+      return input.replace(/\.ts$/, '.js');
+    })
+  )
+];
+
 console.log('inputs', inputs);
 
-for (let input of inputs) {
-  input = path.toUnix(input);
-  /**
-   * @type {import('rollup').OutputOptions}
-   */
-  const sharedOutputOptions = { preserveModulesRoot: 'tmp/dist/src', preserveModules: true };
-  /**
-   * @type {import('rollup').RollupOptions}
-   */
-  const rollupConfig = {
-    input,
-    output: [
-      {
-        format: 'esm',
-        dir: 'dist',
-        ...sharedOutputOptions,
-        entryFileNames: entryFileNamesWithExt('mjs'),
-        chunkFileNames: chunkFileNamesWithExt('mjs')
-      },
-      {
-        format: 'cjs',
-        dir: 'dist',
-        ...sharedOutputOptions,
-        entryFileNames: entryFileNamesWithExt('cjs'),
-        chunkFileNames: chunkFileNamesWithExt('cjs')
-      }
-    ],
-    external: externalPackagesFilter,
-    plugins: [
-      nodeResolve({
-        extensions: ['.js', '.ts', '.cjs', '.mjs', '.json', '.node'],
-        preferBuiltins: true
-      }),
-      commonjs({
-        transformMixedEsModules: true
-      }),
-      json()
-    ]
-  };
+/**
+ * Build every entry in one module graph. With preserveModules enabled, separate
+ * Rollup configs would emit shared modules to the same paths and overwrite them
+ * with entry-specific tree-shaken exports.
+ *
+ * @type {import('rollup').OutputOptions}
+ */
+const sharedOutputOptions = {
+  preserveModulesRoot: 'tmp/dist/src',
+  preserveModules: true
+};
 
-  // Add Babel plugin for TypeScript files
-  if (input.endsWith('.ts')) {
-    rollupConfig.plugins.push(
-      babel({
-        babelHelpers: 'bundled',
-        extensions: ['.js', '.ts', '.cjs', '.mjs'],
-        exclude: '**/node_modules/**',
-        presets: [
-          '@babel/preset-typescript',
-          [
-            '@babel/preset-env',
-            {
-              targets: {
-                node: '18'
-              }
-            }
-          ]
-        ]
-      })
-    );
-  }
+/**
+ * Rollup consumes JavaScript already emitted by TypeScript into tmp/dist.
+ *
+ * @type {import('rollup').RollupOptions}
+ */
+const rollupConfig = {
+  input: inputs,
+  output: [
+    {
+      format: 'esm',
+      dir: 'dist',
+      ...sharedOutputOptions,
+      entryFileNames: entryFileNamesWithExt('mjs'),
+      chunkFileNames: chunkFileNamesWithExt('mjs')
+    },
+    {
+      format: 'cjs',
+      dir: 'dist',
+      ...sharedOutputOptions,
+      entryFileNames: entryFileNamesWithExt('cjs'),
+      chunkFileNames: chunkFileNamesWithExt('cjs')
+    }
+  ],
+  external: externalPackagesFilter,
+  plugins: [
+    nodeResolve({
+      extensions: ['.js', '.cjs', '.mjs', '.json', '.node'],
+      preferBuiltins: true
+    }),
+    commonjs({
+      transformMixedEsModules: true
+    }),
+    json()
+  ]
+};
 
-  configs.push(rollupConfig);
-}
-
-export default configs;
+export default rollupConfig;
