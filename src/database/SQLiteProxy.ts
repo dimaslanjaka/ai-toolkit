@@ -169,7 +169,7 @@ export class SQLiteProxy extends ProxyDB {
    * @param host - Target host/domain to find a proxy for
    * @returns Proxy address or undefined if no active proxy found
    */
-  async getProxyForHost(host: string): Promise<string | undefined> {
+  async getProxyForHost(host: string): Promise<ProxyEntry | undefined> {
     // Find proxies associated with the host and that are marked as 'active' or 'working'
     // This assumes the 'proxies' and 'proxy_hosts' tables are set up and populated.
     // We'll look for proxies linked to the host and return the first one found that is 'active' or 'working'.
@@ -191,7 +191,7 @@ export class SQLiteProxy extends ProxyDB {
       const proxyEntry = await (await this.proxy_entries()).findOne({ id: activeProxyHostEntries[0].proxy_id });
       if (proxyEntry && proxyEntry.proxy) {
         console.log(`Using proxy: ${proxyEntry.proxy} for host: ${host}`);
-        return proxyEntry.proxy;
+        return proxyEntry;
       }
     }
 

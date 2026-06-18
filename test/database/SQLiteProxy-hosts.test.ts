@@ -161,7 +161,7 @@ describe('SQLiteProxy - Hosts and Proxies', () => {
     // Test getProxyForHost - should return first active proxy
     const result = await db.getProxyForHost('proxy.test.com');
     expect(result).toBeDefined();
-    expect(result).toBe('30.0.0.1:7070');
+    expect(result?.proxy).toBe('30.0.0.1:7070');
 
     // Cleanup
     await proxyHosts.delete({ proxy_id: proxy1_id, host_id: host_id });
