@@ -1,0 +1,34 @@
+# This is an example configuration file
+# To learn more, see the full config.yaml reference: https://docs.continue.dev/reference
+
+name: Project Config
+version: 1.0.0
+schema: v1
+
+# Define which models can be used
+# https://docs.continue.dev/customization/models
+models:
+  - name: My Autocomplete
+    provider: openai
+    model: auto
+    apiBase: http://127.0.0.1:5758/v1
+    apiKey: sk-c2aafb0983f2f86b-9gjb00-e3f39ea4
+    useResponsesApi: false
+    roles:
+      - autocomplete
+    autocompleteOptions:
+      debounceDelay: 350
+      maxPromptTokens: 1024
+      onlyMyCode: true
+  - name: 9Router Chat
+    provider: openai
+    model: gratisan
+    apiBase: http://127.0.0.1:20128/v1
+    apiKey: sk-c2aafb0983f2f86b-9gjb00-e3f39ea4
+    useResponsesApi: false
+    roles:
+      - chat
+      - edit
+      - apply
+    capabilities:
+      - tool_use
