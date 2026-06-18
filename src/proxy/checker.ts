@@ -8,6 +8,7 @@ export interface CheckProxyResult {
   status: number;
   ip?: string;
   error?: string;
+  latency?: number;
 }
 
 export type ProxyConfig = {
@@ -78,10 +79,12 @@ export async function checkProxy(options: {
   callback?: (proxy: string, endpoint: string, response: AxiosResponse<any, any, {}>) => CheckProxyResult;
 }): Promise<CheckProxyResult> {
   const { proxy, endpoint = 'https://api.ipify.org?format=json', timeout = 10000, callback } = options;
+  const start = Date.now();
   try {
     const res = await axios.get(endpoint, {
       ...createProxyConfig(proxy, timeout)
     });
+    const latency = Date.now() - start;
 
     if (callback) {
       return callback(proxy, endpoint, res);
@@ -91,17 +94,22 @@ export async function checkProxy(options: {
       proxy: proxy,
       working: true,
       status: res.status,
-      ip: res.data?.ip
+      ip: res.data?.ip,
+      latency
     };
   } catch (err: any) {
+    const latency = Date.now() - start;
     const errorCode = err.response?.status ?? err.code;
-    console.error(`Proxy check failed for ${proxy}:${errorCode ? ` [${errorCode}]` : ''} ${err.response?.statusText || err.message}`);
-    
+    console.error(
+      `Proxy check failed for ${proxy}:${errorCode ? ` [${errorCode}]` : ''} ${err.response?.statusText || err.message}`
+    );
+
     return {
       proxy: proxy,
       working: false,
       status: err.response?.status || 0,
-      error: err.code || err.message
+      error: err.code || err.message,
+      latency
     };
   }
 }

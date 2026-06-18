@@ -1,4 +1,4 @@
-import fs from 'fs/promises';
+import fs from 'fs-extra';
 import readline from 'readline';
 import { applyUnifiedPatch } from './patcher.js';
 import { generateDiff } from './generate-diff.js';

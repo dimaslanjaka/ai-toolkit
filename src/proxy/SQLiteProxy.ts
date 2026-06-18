@@ -1,4 +1,5 @@
 import { ProxyDB } from '../database/ProxyDB.js';
+import { fileURLToPath } from 'url';
 import fs from 'fs-extra';
 import path from 'upath';
 
@@ -51,7 +52,8 @@ export class SQLiteProxy extends ProxyDB {
     await super.initialize();
 
     // Apply schema if tables don't exist
-    const schemaPath = path.join(__dirname, 'schema.sql');
+    const dir = path.dirname(fileURLToPath(import.meta.url));
+    const schemaPath = path.join(dir, 'schema.sql');
     if (fs.existsSync(schemaPath)) {
       const schema = fs.readFileSync(schemaPath, 'utf8');
       // Remove block comments to avoid breaking statements
