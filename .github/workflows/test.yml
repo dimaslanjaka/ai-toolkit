@@ -53,6 +53,24 @@ jobs:
           else
             echo "Skipping missing test file: test/database/SQLiteMarker.test.ts"
           fi
+      - name: 🧪 Run tests in test/database/SQLiteProxy-hosts.test.ts
+        id: run-test-database-SQLiteProxy-hosts-test-ts
+        shell: bash
+        run: >-
+          if [ -f "test/database/SQLiteProxy-hosts.test.ts" ]; then
+            node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --forceExit --testTimeout=120000 --detectOpenHandles --bail=1 --testPathPatterns="database/SQLiteProxy-hosts.test.ts"
+          else
+            echo "Skipping missing test file: test/database/SQLiteProxy-hosts.test.ts"
+          fi
+      - name: 🧪 Run tests in test/database/SQLiteProxy.test.ts
+        id: run-test-database-SQLiteProxy-test-ts
+        shell: bash
+        run: >-
+          if [ -f "test/database/SQLiteProxy.test.ts" ]; then
+            node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --forceExit --testTimeout=120000 --detectOpenHandles --bail=1 --testPathPatterns="database/SQLiteProxy.test.ts"
+          else
+            echo "Skipping missing test file: test/database/SQLiteProxy.test.ts"
+          fi
       - name: 🧪 Run tests in test/database/proxydb-mysql.test.ts
         id: run-test-database-proxydb-mysql-test-ts
         shell: bash

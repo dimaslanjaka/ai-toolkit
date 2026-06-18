@@ -83,10 +83,24 @@ export class SQLiteMarker {
     this.keyColumn = this.validateIdentifier(keyColumn);
     this.timezone = timezone;
 
-    const dbDir = this.getRelativePath(baseDir);
-    fs.ensureDirSync(dbDir);
+    // Determine full database path (support absolute or relative paths)
+    let dbPath: string;
+    if (path.isAbsolute(dbFilename)) {
+      // Absolute path provided – use directly
+      dbPath = dbFilename;
+    } else if (dbFilename.includes('/') || dbFilename.includes('\\')) {
+      // Relative path (e.g., "tmp/database/file.db") – resolve against project root
+      dbPath = path.resolve(PROJECT_ROOT, dbFilename);
+    } else {
+      // Simple filename – place in baseDir as before
+      const dbDir = this.getRelativePath(baseDir);
+      fs.ensureDirSync(dbDir);
+      dbPath = path.join(dbDir, dbFilename);
+    }
 
-    const dbPath = path.join(dbDir, dbFilename);
+    // Ensure the directory exists for any path type
+    fs.ensureDirSync(path.dirname(dbPath));
+
     this.db = new Database(dbPath);
 
     this.configureSqlite();
@@ -183,10 +197,7 @@ export class SQLiteMarker {
     }
 
     if (typeof validUntil === 'number' && isFinite(validUntil)) {
-      return moment()
-        .tz(this.timezone)
-        .add(validUntil, 'days')
-        .format(DATE_FORMAT);
+      return moment().tz(this.timezone).add(validUntil, 'days').format(DATE_FORMAT);
     }
 
     return this.normalizeDate(String(validUntil));

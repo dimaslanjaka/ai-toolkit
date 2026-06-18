@@ -2,6 +2,9 @@ import { MySQLHelper, MySQLConfig } from './MySQLHelper.js';
 import { SQLiteHelper, SQLiteConfig } from './SQLiteHelper.js';
 import type { PoolConnection } from 'mariadb';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
+import { fileURLToPath } from 'url';
+import fs from 'fs-extra';
+import path from 'upath';
 
 export type DatabaseType = 'mysql' | 'mariadb' | 'sqlite';
 
@@ -133,6 +136,36 @@ export class ProxyDB {
   async initialize(): Promise<void> {
     await this.helper.initialize();
     this.ready = this.helper.ready;
+    await this.initializeSchema();
+  }
+
+  async initializeSchema(customSchema?: string) {
+    // Apply schema if tables don't exist
+    const dir = path.dirname(fileURLToPath(import.meta.url));
+    const schemaPath = customSchema && fs.existsSync(customSchema) ? customSchema : path.join(dir, 'schema.sql');
+    if (fs.existsSync(schemaPath)) {
+      const schema = fs.readFileSync(schemaPath, 'utf8');
+      // Remove block comments to avoid breaking statements
+      const cleanedSchema = schema.replace(/\/\*[\s\S]*?\*\//g, '');
+      // Split by semicolon and execute each statement
+      const statements = cleanedSchema
+        .split(';')
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0 && !s.startsWith('--'));
+
+      for (const statement of statements) {
+        try {
+          await this.execute(statement);
+        } catch (err) {
+          // Ignore errors like "table already exists" if not using IF NOT EXISTS
+          // or comments that split incorrectly
+          if (!(err as Error).message.includes('contains no statements')) {
+            console.error(`Failed statement: ${statement}`);
+            throw err;
+          }
+        }
+      }
+    }
   }
 
   /**
