@@ -1,13 +1,20 @@
-import ProxyDB, { Proxy } from '../database/ProxyDB.js';
-import { createProductionMySQL } from '../database/shared.js';
-import { checkProxy, CheckProxyResult } from './checker.js';
+import path from 'upath';
+import { Proxy } from '../database/ProxyDB.js';
 import SQLiteMarker from '../database/SQLiteMarker.js';
+import { createProductionMySQL } from '../database/shared.js';
+import { ProxyEntry, SQLiteProxy } from '../database/SQLiteProxy.js';
+import { checkProxy, CheckProxyResult } from './checker.js';
 
-let database: ProxyDB;
-const marker = new SQLiteMarker('opencode-checker.db');
+const database = createProductionMySQL();
+const DB_PATH = path.join(process.cwd(), 'tmp', 'database', 'opencode-checker.db');
+const marker = new SQLiteMarker(DB_PATH);
+const proxyDb = new SQLiteProxy({ db_type: 'sqlite', sqlite_filename: DB_PATH });
+
+// Marker durations (in days)
+const WORKING_PROXY_HOURS = 1 / 24; // 1 hour
+const DEAD_PROXY_HOURS = 3 / 24; // 3 hours
 
 async function getRemoteWorkingProxies() {
-  database = createProductionMySQL();
   const proxiestable = await database.proxies();
   const proxies = await proxiestable.getWorking();
 
@@ -19,8 +26,6 @@ async function getRemoteWorkingProxies() {
 }
 
 async function checkSingle(item: Proxy) {
-  // let protocols = item.type?.split(/[,-]/) || ['http',  'socks4', 'socks5'];
-  // if (protocols.length === 0) protocols = ['http',  'socks4', 'socks5'];
   const protocols = ['http', 'socks4', 'socks5'];
 
   // Filter out invalid credentials (e.g., "-", "-:-", empty)
@@ -68,18 +73,24 @@ async function checkSingle(item: Proxy) {
   }
 
   if (result?.working) {
-    // mark working for 1 day
-    marker.mark(item.proxy, 1);
+    // mark working for configured hours
+    marker.mark(item.proxy, WORKING_PROXY_HOURS);
+    // write to SQLiteProxy for opencode.ai
+    await proxyDb.initialize();
+    await proxyDb.addProxy({
+      proxy: item.proxy,
+      type: item.type as ProxyEntry['type'],
+      host: 'opencode.ai'
+    });
   } else {
-    // mark dead for 1 hour
-    const oneHour = 1 / 24;
-    marker.mark(item.proxy, oneHour);
+    // mark dead for configured hours
+    marker.mark(item.proxy, DEAD_PROXY_HOURS);
   }
 
   return result;
 }
 
-async function main() {
+export async function opencodeCheckProxy() {
   const proxies = await getRemoteWorkingProxies();
   for (let index = 0; index < proxies.length; index++) {
     const item = proxies[index];
@@ -89,11 +100,8 @@ async function main() {
       break;
     }
   }
-}
 
-main()
-  .catch(console.error)
-  .finally(() => {
-    database.close();
-    marker.close();
-  });
+  await database.close();
+  marker.close();
+  await proxyDb.close();
+}

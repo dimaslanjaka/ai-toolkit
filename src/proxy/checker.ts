@@ -87,7 +87,11 @@ export async function checkProxy(options: {
     const latency = Date.now() - start;
 
     if (callback) {
-      return callback(proxy, endpoint, res);
+      const result = callback(proxy, endpoint, res);
+      if (!result.working) {
+        console.error(`Proxy check failed for ${proxy}: ${result.error || 'Unknown error'}`);
+      }
+      return result;
     }
 
     return {
