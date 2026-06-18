@@ -1,49 +1,12 @@
 import path from 'path';
 import { ProxyDB } from './ProxyDB.js';
 import { fileURLToPath } from 'url';
+import { ProxyEntry, HostEntry, ProxyHostEntry } from './types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export interface ProxyEntry {
-  id?: number;
-  proxy: string;
-  /** 'http' | 'https' | 'socks4' | 'socks5' */
-  type?: string;
-  username?: string;
-  password?: string;
-  status?: string;
-  latency?: string;
-  last_check?: string;
-  region?: string;
-  city?: string;
-  country?: string;
-  timezone?: string;
-  latitude?: string;
-  longitude?: string;
-  anonymity?: string;
-  https?: string;
-  private?: string;
-  lang?: string;
-  useragent?: string;
-  webgl_vendor?: string;
-  webgl_renderer?: string;
-  browser_vendor?: string;
-}
-
-export interface HostEntry {
-  id?: number;
-  host: string;
-  created_at?: string;
-}
-
-export interface ProxyHostEntry {
-  proxy_id: number;
-  host_id: number;
-  status?: string;
-  last_check?: string;
-  created_at?: string;
-}
+export { ProxyEntry, HostEntry, ProxyHostEntry } from './types.js';
 
 export class SQLiteProxy extends ProxyDB {
   /**
@@ -167,12 +130,12 @@ export class SQLiteProxy extends ProxyDB {
   /**
    * Get a working proxy for a given host
    * @param host - Target host/domain to find a proxy for
+   * @param options - Optional filters
+   * @param options.random - If true, randomize the returned proxy
+   * @param options.type - If specified, filter by proxy protocol type (e.g., 'http', 'https', 'socks4', 'socks5')
    * @returns Proxy address or undefined if no active proxy found
    */
-  async getProxyForHost(host: string): Promise<ProxyEntry | undefined> {
-    // Find proxies associated with the host and that are marked as 'active' or 'working'
-    // This assumes the 'proxies' and 'proxy_hosts' tables are set up and populated.
-    // We'll look for proxies linked to the host and return the first one found that is 'active' or 'working'.
+  async getProxyForHost(host: string, options?: { random?: boolean; type?: string }): Promise<ProxyEntry | undefined> {
     const hostEntry = await (await this.hosts()).findOne({ host });
     if (!hostEntry) {
       console.warn(`Host '${host}' not found in proxy database.`);
@@ -183,20 +146,46 @@ export class SQLiteProxy extends ProxyDB {
       await this.proxy_hosts()
     ).find({
       host_id: hostEntry.id,
-      status: 'active' // Or consider 'working' if that's a separate status
+      status: 'active'
     });
 
-    if (activeProxyHostEntries.length > 0) {
-      // Get proxy details for the first active entry
-      const proxyEntry = await (await this.proxy_entries()).findOne({ id: activeProxyHostEntries[0].proxy_id });
+    if (activeProxyHostEntries.length === 0) {
+      console.warn(`No active proxies found for host: ${host}`);
+      return undefined;
+    }
+
+    // Fetch all proxy entries for the active proxy_host entries
+    const proxyEntries: ProxyEntry[] = [];
+    for (const entry of activeProxyHostEntries) {
+      const proxyEntry = await (await this.proxy_entries()).findOne({ id: entry.proxy_id });
       if (proxyEntry && proxyEntry.proxy) {
-        console.log(`Using proxy: ${proxyEntry.proxy} for host: ${host}`);
-        return proxyEntry;
+        proxyEntries.push(proxyEntry);
       }
     }
 
-    console.warn(`No active proxies found for host: ${host}`);
-    return undefined;
+    if (proxyEntries.length === 0) {
+      console.warn(`No valid proxy entries found for host: ${host}`);
+      return undefined;
+    }
+
+    // Filter by type if specified
+    let filteredEntries = proxyEntries;
+    if (options?.type) {
+      filteredEntries = proxyEntries.filter((p) => p.type === options.type);
+      if (filteredEntries.length === 0) {
+        console.warn(`No proxies of type '${options.type}' found for host: ${host}`);
+        return undefined;
+      }
+    }
+
+    // Randomize if requested
+    if (options?.random && filteredEntries.length > 1) {
+      filteredEntries = [...filteredEntries].sort(() => Math.random() - 0.5);
+    }
+
+    const selected = filteredEntries[0];
+    console.log(`Using proxy: ${selected.proxy} for host: ${host}${options?.type ? ` (type: ${selected.type})` : ''}`);
+    return selected;
   }
 }
 

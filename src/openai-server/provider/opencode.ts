@@ -1,20 +1,45 @@
 import { Request } from 'express';
 import type OpenAI from 'openai';
+import { isEmpty } from 'sbg-utility';
+import { ProxyAgent } from 'undici';
+import SQLiteProxy from '../../database/SQLiteProxy.js';
+import { OPENCODE_PROXY_DB_PATH } from '../../proxy/opencode-checker.js';
 import {
   convertChatCompletionsToResponses,
   convertResponsesRequestToChatCompletions,
   convertStreamingChunkToResponses,
   type ResponsesRequest
 } from '../responses-adapter.js';
-import { logMessageToFile, appendMessageToFile, serverLogger } from '../utils.js';
+import { appendMessageToFile, logMessageToFile, serverLogger } from '../utils.js';
 import type { ProviderResult } from './index.js';
 
 // Lazy-load the OpenCode provider to avoid SDK init at import time
 let opencodeClient: OpenAI | null = null;
+const proxyDb = new SQLiteProxy({
+  db_type: 'sqlite',
+  sqlite_filename: OPENCODE_PROXY_DB_PATH
+});
+
 async function getOpenCode(): Promise<OpenAI> {
   if (!opencodeClient) {
     const { opencodeProvider } = await import('../../provider/opencode/get.js');
-    opencodeClient = await opencodeProvider();
+    await proxyDb.initialize();
+
+    // Get the proxy for opencode.ai to initialize the client with it
+    // Filter for HTTP proxies only since undici ProxyAgent doesn't support SOCKS5
+    const item = await proxyDb.getProxyForHost('opencode.ai', { type: 'http' });
+    let proxy: string | undefined;
+    if (item) {
+      let protocol = item.type?.split(/,-/)[0];
+      if (isEmpty(protocol)) protocol = 'http';
+      proxy = `${protocol}://${item.username ? `${item.username}:${item.password}@` : ''}${item.proxy}`;
+    }
+
+    opencodeClient = await opencodeProvider({
+      model: 'deepseek-v4-flash-free',
+      provider: 'opencode',
+      proxy
+    });
   }
   return opencodeClient;
 }
@@ -70,6 +95,26 @@ function resolveModel(model: string | undefined): string {
   return model;
 }
 
+async function createProxyDispatcher(): Promise<{ dispatcher?: ProxyAgent }> {
+  const item = await proxyDb.getProxyForHost('opencode.ai', { type: 'http' });
+
+  if (!item) {
+    return { dispatcher: undefined };
+  }
+
+  let protocol = item.type?.split(/,-/)[0];
+
+  if (isEmpty(protocol)) {
+    protocol = 'http';
+  }
+
+  const proxyUrl = `${protocol}://${item.username ? `${item.username}:${item.password}@` : ''}${item.proxy}`;
+
+  const proxyAgent = new ProxyAgent(proxyUrl);
+
+  return { dispatcher: proxyAgent };
+}
+
 export async function handleChatCompletion(req: Request): Promise<ProviderResult> {
   const { model, messages, stream, temperature, max_tokens } = req.body as any;
   const resolvedModel = resolveModel(model);
@@ -91,6 +136,8 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
     max_tokens
   };
 
+  const { dispatcher } = await createProxyDispatcher();
+
   if (stream) {
     return {
       type: 'stream',
@@ -101,10 +148,13 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
 
         let fullResponse = '';
         try {
-          const streamResponse = await client.chat.completions.create({
-            ...baseBody,
-            stream: true as const
-          });
+          const streamResponse = await client.chat.completions.create(
+            {
+              ...baseBody,
+              stream: true as const
+            },
+            { fetchOptions: { dispatcher } }
+          );
           for await (const chunk of streamResponse) {
             const delta = chunk.choices?.[0]?.delta?.content || '';
             if (delta) {
@@ -126,10 +176,13 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
     };
   }
 
-  const completion = await client.chat.completions.create({
-    ...baseBody,
-    stream: false as const
-  });
+  const completion = await client.chat.completions.create(
+    {
+      ...baseBody,
+      stream: false as const
+    },
+    { fetchOptions: { dispatcher } }
+  );
   const content = completion.choices?.[0]?.message?.content || '';
   appendMessageToFile(logFile, 'OPENCODE RESPONSE', content);
 
@@ -184,10 +237,13 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
 
         let fullResponse = '';
         try {
-          const streamResponse = await client.chat.completions.create({
-            ...baseBody,
-            stream: true as const
-          });
+          const streamResponse = await client.chat.completions.create(
+            {
+              ...baseBody,
+              stream: true as const
+            }
+            // { fetchOptions: { dispatcher: (await createProxyDispatcher()).fetchOptions?.dispatcher } }
+          );
           for await (const chunk of streamResponse) {
             const delta = chunk.choices?.[0]?.delta?.content || '';
             if (delta) {

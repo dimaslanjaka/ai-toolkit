@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 const binaryCollectionsRequire = createRequire(import.meta.url);
 const { opencodeFindWorkingKey, getOpenCodeAuth } = binaryCollectionsRequire('binary-collections');
 import OpenAI from 'openai';
-import { ProxyAgent } from 'undici';
+import { fetch as undiciFetch, ProxyAgent } from 'undici';
 
 export type BuildOpenAIProvider = 'opencode' | 'nvidia' | 'openai';
 
@@ -138,7 +138,8 @@ export async function buildOpenAIClient(
     new OpenAI({
       ...(baseURL ? { baseURL } : {}),
       apiKey,
-      ...(dispatcher ? { dispatcher } : {})
+      fetch: undiciFetch as any,
+      ...(dispatcher ? { fetchOptions: { dispatcher } } : {})
     });
 
   switch (provider) {
