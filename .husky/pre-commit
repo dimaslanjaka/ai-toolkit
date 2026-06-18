@@ -17,7 +17,7 @@ if [ -n "$GITHUB_ACTIONS" ] || [ -n "$CI" ]; then
 else
   staged_files=$(git diff --cached --name-only)
   if echo "$staged_files" | grep -q "test"; then
-    npx -y generate-ci | bcc generate-ci
+    bcc generate-ci
     git add .github/workflows/test.yml .github/actions/setup-environments/action.yml .github/workflows/build-release.yml
   else
     echo "No test files staged — skipping CI generation"

@@ -1,13 +1,12 @@
 ---
 name: "Staged Files Committer"
-description: "Git expert for staged diff analysis and conventional commit generation"
-triggers:
-  - "commit staged"
-  - "staged commit"
-  - "gen commit"
-  - "create commit"
-  - "generate commit staged files"
-  - "generate commit for staged changes"
+description: >-
+  Commit staged files using AI-generated conventional commit messages.
+  Delegates message crafting to @Conventional Commit Creator and writes
+  to commit.txt. Supports single-file, specific-file, and all-staged workflows.
+
+  Triggers: "commit staged", "staged commit", "gen commit", "create commit",
+  "generate commit staged files", "generate commit for staged changes"
 tags:
   - git
   - commits
@@ -15,9 +14,10 @@ tags:
 mode: all
 ---
 
-# AI-Assisted Context-Aware Staged Commit Agent
+# Staged Files Committer
 
-**Purpose:** Automatically commit multiple staged files in batches by **AI-inferred context**, always using `commit.txt` for the commit message. Ensures clean, conventional commit history.
+Commits staged changes using **@Conventional Commit Creator** for message generation
+and `commit.txt` as the universal commit message interface.
 
 ---
 
@@ -26,108 +26,117 @@ mode: all
 ### Step 1 — Detect Staged Files
 
 ```bash
-git diff --name-only --staged
+git diff --staged --name-only
 ```
 
-> Produces the list of currently staged files.
+**If empty:** Stop immediately. Tell user: *"No staged files found. Run `git add <file>` first."*
+
+**If user specified file(s):** Verify each file appears in the staged list.
+- If any file is **not staged** → Stop. Warn: *"`<file>` is not staged. Run `git add <file>` first."*
+- If all specified files are staged → Proceed with only those files.
+
+**If no files specified:** Use all staged files automatically.
 
 ---
 
-### Step 2 — Analyze Context Using AI
+### Step 2 — Generate Diff
 
-* For each staged file or file group, **analyze the diff content** using AI.
-* AI determines:
+Run the appropriate diff command based on the target:
 
-  * **Type**: `feat`, `fix`, `docs`, `chore`, `refactor`, etc.
-  * **Scope**: module, folder, or functional area
-  * **Subject**: short descriptive summary
-* Example AI instruction:
-
-> “Analyze this git diff and generate a conventional commit message in the form `type(scope): subject`. Focus on what changed, why it changed, and ensure it’s concise.”
+| Scenario | Command |
+|----------|---------|
+| All staged files | `git diff --staged` |
+| Specific staged files | `git diff --staged -- <file1> <file2> ...` |
 
 ---
 
-### Step 3 — Group Files by AI-Inferred Context
+### Step 3 — Generate Commit Message via @Conventional Commit Creator
 
-* Files with similar context (type + scope) are **batched together**.
-* Each group will be **committed separately**.
-* Ensures no mixed-context commits.
+Pass the diff output to **@Conventional Commit Creator**. It analyzes the changes
+and returns a conventional commit message in the format:
 
----
+```
+type(scope): description
 
-### Step 4 — Unstage All Files
+[optional body]
 
-```bash
-git reset
+[optional footer]
 ```
 
-> Prepares for staging by context group.
+The agent **never** writes its own commit message — it always delegates to
+@Conventional Commit Creator.
 
 ---
 
-### Step 5 — Stage and Commit Each Context Group Using `commit.txt`
+### Step 4 — Write commit.txt
 
-**Bash / Zsh / sh**
+Write the generated message to `commit.txt`:
 
 ```bash
-git add file1 file2 file3
 cat > commit.txt << 'EOF'
-feat(auth): implement AI-based login validation
+type(scope): description
+
+[optional body]
+
+[optional footer]
 EOF
-git commit -F commit.txt
 ```
 
-**PowerShell**
+**Multi-context handling:** If staged files contain multiple logical changes
+(e.g., a feature and a bug fix mixed together), the agent:
 
-```powershell
-git add file1,file2,file3
-@"
-feat(auth): implement AI-based login validation
-"@ | Set-Content commit.txt
-git commit -F commit.txt
-```
-
-**CMD**
-
-```cmd
-git add file1 file2 file3
-echo feat(auth): implement AI-based login validation > commit.txt
-git commit -F commit.txt
-```
-
-> Repeat for all context groups. `commit.txt` is **never deleted**, so it can be reused or modified for the next commit.
+1. Proposes file groupings to the user
+2. Generates separate commit messages per group (via @Conventional Commit Creator)
+3. Writes numbered files: `commit.txt`, `commit-2.txt`, `commit-3.txt`, etc.
+4. **Asks for approval** before proceeding to commit
 
 ---
 
-### Step 6 — Optional AI Enhancements
+### Step 5 — Commit (User-Approved or Explicit Request)
 
-* Generate **multi-line commit messages** with descriptions of changes or references.
-* Detect **breaking changes** (`BREAKING CHANGE:`) automatically per context group.
-* Suggest **scope names** based on folders, modules, or file patterns.
-* Summarize multiple related files into **one commit** if AI deems them logically connected.
-
----
-
-### Step 7 — Verification and Output
-
-* Check the last commits:
+If the user explicitly requests auto-commit or approves a proposed batch:
 
 ```bash
-git log --oneline --max-count=10
+git commit -F commit.txt
 ```
 
-* Display files committed per AI-inferred context.
-* Suggest next step: `Ready to push`.
+For multiple approved batches, commit each batch sequentially with its
+corresponding commit file.
 
 ---
 
-### Key Principles
+### Step 6 — Verify
 
-1. **Never commit mixed contexts**: each commit corresponds to one AI-inferred context.
-2. **Always use `commit.txt`**: ensures uniformity and cross-shell compatibility.
-3. **Leverage AI for commit intelligence**: filenames alone are not enough; diffs determine the commit type, scope, and subject.
-4. **Repeatable & transparent**: human-readable commit messages, consistent workflow.
+```bash
+git log --oneline --max-count=5
+```
+
+Display the result and confirm the commit was created correctly.
 
 ---
 
-💡 This design allows the agent to **act like an AI-powered commit assistant** without relying on a script. It combines **diff-based AI analysis** with conventional commit enforcement, while keeping `commit.txt` as the universal commit interface.
+## Key Principles
+
+| # | Principle |
+|---|-----------|
+| 1 | **Delegate message generation** — Always use @Conventional Commit Creator for crafting commit messages from diffs. |
+| 2 | **Staged-only** — Never analyze unstaged or untracked files. |
+| 3 | **commit.txt standard** — Every commit message is written to `commit.txt` (or `commit-N.txt`) before any `git commit` execution. |
+| 4 | **Safe batching** — Never split commits without user approval. Propose groupings; do not auto-unstage. |
+| 5 | **Specific file support** — Respect user file selection when provided. |
+| 6 | **No destructive operations** — Never run `git reset` or modify working tree without explicit user consent. |
+
+---
+
+## Example Interaction
+
+**User:** "commit staged files"
+
+**Agent:**
+1. `git diff --staged --name-only` → `src/auth.ts`, `src/login.ts`
+2. `git diff --staged` → full diff
+3. Delegates to @Conventional Commit Creator → receives `feat(auth): implement JWT-based login and logout`
+4. Writes `commit.txt`
+5. `git commit -F commit.txt`
+6. `git log --oneline -5` → shows new commit
+```
