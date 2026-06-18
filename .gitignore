@@ -125,4 +125,8 @@ coverage.*
 !.opencode/opencode.jsonc
 !.opencode/agents/
 !.opencode/agents/*
+!.opencode/memory/
+.opencode/memory/*
+!.opencode/memory/.gitignore
+!.opencode/memory/openai-compatible.md
 binary-collection*

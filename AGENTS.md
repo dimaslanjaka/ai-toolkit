@@ -1,19 +1,23 @@
 # AGENTS QUICK REFERENCE
 
 - Monorepo: `packages/*` workspaces, source in `src/` only.
-- Build: `yarn install && yarn build` → Rollup then `tsc -p tsconfig.dts.json`.
+- Module system: this project mixes ESM and CommonJS; preserve the module style used by the surrounding package and file.
+- Build: `yarn build`.
 - Lint/format: run `eslint --fix <files>`; TypeScript check `tsc --noEmit`.
 - Test: `yarn test` (Jest) – tests under `test/`; single test via `node --test <file>`.
 - Run single TS file: `node --no-warnings=ExperimentalWarning --loader ts-node/esm <file.ts>`.
-- OpenAI‑compatible server:
-  - Start default (Puter) → `node dist/openai-server/start.mjs`.
-  - ChatGPT provider → `PROVIDER=chatgpt node dist/openai-server/start.mjs`.
-  - Per‑request override via header `X-Request-Provider` (chatgpt|puter|opencode).
-  - Provider index (`src/openai-server/provider/index.ts`) handles fallback chain.
-- ChatGPT provider (`src/openai-server/provider/chatgpt.ts`): `getBrowserSession()` now checks `page.url()` and skips navigation when already on a ChatGPT page.
-- Puter provider (`src/openai-server/provider/puter.ts`): uses `@heyputer/puter.js`; default model `gpt-5-nano`; 500+ models available.
-- `.opencode` memory rule: after any `src/` edit create `.opencode/memory/<sanitized-path>.md` with YAML front‑matter (`description`, `label`, `limit`, `read_only`).
-- create or update or refactor memory `.opencode\memory\openai-compatible.md` after modify openai compatible server and the other AI API -> sumarize the memory -> leave only factual architecture reference.
+- Filesystem imports: use the default import `import fs from 'fs-extra'`; do not import from `fs` or `node:fs`.
+- Path imports: use the default import `import path from 'upath'`; do not import from `path` or `node:path`.
+- OpenAI-compatible server architecture and provider details: see `.opencode/memory/openai-compatible.md`.
+- Memory rule: after any file edit, create or update a Letta-compatible memory block at `.opencode/memory/<sanitized-filepath>.md` ([block format](https://github.com/joshuadavidthomas/opencode-agent-memory#block-format)).
+  - Sanitize the edited file path by replacing `/` and `\` with `_`.
+  - Required YAML front-matter:
+    - `description`: accurate purpose of the block—the file or feature it tracks.
+    - `label`: unique identifier equal to the sanitized filepath.
+    - `limit`: character budget; default to `5000`.
+    - `read_only: false`: allow future updates.
+  - Content: plain prose or bullets covering what changed, why, and any migration notes.
+- After changing the OpenAI-compatible server or another AI API integration, update `.opencode/memory/openai-compatible.md`; keep it concise and limited to factual architecture details.
 - Staged‑file commit: use `git diff --staged` then generate conventional commit `<type>(<scope>): <subject>`; run `git commit -F commit.txt`.
 - React/TSX guidelines (`*.tsx, *.jsx`): Tailwind utility classes, Flowbite patterns, Font Awesome Pro icons; no CDN tags; PascalCase filenames; functional components default export.
 - Python files (`*.py`): PEP 8, Black formatting, type hints, tests with pytest.
