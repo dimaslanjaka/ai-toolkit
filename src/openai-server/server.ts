@@ -1,5 +1,7 @@
 import cors from 'cors';
 import express from 'express';
+import fs from 'fs-extra';
+import path from 'upath';
 import * as provider from './provider/index.js';
 import { ProxyCheckerManager } from './proxy/proxy-checker-manager.js';
 import { serverLogger } from './utils.js';
@@ -16,6 +18,23 @@ app.use((req, res, next) => {
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
+
+const chatFrontendDirectory = path.join(process.cwd(), 'dist/openai-server/frontend');
+const chatFrontendIndex = path.join(chatFrontendDirectory, 'index.html');
+
+app.get('/', (_req, res) => {
+  res.redirect('/chat/');
+});
+
+app.use('/chat', express.static(chatFrontendDirectory));
+app.get(/^\/chat(?:\/.*)?$/, (_req, res, next) => {
+  if (!fs.existsSync(chatFrontendIndex)) {
+    next();
+    return;
+  }
+
+  res.sendFile(chatFrontendIndex);
+});
 
 // Optional API‑key authorization middleware (accept any bearer token)
 app.use((req, _res, next) => {

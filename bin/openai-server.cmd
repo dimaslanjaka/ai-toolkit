@@ -15,6 +15,7 @@ npx -y nodemon ^
   --ignore "**/node_modules/**" ^
   --ignore "**/*test*" ^
   --ignore "**/*runner*" ^
+  --ignore "**/frontend/**" ^
   --delay 10 ^
   --exec "tsc -p tsconfig.build.json && set ROLLUP_ENTRIES=src/openai-server/start.ts && rollup -c && node dist/openai-server/start.cjs"
 

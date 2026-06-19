@@ -11,7 +11,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 let inputs = glob.sync('src/**/*.{ts,js,mjs,cjs}', {
-  ignore: ['**/*.runner.*', '**/*test*']
+  ignore: ['**/*.runner.*', '**/*test*', '**/*.d.ts', '**/frontend/**']
 });
 if (!isEmpty(process.env.ROLLUP_ENTRIES)) {
   const customInputs = process.env.ROLLUP_ENTRIES.split(',')

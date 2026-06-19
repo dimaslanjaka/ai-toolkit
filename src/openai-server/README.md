@@ -40,6 +40,44 @@ yarn build
 
 ## Usage
 
+### Web chat frontend
+
+Start the API server and Vite frontend in separate terminals during development:
+
+```bash
+node dist/openai-server/start.mjs
+yarn dev:web
+```
+
+Vite serves the chat at `http://localhost:5173/chat/` and proxies `/v1` requests to
+`http://localhost:5758`.
+
+The frontend selects its API backend in this order:
+
+1. API base URL saved in the chat settings.
+2. `VITE_BACKEND_HOSTNAME_DEV` while running the Vite development server.
+3. `VITE_BACKEND_HOSTNAME_PROD` in a production build.
+4. The current browser origin.
+
+Typical local-domain configuration:
+
+```dotenv
+VITE_HOSTNAME=dev.webmanajemen.com
+VITE_PORT=5173
+VITE_BACKEND_HOSTNAME_DEV=127.0.0.1:5758
+VITE_BACKEND_HOSTNAME_PROD=sh.webmanajemen.com
+```
+
+The URL builder dynamically prepends `window.location.protocol` to the selected
+hostname. An HTTPS page therefore uses `https://127.0.0.1:5758/v1/*` in development
+and `https://sh.webmanajemen.com/v1/*` in production. The Vite proxy target is also
+derived from `VITE_BACKEND_HOSTNAME_DEV`, with HTTP as its server-side default when
+the hostname has no protocol.
+
+For production, `yarn build` creates the frontend in `dist/openai-server/frontend/`.
+The Express server then serves it at `http://localhost:5758/chat/` and redirects `/`
+to that route.
+
 ### 1. Start the server with ChatGPT provider
 
 ```bash

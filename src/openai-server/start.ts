@@ -29,6 +29,7 @@ app.use((err: any, _req: any, res: any, _next: any) => {
 
 startServer(app, 5758).then(({ state }) => {
   const endpoints = [
+    ['GET', '/chat/'],
     ['GET', '/v1/models'],
     ['POST', '/v1/chat/completions'],
     ['POST', '/v1/responses'],
