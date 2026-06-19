@@ -6,6 +6,9 @@
 - Lint/format: run `eslint --fix <files>`; TypeScript check `tsc --noEmit`.
 - Test: `yarn test` (Jest) – tests under `test/`; single test via `node --test <file>`.
 - Run single TS file: `node --no-warnings=ExperimentalWarning --loader ts-node/esm <file.ts>`.
+- Terminal PATH: before running commands, prepend repository-local executable directories so project tools take precedence:
+  - Windows: `bin/`, `node_modules/.bin/`, `venv/Scripts/`, `.venv/Scripts/`, `vendor/bin/`.
+  - Linux/macOS: `bin/`, `node_modules/.bin/`, `venv/bin/`, `.venv/bin/`, `vendor/bin/`.
 - Filesystem imports: use the default import `import fs from 'fs-extra'`; do not import from `fs` or `node:fs`.
 - Path imports: use the default import `import path from 'upath'`; do not import from `path` or `node:path`.
 - OpenAI-compatible server architecture and provider details: see `.opencode/memory/openai-compatible.md`.
