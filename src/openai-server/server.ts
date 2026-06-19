@@ -4,6 +4,8 @@ import fs from 'fs-extra';
 import path from 'upath';
 import * as provider from './provider/index.js';
 import { ProxyCheckerManager } from './proxy/proxy-checker-manager.js';
+import { SQLiteProxy } from '../database/SQLiteProxy.js';
+import { OPENCODE_PROXY_DB_PATH } from '../proxy/opencode-checker.js';
 import { serverLogger } from './utils.js';
 
 const proxyChecker = new ProxyCheckerManager();
@@ -117,6 +119,34 @@ app.get('/proxy-checker/logs', async (req, res) => {
     status: await proxyChecker.getStatus(),
     logs
   });
+});
+
+/**
+ * List all active proxies for a given host.
+ * Query params: host (required)
+ */
+app.get('/proxy-checker/proxies', async (req, res) => {
+  try {
+    const host = req.query.host as string | undefined;
+    if (!host) {
+      res.status(400).json({ ok: false, message: 'Missing required query parameter: host' });
+      return;
+    }
+
+    const proxyDb = new SQLiteProxy({ db_type: 'sqlite', sqlite_filename: OPENCODE_PROXY_DB_PATH });
+    await proxyDb.initialize();
+
+    const proxies = await proxyDb.getProxiesByHost(host);
+
+    await proxyDb.close();
+
+    res.json({ ok: true, proxies });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      message: error instanceof Error ? error.message : String(error)
+    });
+  }
 });
 
 export { app };

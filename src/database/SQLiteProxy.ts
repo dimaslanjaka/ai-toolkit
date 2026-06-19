@@ -128,6 +128,22 @@ export class SQLiteProxy extends ProxyDB {
   }
 
   /**
+   * Get all active proxies for a given host
+   * @param host - Target host/domain to find proxies for
+   * @returns Array of proxy entries with status and last_check info
+   */
+  async getProxiesByHost(host: string): Promise<(ProxyEntry & { status?: string; last_check?: string })[]> {
+    return this.query<ProxyEntry & { status?: string; last_check?: string }>(
+      `SELECT p.*, ph.status, ph.last_check
+       FROM proxies p
+       INNER JOIN proxy_hosts ph ON ph.proxy_id = p.id
+       INNER JOIN hosts h ON h.id = ph.host_id
+       WHERE h.host = ? AND ph.status = 'active'`,
+      [host]
+    );
+  }
+
+  /**
    * Get a working proxy for a given host
    * @param host - Target host/domain to find a proxy for
    * @param options - Optional filters
