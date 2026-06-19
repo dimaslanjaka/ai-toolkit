@@ -25,8 +25,8 @@ Format: `<type>(<scope>): <subject>`
 **Footer (optional):** Include `BREAKING CHANGE:` for breaking API changes, or `Closes #123` / `Fixes #456` for issue references.
 
 ### Step 3 — Save & Commit
-1. Write the commit message to `commit.txt`
-2. Run `git commit -F commit.txt`
+1. Write the commit message to `tmp/commit.txt`
+2. Run `git commit -F tmp/commit.txt`
 
 ## Rules
 - Do NOT validate styling (let git hooks handle linting)

@@ -21,7 +21,7 @@
     - `read_only: false`: allow future updates.
   - Content: plain prose or bullets covering what changed, why, and any migration notes.
 - After changing the OpenAI-compatible server or another AI API integration, update `.opencode/memory/openai-compatible.md`; keep it concise and limited to factual architecture details.
-- Staged‑file commit: use `git diff --staged` then generate conventional commit `<type>(<scope>): <subject>`; run `git commit -F commit.txt`.
+- Staged‑file commit: use `git diff --staged` then generate conventional commit `<type>(<scope>): <subject>`; run `git commit -F tmp/commit.txt`.
 - React/TSX guidelines (`*.tsx, *.jsx`): Tailwind utility classes, Flowbite patterns, Font Awesome Pro icons; no CDN tags; PascalCase filenames; functional components default export.
 - Python files (`*.py`): PEP 8, Black formatting, type hints, tests with pytest.
 - PHP files (`*.php`): PSR‑12, PHP 8.1+, typed properties, PHPDoc for public API.
