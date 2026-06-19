@@ -205,12 +205,12 @@
     "**/vendor/**": true,
     "**/venv/**": true
   },
-  "terminal.integrated.defaultProfile.windows": "Command Prompt",
+  "terminal.integrated.defaultProfile.windows": "Short PowerShell 7",
   "terminal.integrated.env.linux": {
     "DEBUG_PKG": "1",
     "ESLINT_USE_FLAT_CONFIG": "true",
     "NUITKA_CACHE_DIR": "${workspaceFolder}/tmp/nuitka-cache",
-    "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib:${workspaceFolder}/bin:${workspaceFolder}/node_modules/.bin:${workspaceFolder}/vendor/bin",
+    "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib:${workspaceFolder}/.venv/bin:${workspaceFolder}/venv/bin:${workspaceFolder}/bin:${workspaceFolder}/node_modules/.bin:${workspaceFolder}/vendor/bin",
     "PHP_CS_FIXER_IGNORE_ENV": "1",
     "PUPPETEER_SKIP_DOWNLOAD": "true"
   },
@@ -218,7 +218,7 @@
     "DEBUG_PKG": "1",
     "ESLINT_USE_FLAT_CONFIG": "true",
     "NUITKA_CACHE_DIR": "${workspaceFolder}\\tmp\\nuitka-cache",
-    "PATH": "${env:LOCALAPPDATA}\\nvm;C:\\nvm4w\\nodejs;C:\\Program Files\\Git\\cmd;C:\\Program Files\\Git\\usr\\bin;${env:PATH};${workspaceFolder}\\node_modules\\.bin;${workspaceFolder}\\bin;${workspaceFolder}\\vendor\\bin;C:\\laragon\\bin\\mysql\\mysql-8.4.3-winx64\\bin;${env:LOCALAPPDATA}\\Programs\\Ollama",
+    "PATH": "${env:LOCALAPPDATA}\\nvm;C:\\nvm4w\\nodejs;C:\\Program Files\\Git\\cmd;C:\\Program Files\\Git\\usr\\bin;${env:PATH};${workspaceFolder}\\.venv\\Scripts;${workspaceFolder}\\venv\\Scripts;${workspaceFolder}\\node_modules\\.bin;${workspaceFolder}\\bin;${workspaceFolder}\\vendor\\bin;C:\\laragon\\bin\\mysql\\mysql-8.4.3-winx64\\bin;${env:LOCALAPPDATA}\\Programs\\Ollama",
     "PHP_CS_FIXER_IGNORE_ENV": "1",
     "PUPPETEER_SKIP_DOWNLOAD": "true",
     "WORKSPACE_FOLDER": "${workspaceFolder}"
@@ -449,5 +449,12 @@
   "github.copilot.chat.agentDebugLog.fileLogging.enabled": true,
   "chat.agent.enabled": true,
   "chat.agent.networkFilter": false,
-  "chat.checkpoints.showFileChanges": true
+  "chat.checkpoints.showFileChanges": true,
+  "yaml.schemas": {
+    "file:///c:/Users/Dell/.vscode/extensions/continue.continue-2.0.0-win32-x64/config-yaml-schema.json": [
+      "file:///d%3A/Repositories/workspace/packages/ai-toolkit/.continue/agents/project-config.yaml",
+      ".continue/**/*.yaml",
+      "file:///c%3A/Users/Dell/.continue/config.yaml"
+    ]
+  }
 }
