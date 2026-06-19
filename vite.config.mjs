@@ -80,6 +80,9 @@ export default defineConfig(({ mode }) => {
       outDir: path.join(packageDirectory, 'dist/openai-server/frontend'),
       emptyOutDir: true
     },
+    optimizeDeps: {
+      include: ['ansi-to-html', 'dompurify']
+    },
     server: {
       host: hostname,
       port,

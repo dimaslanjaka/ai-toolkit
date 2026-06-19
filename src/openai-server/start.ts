@@ -3,7 +3,6 @@ import fs from 'fs-extra';
 import path from 'upath';
 import { app } from './server.js';
 import { serverLogger, startServer } from './utils.js';
-import { startProxyChecker } from './proxy/start-proxy-checker.js';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env'), quiet: true });
 
@@ -74,7 +73,4 @@ startServer(app, 5758, { https: getHttpsOptions() }).then(({ state }) => {
 
   console.log(message);
   serverLogger.log(message);
-  console.log('starting proxy checker...');
-  // startProxyChecker([], true); // for debug
-  startProxyChecker();
 });

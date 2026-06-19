@@ -2,12 +2,14 @@ import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from 'r
 import { createRoot } from 'react-dom/client';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import ProxyManager from './components/ProxyManager';
 import './styles.css';
 import { fallbackTitleFromPrompt, normalizeGeneratedTitle } from './utils/title';
 import { createApiUrl, sanitizeStoredApiBase } from './utils/url';
 
 type Provider = 'auto' | 'opencode' | 'puter' | 'chatgpt';
 type Theme = 'dark' | 'light';
+type AppView = 'chat' | 'proxy-manager';
 type MessageRole = 'user' | 'assistant';
 type MessageStatus = 'complete' | 'streaming' | 'stopped' | 'error';
 
@@ -99,6 +101,10 @@ function createId(): string {
 
 function now(): string {
   return new Date().toISOString();
+}
+
+function getViewFromPath(): AppView {
+  return /\/proxy-manager\/?$/.test(window.location.pathname) ? 'proxy-manager' : 'chat';
 }
 
 function createConversation(): Conversation {
@@ -255,6 +261,7 @@ function App() {
   const [settings, setSettings] = useState<ChatSettings>(initial.settings);
   const [models, setModels] = useState<ModelEntry[]>(FALLBACK_MODELS[initial.settings.provider]);
   const [connectionState, setConnectionState] = useState<'checking' | 'online' | 'offline'>('checking');
+  const [activeView, setActiveView] = useState<AppView>(getViewFromPath);
   const [composer, setComposer] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -263,6 +270,17 @@ function App() {
   const messageEndRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const { apiBase, apiKey, provider } = settings;
+
+  const navigateToView = useCallback((view: AppView) => {
+    const nextPath = view === 'proxy-manager' ? '/chat/proxy-manager' : '/chat/';
+
+    if (window.location.pathname !== nextPath) {
+      window.history.pushState({}, '', nextPath);
+    }
+
+    setActiveView(view);
+    setSidebarOpen(false);
+  }, []);
 
   const activeConversation = useMemo(
     () => conversations.find((conversation) => conversation.id === activeId) ?? conversations[0],
@@ -303,6 +321,13 @@ function App() {
   useEffect(() => {
     document.documentElement.classList.toggle('light', settings.theme === 'light');
   }, [settings.theme]);
+
+  useEffect(() => {
+    const handlePopState = () => setActiveView(getViewFromPath());
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ behavior: isSending ? 'smooth' : 'auto' });
@@ -367,10 +392,10 @@ function App() {
     const conversation = createConversation();
     setConversations((current) => [conversation, ...current]);
     setActiveId(conversation.id);
+    navigateToView('chat');
     setComposer('');
-    setSidebarOpen(false);
     requestAnimationFrame(() => textareaRef.current?.focus());
-  }, [isSending]);
+  }, [isSending, navigateToView]);
 
   const deleteConversation = useCallback(
     (conversationId: string) => {
@@ -705,14 +730,16 @@ function App() {
             <div
               key={conversation.id}
               className={`group flex items-center rounded-lg transition ${
-                conversation.id === activeConversation?.id ? 'bg-neutral-800' : 'hover:bg-neutral-800/70'
+                activeView === 'chat' && conversation.id === activeConversation?.id
+                  ? 'bg-neutral-800'
+                  : 'hover:bg-neutral-800/70'
               }`}>
               <button
                 type="button"
                 className="min-w-0 flex-1 truncate px-3 py-2.5 text-left text-sm focus:outline-none"
                 onClick={() => {
                   setActiveId(conversation.id);
-                  setSidebarOpen(false);
+                  navigateToView('chat');
                 }}>
                 {conversation.title}
               </button>
@@ -729,6 +756,17 @@ function App() {
         </nav>
 
         <div className="border-t border-white/10 p-3">
+          <button
+            type="button"
+            onClick={() => navigateToView('proxy-manager')}
+            className={`mb-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+              activeView === 'proxy-manager'
+                ? 'bg-neutral-800 text-neutral-100'
+                : 'text-neutral-300 hover:bg-neutral-800'
+            }`}>
+            <i aria-hidden="true" className="fa-solid fa-network-wired w-4 text-neutral-400" />
+            Proxy manager
+          </button>
           <button
             type="button"
             onClick={() => setSettingsOpen(true)}
@@ -757,53 +795,64 @@ function App() {
             <i aria-hidden="true" className="fa-solid fa-bars" />
           </IconButton>
 
-          <label className="relative min-w-0">
-            <span className="sr-only">Model</span>
-            <select
-              value={settings.model}
-              onChange={(event) => setSettings((current) => ({ ...current, model: event.target.value }))}
-              className={`max-w-[13rem] appearance-none truncate rounded-lg border-0 bg-transparent py-2 pr-7 pl-2 text-sm font-semibold focus:ring-2 focus:ring-emerald-500 md:max-w-xs ${
-                settings.theme === 'dark' ? 'text-neutral-100' : 'text-neutral-900'
-              }`}>
-              {models.map((model) => (
-                <option key={model.id} value={model.id} className="bg-neutral-800 text-neutral-100">
-                  {model.id}
-                </option>
-              ))}
-            </select>
-            <span className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-xs text-neutral-500">
-              ▾
-            </span>
-          </label>
+          {activeView === 'chat' ? (
+            <>
+              <label className="relative min-w-0">
+                <span className="sr-only">Model</span>
+                <select
+                  value={settings.model}
+                  onChange={(event) => setSettings((current) => ({ ...current, model: event.target.value }))}
+                  className={`max-w-[13rem] appearance-none truncate rounded-lg border-0 bg-transparent py-2 pr-7 pl-2 text-sm font-semibold focus:ring-2 focus:ring-emerald-500 md:max-w-xs ${
+                    settings.theme === 'dark' ? 'text-neutral-100' : 'text-neutral-900'
+                  }`}>
+                  {models.map((model) => (
+                    <option key={model.id} value={model.id} className="bg-neutral-800 text-neutral-100">
+                      {model.id}
+                    </option>
+                  ))}
+                </select>
+                <span className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-xs text-neutral-500">
+                  ▾
+                </span>
+              </label>
 
-          <span
-            className={`hidden rounded-full px-2 py-1 text-[11px] font-medium sm:inline ${
-              settings.theme === 'dark' ? 'bg-neutral-800 text-neutral-400' : 'bg-neutral-100 text-neutral-500'
-            }`}>
-            {providerLabel}
-          </span>
+              <span
+                className={`hidden rounded-full px-2 py-1 text-[11px] font-medium sm:inline ${
+                  settings.theme === 'dark' ? 'bg-neutral-800 text-neutral-400' : 'bg-neutral-100 text-neutral-500'
+                }`}>
+                {providerLabel}
+              </span>
+            </>
+          ) : (
+            <div className="min-w-0 px-2">
+              <p className="truncate text-sm font-semibold">Proxy manager</p>
+              <p className="hidden text-[11px] text-neutral-500 sm:block">OpenCode proxy operations</p>
+            </div>
+          )}
 
           <div className="ml-auto flex items-center gap-1">
-            <span
-              className={`mr-1 hidden items-center gap-1.5 text-xs md:flex ${
-                connectionState === 'online'
-                  ? 'text-emerald-400'
+            {activeView === 'chat' ? (
+              <span
+                className={`mr-1 hidden items-center gap-1.5 text-xs md:flex ${
+                  connectionState === 'online'
+                    ? 'text-emerald-400'
+                    : connectionState === 'checking'
+                      ? 'text-amber-400'
+                      : 'text-neutral-500'
+                }`}>
+                <i
+                  aria-hidden="true"
+                  className={`fa-solid ${
+                    connectionState === 'online' ? 'fa-plug-circle-check' : 'fa-circle-exclamation'
+                  }`}
+                />
+                {connectionState === 'online'
+                  ? 'Connected'
                   : connectionState === 'checking'
-                    ? 'text-amber-400'
-                    : 'text-neutral-500'
-              }`}>
-              <i
-                aria-hidden="true"
-                className={`fa-solid ${
-                  connectionState === 'online' ? 'fa-plug-circle-check' : 'fa-circle-exclamation'
-                }`}
-              />
-              {connectionState === 'online'
-                ? 'Connected'
-                : connectionState === 'checking'
-                  ? 'Checking'
-                  : 'Server offline'}
-            </span>
+                    ? 'Checking'
+                    : 'Server offline'}
+              </span>
+            ) : null}
             <IconButton
               label={settings.theme === 'dark' ? 'Use light theme' : 'Use dark theme'}
               onClick={() =>
@@ -820,153 +869,165 @@ function App() {
           </div>
         </header>
 
-        <section className="app-scrollbar min-h-0 flex-1 overflow-y-auto">
-          {!activeConversation?.messages.length ? (
-            <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col justify-start px-5 pt-10 pb-48 md:justify-center md:pt-12">
-              <div className="mb-8 text-center">
-                <div className="mx-auto mb-5 flex size-12 items-center justify-center rounded-full bg-emerald-600 text-lg text-white shadow-lg shadow-emerald-950/20">
-                  <i aria-hidden="true" className="fa-solid fa-wand-magic-sparkles" />
-                </div>
-                <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">How can I help you today?</h1>
-                <p className="mt-2 text-sm text-neutral-500">
-                  Chat through your local OpenAI-compatible Express server.
-                </p>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                {PROMPT_SUGGESTIONS.map((suggestion) => (
-                  <button
-                    key={suggestion.title}
-                    type="button"
-                    onClick={() => {
-                      setComposer(suggestion.prompt);
-                      requestAnimationFrame(() => textareaRef.current?.focus());
-                    }}
-                    className={`rounded-xl border p-4 text-left transition focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-                      settings.theme === 'dark'
-                        ? 'border-white/10 bg-neutral-800/40 hover:bg-neutral-800'
-                        : 'border-neutral-200 bg-white hover:bg-neutral-50'
-                    }`}>
-                    <span className="block text-sm font-semibold">{suggestion.title}</span>
-                    <span className="mt-1 block text-xs leading-5 text-neutral-500">{suggestion.prompt}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="mx-auto w-full max-w-3xl px-4 pt-6 pb-40 md:px-6">
-              {activeConversation.messages.map((message) => (
-                <article
-                  key={message.id}
-                  className={`group flex gap-3 py-5 md:gap-4 ${
-                    message.role === 'user' ? 'justify-end' : 'justify-start'
-                  }`}>
-                  {message.role === 'assistant' ? (
-                    <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-xs text-white">
+        {activeView === 'proxy-manager' ? (
+          <ProxyManager apiBase={settings.apiBase} apiKey={settings.apiKey} theme={settings.theme} />
+        ) : (
+          <>
+            <section className="app-scrollbar min-h-0 flex-1 overflow-y-auto">
+              {!activeConversation?.messages.length ? (
+                <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col justify-start px-5 pt-10 pb-48 md:justify-center md:pt-12">
+                  <div className="mb-8 text-center">
+                    <div className="mx-auto mb-5 flex size-12 items-center justify-center rounded-full bg-emerald-600 text-lg text-white shadow-lg shadow-emerald-950/20">
                       <i aria-hidden="true" className="fa-solid fa-wand-magic-sparkles" />
                     </div>
-                  ) : null}
-
-                  <div
-                    className={`min-w-0 ${
-                      message.role === 'user'
-                        ? `max-w-[85%] rounded-3xl px-5 py-3 ${
-                            settings.theme === 'dark' ? 'bg-neutral-700' : 'bg-neutral-100'
-                          }`
-                        : 'w-full pt-1'
-                    }`}>
-                    {message.role === 'assistant' ? (
-                      <div
-                        className={`markdown-body ${
-                          message.status === 'streaming' ? 'typing-cursor' : ''
-                        } ${message.status === 'error' ? 'text-red-300' : ''}`}>
-                        {message.content ? (
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
-                        ) : (
-                          <span className="text-neutral-500">Thinking</span>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="whitespace-pre-wrap text-[15px] leading-6">{message.content}</p>
-                    )}
-
-                    {message.role === 'assistant' && message.status !== 'streaming' ? (
-                      <div className="mt-2 flex items-center gap-1 text-neutral-500 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
-                        <IconButton
-                          label="Copy response"
-                          onClick={() => void navigator.clipboard.writeText(message.content)}
-                          className="size-8">
-                          <i aria-hidden="true" className="fa-solid fa-copy text-xs" />
-                        </IconButton>
-                        {message.id === lastAssistantId ? (
-                          <IconButton label="Regenerate response" onClick={regenerateLastResponse} className="size-8">
-                            <i aria-hidden="true" className="fa-solid fa-rotate-right text-xs" />
-                          </IconButton>
-                        ) : null}
-                        {message.status === 'stopped' ? <span className="ml-1 text-xs">Stopped</span> : null}
-                      </div>
-                    ) : null}
+                    <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">How can I help you today?</h1>
+                    <p className="mt-2 text-sm text-neutral-500">
+                      Chat through your local OpenAI-compatible Express server.
+                    </p>
                   </div>
-                </article>
-              ))}
-              <div ref={messageEndRef} />
-            </div>
-          )}
-        </section>
 
-        <div
-          className={`pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t ${
-            settings.theme === 'dark'
-              ? 'from-[#212121] via-[#212121] to-transparent'
-              : 'from-white via-white to-transparent'
-          } pt-16`}>
-          <div className="pointer-events-auto mx-auto w-full max-w-3xl px-3 pb-3 md:px-5 md:pb-5">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {PROMPT_SUGGESTIONS.map((suggestion) => (
+                      <button
+                        key={suggestion.title}
+                        type="button"
+                        onClick={() => {
+                          setComposer(suggestion.prompt);
+                          requestAnimationFrame(() => textareaRef.current?.focus());
+                        }}
+                        className={`rounded-xl border p-4 text-left transition focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                          settings.theme === 'dark'
+                            ? 'border-white/10 bg-neutral-800/40 hover:bg-neutral-800'
+                            : 'border-neutral-200 bg-white hover:bg-neutral-50'
+                        }`}>
+                        <span className="block text-sm font-semibold">{suggestion.title}</span>
+                        <span className="mt-1 block text-xs leading-5 text-neutral-500">{suggestion.prompt}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="mx-auto w-full max-w-3xl px-4 pt-6 pb-40 md:px-6">
+                  {activeConversation.messages.map((message) => (
+                    <article
+                      key={message.id}
+                      className={`group flex gap-3 py-5 md:gap-4 ${
+                        message.role === 'user' ? 'justify-end' : 'justify-start'
+                      }`}>
+                      {message.role === 'assistant' ? (
+                        <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-xs text-white">
+                          <i aria-hidden="true" className="fa-solid fa-wand-magic-sparkles" />
+                        </div>
+                      ) : null}
+
+                      <div
+                        className={`min-w-0 ${
+                          message.role === 'user'
+                            ? `max-w-[85%] rounded-3xl px-5 py-3 ${
+                                settings.theme === 'dark' ? 'bg-neutral-700' : 'bg-neutral-100'
+                              }`
+                            : 'w-full pt-1'
+                        }`}>
+                        {message.role === 'assistant' ? (
+                          <div
+                            className={`markdown-body ${
+                              message.status === 'streaming' ? 'typing-cursor' : ''
+                            } ${message.status === 'error' ? 'text-red-300' : ''}`}>
+                            {message.content ? (
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+                            ) : (
+                              <span className="text-neutral-500">Thinking</span>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="whitespace-pre-wrap text-[15px] leading-6">{message.content}</p>
+                        )}
+
+                        {message.role === 'assistant' && message.status !== 'streaming' ? (
+                          <div className="mt-2 flex items-center gap-1 text-neutral-500 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
+                            <IconButton
+                              label="Copy response"
+                              onClick={() => void navigator.clipboard.writeText(message.content)}
+                              className="size-8">
+                              <i aria-hidden="true" className="fa-solid fa-copy text-xs" />
+                            </IconButton>
+                            {message.id === lastAssistantId ? (
+                              <IconButton
+                                label="Regenerate response"
+                                onClick={regenerateLastResponse}
+                                className="size-8">
+                                <i aria-hidden="true" className="fa-solid fa-rotate-right text-xs" />
+                              </IconButton>
+                            ) : null}
+                            {message.status === 'stopped' ? <span className="ml-1 text-xs">Stopped</span> : null}
+                          </div>
+                        ) : null}
+                      </div>
+                    </article>
+                  ))}
+                  <div ref={messageEndRef} />
+                </div>
+              )}
+            </section>
+
             <div
-              className={`rounded-[1.7rem] border p-2 shadow-xl ${
+              className={`pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t ${
                 settings.theme === 'dark'
-                  ? 'border-white/10 bg-[#303030] shadow-black/20'
-                  : 'border-neutral-200 bg-white shadow-neutral-300/30'
-              }`}>
-              <textarea
-                ref={textareaRef}
-                value={composer}
-                rows={1}
-                aria-label="Message"
-                placeholder="Message Toolkit Chat"
-                onChange={(event) => setComposer(event.target.value)}
-                onKeyDown={handleComposerKeyDown}
-                className={`app-scrollbar max-h-48 min-h-11 w-full resize-none overflow-y-auto border-0 bg-transparent px-3 py-2.5 text-[15px] leading-6 outline-none placeholder:text-neutral-500 focus:ring-0 ${
-                  settings.theme === 'dark' ? 'text-neutral-100' : 'text-neutral-900'
-                }`}
-              />
-              <div className="flex items-center gap-2 px-1 pb-1">
-                <span className="truncate px-2 text-xs text-neutral-500">
-                  {settings.provider === 'chatgpt'
-                    ? 'ChatGPT browser uses only the latest user message'
-                    : `${providerLabel} · ${settings.model}`}
-                </span>
-                <button
-                  type="button"
-                  aria-label={isSending ? 'Stop generating' : 'Send message'}
-                  title={isSending ? 'Stop generating' : 'Send message'}
-                  disabled={!isSending && !composer.trim()}
-                  onClick={() => (isSending ? stopGeneration() : void submitPrompt(composer))}
-                  className={`ml-auto inline-flex size-9 shrink-0 items-center justify-center rounded-full transition focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-neutral-800 ${
-                    isSending
-                      ? 'bg-white text-neutral-900 hover:bg-neutral-200'
-                      : composer.trim()
-                        ? 'bg-emerald-600 text-white hover:bg-emerald-500'
-                        : 'cursor-not-allowed bg-neutral-600 text-neutral-400'
+                  ? 'from-[#212121] via-[#212121] to-transparent'
+                  : 'from-white via-white to-transparent'
+              } pt-16`}>
+              <div className="pointer-events-auto mx-auto w-full max-w-3xl px-3 pb-3 md:px-5 md:pb-5">
+                <div
+                  className={`rounded-[1.7rem] border p-2 shadow-xl ${
+                    settings.theme === 'dark'
+                      ? 'border-white/10 bg-[#303030] shadow-black/20'
+                      : 'border-neutral-200 bg-white shadow-neutral-300/30'
                   }`}>
-                  <i aria-hidden="true" className={`fa-solid ${isSending ? 'fa-stop' : 'fa-paper-plane'} text-sm`} />
-                </button>
+                  <textarea
+                    ref={textareaRef}
+                    value={composer}
+                    rows={1}
+                    aria-label="Message"
+                    placeholder="Message Toolkit Chat"
+                    onChange={(event) => setComposer(event.target.value)}
+                    onKeyDown={handleComposerKeyDown}
+                    className={`app-scrollbar max-h-48 min-h-11 w-full resize-none overflow-y-auto border-0 bg-transparent px-3 py-2.5 text-[15px] leading-6 outline-none placeholder:text-neutral-500 focus:ring-0 ${
+                      settings.theme === 'dark' ? 'text-neutral-100' : 'text-neutral-900'
+                    }`}
+                  />
+                  <div className="flex items-center gap-2 px-1 pb-1">
+                    <span className="truncate px-2 text-xs text-neutral-500">
+                      {settings.provider === 'chatgpt'
+                        ? 'ChatGPT browser uses only the latest user message'
+                        : `${providerLabel} · ${settings.model}`}
+                    </span>
+                    <button
+                      type="button"
+                      aria-label={isSending ? 'Stop generating' : 'Send message'}
+                      title={isSending ? 'Stop generating' : 'Send message'}
+                      disabled={!isSending && !composer.trim()}
+                      onClick={() => (isSending ? stopGeneration() : void submitPrompt(composer))}
+                      className={`ml-auto inline-flex size-9 shrink-0 items-center justify-center rounded-full transition focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-neutral-800 ${
+                        isSending
+                          ? 'bg-white text-neutral-900 hover:bg-neutral-200'
+                          : composer.trim()
+                            ? 'bg-emerald-600 text-white hover:bg-emerald-500'
+                            : 'cursor-not-allowed bg-neutral-600 text-neutral-400'
+                      }`}>
+                      <i
+                        aria-hidden="true"
+                        className={`fa-solid ${isSending ? 'fa-stop' : 'fa-paper-plane'} text-sm`}
+                      />
+                    </button>
+                  </div>
+                </div>
+                <p className="mt-2 text-center text-[11px] text-neutral-500">
+                  AI can make mistakes. Check important information.
+                </p>
               </div>
             </div>
-            <p className="mt-2 text-center text-[11px] text-neutral-500">
-              AI can make mistakes. Check important information.
-            </p>
-          </div>
-        </div>
+          </>
+        )}
       </main>
 
       {settingsOpen ? (
