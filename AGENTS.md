@@ -2,10 +2,19 @@
 
 - Monorepo: `packages/*` workspaces, source in `src/` only.
 - Module system: this project mixes ESM and CommonJS; preserve the module style used by the surrounding package and file.
-- Build: `yarn build`.
+- Build: `yarn build` (multi-step: `tsc -p tsconfig.build.json` → `rollup -c` → `build-cli.mjs` → `tsc -p tsconfig.dts.json` → `vite build`). Intermediate TS compiles to `tmp/dist/` before Rollup bundles to `dist/`.
+- Include excluded entries in Rollup: `ROLLUP_ENTRIES=src/path/to/file.ts` adds files the default glob ignores (e.g., `*.runner.*`).
 - Lint/format: prefer `corepack yarn exec eslint --fix <files>` (the repo does not define a `yarn eslint` script); TypeScript check `tsc --noEmit`.
 - Test: `yarn test` (Jest) – tests under `test/`; single Jest file via `corepack yarn jest --runTestsByPath <file>`.
 - Run single TS file: `node --no-warnings=ExperimentalWarning --loader ts-node/esm <file.ts>`.
+- Pre-commit hook (`.husky/pre-commit`):
+  - Auto-stages submodule pointer changes (skipped on CI).
+  - Regenerates CI workflow YAML when test files are staged: `bcc generate-ci` → stages `.github/workflows/test.yml`, `.github/actions/setup-environments/action.yml`, `.github/workflows/build-release.yml`.
+  - Runs `corepack yarn exec lint-staged --config lint-staged.config.js --no-stash` for lintable files.
+  - Sets up `resolve_hash` merge driver (idempotent).
+  - Verifies release tarballs (`release/`, `releases/`) do not exceed 10 MB.
+- Lint-staged formatters: ESLint for `*.{js,cjs,mjs,ts,jsx,tsx}`; Prettier for `*.{json,css,scss,less,yml,yaml,sql,jsonc}`; `php-cs-fixer` for `*.php`; Black for `*.py`.
+- OpenAI-compatible server dev mode: `bin\openai-server.cmd` (Windows) uses nodemon to watch `src/`, rebuilds via `tsc -p tsconfig.build.json && rollup -c`, then runs the built entry.
 - Terminal PATH: before running commands, prepend repository-local executable directories so project tools take precedence:
   - Windows: `bin/`, `node_modules/.bin/`, `venv/Scripts/`, `.venv/Scripts/`, `vendor/bin/`.
   - Linux/macOS: `bin/`, `node_modules/.bin/`, `venv/bin/`, `.venv/bin/`, `vendor/bin/`.

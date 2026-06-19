@@ -122,12 +122,10 @@ coverage.*
 # Non-indexed files
 .opencode/*
 !.opencode/plugins/memory
-!.opencode/opencode.json
-!.opencode/opencode.jsonc
+!.opencode/opencode.json*
 !.opencode/agents/
-!.opencode/agents/*
+!.opencode/skills/
 !.opencode/memory/
-.opencode/memory/*
 !.opencode/memory/.gitignore
 !.opencode/memory/openai-compatible.md
 binary-collection*
