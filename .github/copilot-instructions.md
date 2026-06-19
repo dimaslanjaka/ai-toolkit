@@ -79,3 +79,11 @@ When editing multiple files:
 - **Git-agnostic reverts**: file editing does not depend on Git state.
 - **Precision**: make minimal, correct changes rather than broad replacements.
 - **Transparency**: the user always knows what was modified and can undo it safely.
+
+## AGENTS.md Maintenance
+
+When updating `AGENTS.md`, keep edits minimal, accurate, and grounded in commands or workflows already used by this repository.
+
+- Prefer adding repo-proven commands such as `corepack yarn exec eslint --fix <files>` instead of inventing new script names.
+- Do not touch unrelated sections or auto-generated files while updating contributor instructions.
+- If a workflow is uncertain, add a short `TODO` note rather than guessing.
