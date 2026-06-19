@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import './styles.css';
+import { fallbackTitleFromPrompt, normalizeGeneratedTitle } from './utils/title';
 import { createApiUrl, sanitizeStoredApiBase } from './utils/url';
 
 type Provider = 'auto' | 'opencode' | 'puter' | 'chatgpt';
@@ -151,19 +152,10 @@ function getInitialState(): { conversations: Conversation[]; activeId: string; s
   };
 }
 
-function titleFromPrompt(prompt: string): string {
-  const compact = prompt.replace(/\s+/g, ' ').trim();
-
-  if (compact.length <= 42) {
-    return compact;
-  }
-
-  return `${compact.slice(0, 39).trim()}…`;
-}
-
 function getRequestHeaders(settings: Pick<ChatSettings, 'apiKey' | 'provider'>): HeadersInit {
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    'X-AI-Toolkit-Frontend': 'true'
   };
 
   if (settings.apiKey.trim()) {
@@ -401,11 +393,47 @@ function App() {
     [activeId]
   );
 
+  const generateConversationTitle = useCallback(
+    async (prompt: string, assistantResponse: string, fallbackTitle: string): Promise<string> => {
+      try {
+        const titlePrompt = [
+          'Create a concise title for this chat.',
+          'Return only the title with no quotes, prefix, markdown, or ending period.',
+          'Use at most 6 words.',
+          '',
+          `User: ${prompt.slice(0, 2000)}`,
+          `Assistant: ${assistantResponse.slice(0, 2000)}`
+        ].join('\n');
+        const response = await fetch(createApiUrl('/v1/chat/completions', { apiBase: settings.apiBase }), {
+          method: 'POST',
+          headers: getRequestHeaders(settings),
+          body: JSON.stringify({
+            model: settings.model,
+            messages: [{ role: 'user', content: titlePrompt }],
+            stream: false,
+            max_tokens: 64
+          })
+        });
+
+        if (!response.ok) {
+          return fallbackTitle;
+        }
+
+        const payload = await response.json();
+        return normalizeGeneratedTitle(extractDelta(payload), fallbackTitle);
+      } catch {
+        return fallbackTitle;
+      }
+    },
+    [settings]
+  );
+
   const streamCompletion = useCallback(
-    async (conversationId: string, requestMessages: ChatMessage[], assistantId: string) => {
+    async (conversationId: string, requestMessages: ChatMessage[], assistantId: string): Promise<string | null> => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
       setIsSending(true);
+      let assistantContent = '';
 
       try {
         const messages = [
@@ -467,6 +495,7 @@ function App() {
             }
 
             if (parsed.delta) {
+              assistantContent += parsed.delta;
               updateConversation(conversationId, (conversation) => ({
                 ...conversation,
                 updatedAt: now(),
@@ -495,6 +524,7 @@ function App() {
           )
         }));
         setConnectionState('online');
+        return assistantContent.trim();
       } catch (error) {
         const aborted = (error as Error).name === 'AbortError';
 
@@ -525,6 +555,8 @@ function App() {
         if (!aborted) {
           setConnectionState('offline');
         }
+
+        return null;
       } finally {
         if (abortControllerRef.current === controller) {
           abortControllerRef.current = null;
@@ -561,17 +593,29 @@ function App() {
       };
       const sourceMessages = baseMessages ?? activeConversation.messages;
       const requestMessages = [...sourceMessages, userMessage];
+      const shouldGenerateTitle = sourceMessages.length === 0 && activeConversation.messages.length === 0;
+      const fallbackTitle = shouldGenerateTitle ? fallbackTitleFromPrompt(trimmed) : activeConversation.title;
 
       updateConversation(activeConversation.id, (conversation) => ({
         ...conversation,
-        title: conversation.messages.length ? conversation.title : titleFromPrompt(trimmed),
+        title: shouldGenerateTitle ? fallbackTitle : conversation.title,
         updatedAt: timestamp,
         messages: [...sourceMessages, userMessage, assistantMessage]
       }));
       setComposer('');
-      await streamCompletion(activeConversation.id, requestMessages, assistantMessage.id);
+      const assistantResponse = await streamCompletion(activeConversation.id, requestMessages, assistantMessage.id);
+
+      if (shouldGenerateTitle && assistantResponse) {
+        const generatedTitle = await generateConversationTitle(trimmed, assistantResponse, fallbackTitle);
+
+        updateConversation(activeConversation.id, (conversation) => ({
+          ...conversation,
+          title: conversation.title === fallbackTitle ? generatedTitle : conversation.title,
+          updatedAt: now()
+        }));
+      }
     },
-    [activeConversation, isSending, streamCompletion, updateConversation]
+    [activeConversation, generateConversationTitle, isSending, streamCompletion, updateConversation]
   );
 
   const regenerateLastResponse = useCallback(() => {

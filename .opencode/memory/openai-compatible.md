@@ -8,12 +8,12 @@ read_only: false
 - Source: `src/openai-server/`, including `src/openai-server/frontend/`, `src/provider/{opencode,puter,chatgpt}/`, plus related `src/proxy/` and `src/puppeteer/` modules. `dist/` is generated.
 - Build and startup:
   - `yarn build` compiles to `tmp/dist`; Rollup emits preserved ESM (`.mjs`) and CommonJS (`.cjs`) modules into `dist`, then Vite builds the web chat into `dist/openai-server/frontend/`.
-  - `yarn dev:web` serves the Vite frontend at `http://localhost:5173/chat/` and proxies `/v1` and `/proxy-checker` to `http://localhost:5758`.
+  - Local HTTPS is enabled by default. `yarn dev:web` uses `vite-plugin-mkcert` to generate `.cert/dev.pem` and `.cert/cert.pem`, serves the Vite frontend at `https://localhost:5173/chat/`, and proxies `/v1` and `/proxy-checker` to the HTTPS Express server.
   - Start the server with `node dist/openai-server/start.mjs`.
-  - It binds to `0.0.0.0`, preferring port `5758` and scanning upward when occupied.
+  - The standard startup reads `.env`, binds to `0.0.0.0`, prefers port `5758`, scans upward when occupied, and loads the shared mkcert files. `OPENAI_SERVER_HTTPS=false` explicitly restores HTTP.
   - State: `tmp/database/openai-server.json`.
   - Logs: `tmp/logs/openai-compatible/server.log`; per-request logs: `tmp/logs/openai-compatible/messages/`, cleared at startup.
-  - Startup automatically calls `startProxyChecker()` after the HTTP server begins listening.
+  - Startup automatically calls `startProxyChecker()` after the HTTP or HTTPS server begins listening.
 - HTTP surface:
   - `GET /` redirects to `/chat/`; `GET /chat/` and nested client routes serve the built ChatGPT-style frontend when present.
   - OpenAI-compatible routes are `GET /v1/models` and `POST /v1/chat/completions`, `/v1/responses`, `/v1/completions`, and `/v1/embeddings`.
@@ -22,11 +22,14 @@ read_only: false
 - Web chat:
   - React, Vite, Tailwind, Flowbite patterns, Font Awesome Pro CSS class icons loaded by the frontend HTML, React Markdown, and GFM rendering.
   - Uses `GET /v1/models` and streaming `POST /v1/chat/completions`; `X-Request-Provider` supports `opencode`, `puter`, or `chatgpt`, while `auto` omits the header.
+  - Every browser frontend request includes `X-AI-Toolkit-Frontend: true` so server middleware can distinguish web-chat traffic.
   - `VITE_HOSTNAME` and `VITE_PORT` configure the Vite development listener.
   - Browser API URLs use `VITE_BACKEND_HOSTNAME_DEV` in development and `VITE_BACKEND_HOSTNAME_PROD` in production, dynamically prefixed with `window.location.protocol`.
-  - Vite proxies `/v1` and `/proxy-checker` to `VITE_BACKEND_HOSTNAME_DEV`, defaulting a missing proxy-target protocol to HTTP.
+  - `OPENAI_SERVER_HTTPS_KEY_FILE` and `OPENAI_SERVER_HTTPS_CERT_FILE` default to `.cert/dev.pem` and `.cert/cert.pem`; both files must share a directory so Vite and Express use the same certificate.
+  - Vite proxies `/v1` and `/proxy-checker` to `VITE_BACKEND_HOSTNAME_DEV`, defaulting a missing proxy-target protocol to HTTPS unless `OPENAI_SERVER_HTTPS=false`.
   - API priority is browser-saved override, mode-specific backend hostname, then the current browser origin; Vite reads env files from the package root.
   - Conversations, connection settings, theme, optional bearer token, and system prompt persist in browser local storage.
+  - After the first successful assistant response, the client uses a non-streaming `/v1/chat/completions` request to generate a concise conversation title; the compact first-prompt title remains as fallback.
   - Supports responsive navigation, new/delete chat, stop, regenerate, copy, model selection, provider selection, fallback models, and SSE error handling.
 - Provider dispatch:
   - `provider/index.ts` dynamically loads the fixed fallback chain `opencode → puter → chatgpt`.
