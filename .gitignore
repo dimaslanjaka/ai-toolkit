@@ -131,3 +131,4 @@ coverage.*
 !.opencode/memory/.gitignore
 !.opencode/memory/openai-compatible.md
 binary-collection*
+**/*superpowers/**
