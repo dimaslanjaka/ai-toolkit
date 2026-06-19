@@ -31,6 +31,7 @@ read_only: false
   - Conversations, connection settings, theme, optional bearer token, and system prompt persist in browser local storage.
   - After the first successful assistant response, the client uses a non-streaming `/v1/chat/completions` request to generate a concise conversation title; the compact first-prompt title remains as fallback.
   - Supports responsive navigation, new/delete chat, stop, regenerate, copy, model selection, provider selection, fallback models, and SSE error handling.
+  - `/chat/proxy-manager` is a routed operations view for the proxy checker. It provides start/stop actions, adaptive status/log polling, PID and lock health, lifecycle details, runtime paths, and searchable copied logs while sharing the chat API-base, bearer-token, and theme settings.
 - Provider dispatch:
   - `provider/index.ts` dynamically loads the fixed fallback chain `opencode → puter → chatgpt`.
   - `X-Request-Provider` selects one provider with no fallback. Valid names are `opencode`, `puter`, and `chatgpt`; unknown names reach the loader's Puter default branch.

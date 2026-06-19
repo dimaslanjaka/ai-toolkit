@@ -4,7 +4,7 @@
 - Module system: this project mixes ESM and CommonJS; preserve the module style used by the surrounding package and file.
 - Build: `yarn build`.
 - Lint/format: prefer `corepack yarn exec eslint --fix <files>` (the repo does not define a `yarn eslint` script); TypeScript check `tsc --noEmit`.
-- Test: `yarn test` (Jest) – tests under `test/`; single test via `node --test <file>`.
+- Test: `yarn test` (Jest) – tests under `test/`; single Jest file via `corepack yarn jest --runTestsByPath <file>`.
 - Run single TS file: `node --no-warnings=ExperimentalWarning --loader ts-node/esm <file.ts>`.
 - Terminal PATH: before running commands, prepend repository-local executable directories so project tools take precedence:
   - Windows: `bin/`, `node_modules/.bin/`, `venv/Scripts/`, `.venv/Scripts/`, `vendor/bin/`.
