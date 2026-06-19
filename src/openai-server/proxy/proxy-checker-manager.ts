@@ -1,8 +1,9 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
-import { open } from 'node:fs/promises';
 import process from 'node:process';
 import fs from 'fs-extra';
-import upath from 'upath';
+import path from 'upath';
+import { PROXY_CHECKER_EXTERNAL_LOCK_ENV } from '../../proxy/proxy-checker-lock.js';
+import { createProxyCheckerNodeArgs, resolveProxyCheckerRunner } from './proxy-checker-runner.js';
 
 export type ProxyCheckerState = 'idle' | 'starting' | 'running' | 'finished' | 'failed' | 'stopped' | 'locked';
 
@@ -32,25 +33,22 @@ export class ProxyCheckerManager {
   private lastError: string | null = null;
 
   private readonly projectRoot: string;
-  private readonly runnerFile: string;
   private readonly logFile: string;
   private readonly pidFile: string;
   private readonly lockFile: string;
 
   constructor(projectRoot = process.cwd()) {
-    this.projectRoot = upath.normalize(projectRoot);
+    this.projectRoot = path.normalize(projectRoot);
 
-    this.runnerFile = upath.join(this.projectRoot, 'src', 'proxy', 'opencode-checker.runner.ts');
+    const tmpDir = path.join(this.projectRoot, 'tmp');
 
-    const tmpDir = upath.join(this.projectRoot, 'tmp');
-
-    this.logFile = upath.join(tmpDir, 'logs/proxy-checker.log');
-    this.pidFile = upath.join(tmpDir, 'logs/proxy-checker.pid');
-    this.lockFile = upath.join(tmpDir, 'logs/proxy-checker.lock');
+    this.logFile = path.join(tmpDir, 'logs/proxy-checker.log');
+    this.pidFile = path.join(tmpDir, 'logs/proxy-checker.pid');
+    this.lockFile = path.join(tmpDir, 'logs/proxy-checker.lock');
   }
 
   async start() {
-    await fs.ensureDir(upath.dirname(this.logFile));
+    await fs.ensureDir(path.dirname(this.logFile));
 
     const currentPid = await this.readPidFile();
 
@@ -86,9 +84,11 @@ export class ProxyCheckerManager {
       this.signal = null;
       this.lastError = null;
 
-      const args = ['--no-warnings=ExperimentalWarning', '--loader', 'ts-node/esm', this.runnerFile];
+      const runner = resolveProxyCheckerRunner(this.projectRoot);
+      const args = createProxyCheckerNodeArgs(runner);
 
       await this.writeLog('Starting proxy checker');
+      await this.writeLog(`Runner: ${runner.kind} ${runner.file}`);
       await this.writeLog(`Command: ${process.execPath} ${args.join(' ')}`);
       await this.writeLog(`CWD: ${this.projectRoot}`);
 
@@ -99,7 +99,8 @@ export class ProxyCheckerManager {
         stdio: ['ignore', 'pipe', 'pipe'],
         env: {
           ...process.env,
-          FORCE_COLOR: '1'
+          FORCE_COLOR: '1',
+          [PROXY_CHECKER_EXTERNAL_LOCK_ENV]: '1'
         }
       });
 
@@ -236,7 +237,7 @@ export class ProxyCheckerManager {
 
   private async acquireLock() {
     try {
-      const handle = await open(this.lockFile, 'wx');
+      const handle = await fs.promises.open(this.lockFile, 'wx');
 
       await handle.writeFile(
         JSON.stringify(
@@ -320,7 +321,7 @@ export class ProxyCheckerManager {
   }
 
   private async writeLog(input: string) {
-    await fs.ensureDir(upath.dirname(this.logFile));
+    await fs.ensureDir(path.dirname(this.logFile));
 
     const lines = String(input)
       .split(/\r?\n/)
