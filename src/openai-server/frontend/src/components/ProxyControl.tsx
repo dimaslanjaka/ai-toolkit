@@ -85,7 +85,7 @@ export default function ProxyControl({
   }, [notice, setNotice]);
 
   return (
-    <div className={`flex flex-col h-[38rem] overflow-hidden rounded-2xl border shadow-lg ${panelClass}`}>
+    <div className={`flex flex-col overflow-hidden rounded-2xl border shadow-lg ${panelClass}`}>
       <div
         className={`flex flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-center ${
           theme === 'dark' ? 'border-white/10' : 'border-neutral-200'

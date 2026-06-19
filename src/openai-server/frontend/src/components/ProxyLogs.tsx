@@ -462,7 +462,7 @@ export default function ProxyManager({ apiBase, apiKey, theme }: ProxyManagerPro
             className={`px-4 py-2 rounded-t-md font-medium ${activeTab === 'control' ? 'border-b-2 border-emerald-500 text-emerald-400' : 'text-neutral-500'}
               `}
             onClick={() => setActiveTab('control')}>
-            <i className="fa-solid fa-terminal mr-1" aria-hidden="true" /> Controller
+            <i className="fa-solid fa-terminal mr-1" aria-hidden="true" /> Logs
           </button>
           <button
             type="button"
@@ -473,7 +473,7 @@ export default function ProxyManager({ apiBase, apiKey, theme }: ProxyManagerPro
           </button>
         </div>
 
-        <div className="mt-5 grid min-h-[32rem] gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(18rem,0.75fr)]">
+        <div className="mt-5 grid h-[38rem] gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(18rem,0.75fr)]">
           {activeTab === 'control' ? (
             <ProxyControl
               status={status}

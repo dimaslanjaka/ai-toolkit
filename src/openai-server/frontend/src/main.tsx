@@ -2,7 +2,7 @@ import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from 'r
 import { createRoot } from 'react-dom/client';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import ProxyManager from './components/ProxyManager';
+import ProxyManager from './components/ProxyLogs';
 import './styles.css';
 import { fallbackTitleFromPrompt, normalizeGeneratedTitle } from './utils/title';
 import { createApiUrl, sanitizeStoredApiBase } from './utils/url';

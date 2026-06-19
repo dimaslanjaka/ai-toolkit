@@ -20,7 +20,7 @@ export default function ProxyList({ workingProxies, theme }: ProxyListProps) {
       : 'border-neutral-200 bg-white shadow-neutral-200/50';
 
   return (
-    <div className={`rounded-2xl border p-5 shadow-lg ${panelClass}`}>
+    <div className={`h-full overflow-auto rounded-2xl border p-5 shadow-lg ${panelClass}`}>
       <div className="flex items-center gap-3">
         <span
           className={`flex size-10 items-center justify-center rounded-xl ${
