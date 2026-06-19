@@ -15,7 +15,7 @@ This module provides an OpenAI-compatible API server that uses Puppeteer to inte
 
 ```
 Client (OpenAI SDK/curl)
-    ↓ HTTP POST
+    ↓ HTTPS POST
 Express Server (/v1/chat/completions)
     ↓
 Puppeteer Browser (persistent session)
@@ -45,12 +45,13 @@ yarn build
 Start the API server and Vite frontend in separate terminals during development:
 
 ```bash
-node dist/openai-server/start.mjs
 yarn dev:web
+node dist/openai-server/start.mjs
 ```
 
-Vite serves the chat at `http://localhost:5173/chat/` and proxies `/v1` requests to
-`http://localhost:5758`.
+Run `yarn dev:web` first at least once so `vite-plugin-mkcert` generates the shared
+certificate files. Vite then serves the chat at `https://localhost:5173/chat/`, and
+the Express server listens at `https://localhost:5758`.
 
 The frontend selects its API backend in this order:
 
@@ -66,17 +67,23 @@ VITE_HOSTNAME=dev.webmanajemen.com
 VITE_PORT=5173
 VITE_BACKEND_HOSTNAME_DEV=127.0.0.1:5758
 VITE_BACKEND_HOSTNAME_PROD=sh.webmanajemen.com
+OPENAI_SERVER_HTTPS=true
+OPENAI_SERVER_HTTPS_KEY_FILE=.cert/dev.pem
+OPENAI_SERVER_HTTPS_CERT_FILE=.cert/cert.pem
 ```
 
 The URL builder dynamically prepends `window.location.protocol` to the selected
 hostname. An HTTPS page therefore uses `https://127.0.0.1:5758/v1/*` in development
 and `https://sh.webmanajemen.com/v1/*` in production. The Vite proxy target is also
-derived from `VITE_BACKEND_HOSTNAME_DEV`, with HTTP as its server-side default when
-the hostname has no protocol.
+derived from `VITE_BACKEND_HOSTNAME_DEV`, using the same protocol selected by
+`OPENAI_SERVER_HTTPS` when the hostname has no protocol.
 
 For production, `yarn build` creates the frontend in `dist/openai-server/frontend/`.
-The Express server then serves it at `http://localhost:5758/chat/` and redirects `/`
+The Express server then serves it at `https://localhost:5758/chat/` and redirects `/`
 to that route.
+
+Set `OPENAI_SERVER_HTTPS=false` to run both the Vite development server and Express
+over HTTP. The certificate directory is ignored by Git and must not be committed.
 
 ### 1. Start the server with ChatGPT provider
 
@@ -107,7 +114,7 @@ The server will:
 
 **Non-streaming:**
 ```bash
-curl -X POST http://localhost:5758/v1/chat/completions \
+curl -X POST https://localhost:5758/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "gpt-4o",
@@ -118,7 +125,7 @@ curl -X POST http://localhost:5758/v1/chat/completions \
 
 **Streaming:**
 ```bash
-curl -X POST http://localhost:5758/v1/chat/completions \
+curl -X POST https://localhost:5758/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "gpt-4o",
@@ -133,7 +140,7 @@ curl -X POST http://localhost:5758/v1/chat/completions \
 import OpenAI from 'openai';
 
 const client = new OpenAI({
-  baseURL: 'http://localhost:5758/v1',
+  baseURL: 'https://localhost:5758/v1',
   apiKey: 'dummy-key' // Any string works
 });
 
@@ -174,6 +181,9 @@ node dist/openai-server/chatgpt-demo.mjs
 | Variable | Values | Default | Description |
 |----------|--------|---------|-------------|
 | `PROVIDER` | `puter` or `chatgpt` | `puter` | Which AI provider to use |
+| `OPENAI_SERVER_HTTPS` | `true` or `false` | `true` | Enable shared HTTPS for Vite and Express |
+| `OPENAI_SERVER_HTTPS_KEY_FILE` | File path | `.cert/dev.pem` | mkcert private-key path |
+| `OPENAI_SERVER_HTTPS_CERT_FILE` | File path | `.cert/cert.pem` | mkcert certificate path |
 
 ### Switching Providers
 

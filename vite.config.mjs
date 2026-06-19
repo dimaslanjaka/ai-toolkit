@@ -9,14 +9,14 @@ import mkcert from 'vite-plugin-mkcert';
 const packageDirectory = path.dirname(fileURLToPath(import.meta.url));
 const frontendDirectory = path.join(packageDirectory, 'src/openai-server/frontend');
 
-function normalizeProxyTarget(hostname) {
+function normalizeProxyTarget(hostname, protocol) {
   const trimmed = hostname.trim().replace(/\/+$/, '');
 
   if (!trimmed) {
-    return 'http://127.0.0.1:5758';
+    return `${protocol}://127.0.0.1:5758`;
   }
 
-  return /^https?:\/\//i.test(trimmed) ? trimmed : `http://${trimmed}`;
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `${protocol}://${trimmed}`;
 }
 
 export default defineConfig(({ mode }) => {
@@ -24,13 +24,33 @@ export default defineConfig(({ mode }) => {
   const hostname = env.VITE_HOSTNAME || '0.0.0.0';
   const parsedPort = Number(env.VITE_PORT);
   const port = Number.isInteger(parsedPort) && parsedPort > 0 ? parsedPort : 5173;
-  const backendDev = normalizeProxyTarget(env.VITE_BACKEND_HOSTNAME_DEV || '127.0.0.1:5758');
+  const httpsEnabled = env.OPENAI_SERVER_HTTPS !== 'false';
+  const httpsKeyFile = path.resolve(packageDirectory, env.OPENAI_SERVER_HTTPS_KEY_FILE || '.cert/dev.pem');
+  const httpsCertFile = path.resolve(packageDirectory, env.OPENAI_SERVER_HTTPS_CERT_FILE || '.cert/cert.pem');
+  const httpsDirectory = path.dirname(httpsKeyFile);
+  const backendProtocol = httpsEnabled ? 'https' : 'http';
+  const backendDev = normalizeProxyTarget(env.VITE_BACKEND_HOSTNAME_DEV || '127.0.0.1:5758', backendProtocol);
+
+  if (httpsEnabled && path.dirname(httpsCertFile) !== httpsDirectory) {
+    throw new Error('OPENAI_SERVER_HTTPS_KEY_FILE and OPENAI_SERVER_HTTPS_CERT_FILE must use the same directory');
+  }
 
   return {
     root: frontendDirectory,
     envDir: packageDirectory,
     base: '/chat/',
-    plugins: [react(), mkcert()],
+    plugins: [
+      react(),
+      ...(httpsEnabled
+        ? [
+            mkcert({
+              savePath: httpsDirectory,
+              keyFileName: path.basename(httpsKeyFile),
+              certFileName: path.basename(httpsCertFile)
+            })
+          ]
+        : [])
+    ],
     css: {
       postcss: {
         plugins: [

@@ -1,7 +1,34 @@
+import dotenv from 'dotenv';
 import fs from 'fs-extra';
+import path from 'upath';
 import { app } from './server.js';
 import { serverLogger, startServer } from './utils.js';
 import { startProxyChecker } from './proxy/start-proxy-checker.js';
+
+dotenv.config({ path: path.resolve(process.cwd(), '.env'), quiet: true });
+
+const httpsEnabled = process.env.OPENAI_SERVER_HTTPS !== 'false';
+const httpsKeyFile = path.resolve(process.env.OPENAI_SERVER_HTTPS_KEY_FILE || '.cert/dev.pem');
+const httpsCertFile = path.resolve(process.env.OPENAI_SERVER_HTTPS_CERT_FILE || '.cert/cert.pem');
+
+function getHttpsOptions() {
+  if (!httpsEnabled) {
+    return undefined;
+  }
+
+  const missingFiles = [httpsKeyFile, httpsCertFile].filter((file) => !fs.existsSync(file));
+
+  if (missingFiles.length > 0) {
+    throw new Error(
+      `HTTPS is enabled but certificate files are missing: ${missingFiles.join(', ')}. Run "yarn dev:web" once to generate them with vite-plugin-mkcert, or set OPENAI_SERVER_HTTPS=false.`
+    );
+  }
+
+  return {
+    key: fs.readFileSync(httpsKeyFile),
+    cert: fs.readFileSync(httpsCertFile)
+  };
+}
 
 // Clear messages log folder on server startup
 const logDir = 'tmp/logs/openai-compatible/messages';
@@ -27,7 +54,7 @@ app.use((err: any, _req: any, res: any, _next: any) => {
   }
 });
 
-startServer(app, 5758).then(({ state }) => {
+startServer(app, 5758, { https: getHttpsOptions() }).then(({ state }) => {
   const endpoints = [
     ['GET', '/chat/'],
     ['GET', '/v1/models'],

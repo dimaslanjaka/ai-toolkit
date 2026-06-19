@@ -1,4 +1,5 @@
 import net from 'net';
+import https from 'https';
 import { writefile, readfile } from 'sbg-utility';
 import path from 'upath';
 import moment from 'moment';
@@ -57,6 +58,11 @@ export interface ServerState {
   server?: net.Server;
 }
 
+export interface StartServerOptions {
+  hostname?: string;
+  https?: https.ServerOptions;
+}
+
 /**
  * Find a free port starting from a preferred port
  */
@@ -106,26 +112,30 @@ export function getServerState(): ServerState | null {
  */
 export async function startServer(
   app: any,
-  preferredPort: number = 5758
+  preferredPort: number = 5758,
+  options: StartServerOptions = {}
 ): Promise<{ state: ServerState; server: net.Server }> {
   // Reset log on startup
   serverLogger.reset();
 
   const port = await findFreePort(preferredPort);
+  const hostname = options.hostname || '0.0.0.0';
+  const protocol = options.https ? 'https' : 'http';
 
   return new Promise<{ state: ServerState; server: net.Server }>((resolve) => {
-    const server = app.listen(port, '0.0.0.0', () => {
+    let server: net.Server;
+    const handleListening = () => {
       const state: ServerState = {
         port,
         pid: process.pid,
         startedAt: new Date().toISOString(),
-        url: `http://localhost:${port}`,
+        url: `${protocol}://localhost:${port}`,
         server: server // Add the server instance to the state
       };
 
       saveServerState(state);
 
-      serverLogger.log(`OpenAI-compatible server running on http://0.0.0.0:${port}`);
+      serverLogger.log(`OpenAI-compatible server running on ${protocol}://${hostname}:${port}`);
       serverLogger.log(`State saved to ${STATE_FILE}`);
       serverLogger.log(`Provider: ${process.env.PROVIDER || 'puter'}`);
 
@@ -135,7 +145,14 @@ export async function startServer(
       server.on('close', () => {
         serverLogger.log('Server shutting down');
       });
-    });
+    };
+
+    if (options.https) {
+      server = https.createServer(options.https, app);
+      server.listen(port, hostname, handleListening);
+    } else {
+      server = app.listen(port, hostname, handleListening);
+    }
   });
 }
 

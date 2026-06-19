@@ -1,5 +1,6 @@
 # Private keys and sensitive files
 /xl*
+/.cert/
 /.env
 /.env.build.json
 /.env.cjs
