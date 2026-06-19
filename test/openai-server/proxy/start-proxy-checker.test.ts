@@ -40,7 +40,8 @@ describe('startProxyChecker', () => {
       ownerPid: 123
     });
 
-    const { startProxyChecker } = await import('../../../src/openai-server/proxy/start-proxy-checker.js');
+    const { startProxyCheckerNewTerminal: startProxyChecker } =
+      await import('../../../src/openai-server/proxy/start-proxy-checker-new-terminal.js');
 
     expect(startProxyChecker()).toBeNull();
     expect(spawnNewTerminal).not.toHaveBeenCalled();
@@ -56,7 +57,8 @@ describe('startProxyChecker', () => {
       }
     });
 
-    const { startProxyChecker } = await import('../../../src/openai-server/proxy/start-proxy-checker.js');
+    const { startProxyCheckerNewTerminal: startProxyChecker } =
+      await import('../../../src/openai-server/proxy/start-proxy-checker-new-terminal.js');
 
     expect(startProxyChecker()).toBe(terminal);
     expect(spawnNewTerminal).toHaveBeenCalledTimes(1);
