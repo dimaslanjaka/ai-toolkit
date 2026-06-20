@@ -1,6 +1,7 @@
 import axios, { AxiosResponse } from 'axios';
 import { SocksProxyAgent } from 'socks-proxy-agent';
 import { HttpsProxyAgent } from 'https-proxy-agent';
+import ansiColors from 'ansi-colors';
 
 export interface CheckProxyResult {
   proxy: string;
@@ -9,6 +10,7 @@ export interface CheckProxyResult {
   ip?: string;
   error?: string;
   latency?: number;
+  protocol?: string;
 }
 
 export type ProxyConfig = {
@@ -89,23 +91,26 @@ export async function checkProxy(options: {
     if (callback) {
       const result = callback(proxy, endpoint, res);
       if (!result.working) {
-        console.error(`Proxy check failed for ${proxy}: ${result.error || 'Unknown error'}`);
+        console.error(`Proxy check failed for ${ansiColors.redBright(proxy)}: ${result.error || 'Unknown error'}`);
       }
       return result;
     }
+
+    const protocol = proxy.split('://')[0];
 
     return {
       proxy: proxy,
       working: true,
       status: res.status,
       ip: res.data?.ip,
-      latency
+      latency,
+      protocol
     };
   } catch (err: any) {
     const latency = Date.now() - start;
     const errorCode = err.response?.status ?? err.code;
     console.error(
-      `Proxy check failed for ${proxy}:${errorCode ? ` [${errorCode}]` : ''} ${err.response?.statusText || err.message}`
+      `Proxy check failed for ${ansiColors.redBright(proxy)}:${errorCode ? ` [${errorCode}]` : ''} ${err.response?.statusText || err.message}`
     );
 
     return {

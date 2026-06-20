@@ -1,11 +1,11 @@
+import ansiColors from 'ansi-colors';
 import { Proxy } from '../database/ProxyDB.js';
 import SQLiteMarker from '../database/SQLiteMarker.js';
-import { getProductionMySQL, getSQLite } from '../database/shared.js';
-import type { ProxyEntry } from '../database/types.js';
 import { SQLiteProxy } from '../database/SQLiteProxy.js';
+import { getProductionMySQL, getSQLite } from '../database/shared.js';
 import { checkProxy, CheckProxyResult } from './checker.js';
 
-const database = getProductionMySQL();
+const productionMySQL = getProductionMySQL();
 let sharedSqlite: Awaited<ReturnType<typeof getSQLite>>;
 let marker: SQLiteMarker;
 let proxyDb: SQLiteProxy;
@@ -25,7 +25,7 @@ const DEAD_PROXY_HOURS = 3 / 24; // 3 hours
 
 async function getRemoteWorkingProxies() {
   await initSharedSqlite();
-  const proxiestable = await database.proxies();
+  const proxiestable = await productionMySQL.proxies();
   const proxies = await proxiestable.getWorking();
 
   const result = marker.filterUnseen(proxies.map((p) => p.proxy));
@@ -53,11 +53,12 @@ async function checkSingle(item: Proxy) {
   const valid = hasValidCredentials(item);
 
   if (!valid) {
-    await database.update('proxies', { username: '', password: '' }, { proxy: item.proxy });
+    await productionMySQL.update('proxies', { username: '', password: '' }, { proxy: item.proxy });
   }
 
   let result: CheckProxyResult | undefined = undefined;
-  for (const protocol of protocols) {
+  let protocol: string | undefined = undefined;
+  for (protocol of protocols) {
     const built = `${protocol}://${valid ? `${item.username}:${item.password}@` : ''}${item.proxy}`;
     console.log(`Checking proxy: ${built}`);
     result = await checkProxy({
@@ -70,7 +71,8 @@ async function checkSingle(item: Proxy) {
             proxy: proxy,
             working: true,
             status: response.status,
-            ip: response.data?.ip
+            ip: response.data?.ip,
+            protocol
           };
         } else {
           return {
@@ -93,7 +95,7 @@ async function checkSingle(item: Proxy) {
     // write to SQLiteProxy for opencode.ai
     await proxyDb.addProxy({
       proxy: item.proxy,
-      type: item.type as ProxyEntry['type'],
+      type: protocol,
       host: 'opencode.ai'
     });
   } else {
@@ -111,12 +113,13 @@ export async function opencodeCheckProxy() {
     const item = proxies[index];
     const result = await checkSingle(item);
     if (result?.working) {
-      console.log(`Proxy ${item.proxy} is working!`);
-      break;
+      console.log(`Proxy ${ansiColors.green(item.proxy)} is working!`);
+      // wait until protocol http found
+      if (result.protocol === 'http') break;
     }
   }
 
-  await database.close();
+  await productionMySQL.close();
   marker.close();
   // proxyDb.close() is now handled by the shared instance
 }
