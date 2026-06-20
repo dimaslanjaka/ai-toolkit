@@ -969,6 +969,27 @@ function App() {
                         ▾
                       </span>
                     </label>
+
+                    {settings.provider !== 'auto' && (
+                      <label className="relative">
+                        <span className="sr-only">Model</span>
+                        <select
+                          value={settings.model}
+                          onChange={(event) => setSettings((current) => ({ ...current, model: event.target.value }))}
+                          className={`max-w-[6rem] appearance-none truncate rounded-lg border-0 bg-transparent py-1 pr-5 pl-1.5 text-xs focus:ring-2 focus:ring-emerald-500 md:max-w-[8rem] ${
+                            settings.theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'
+                          }`}>
+                          {models.map((model) => (
+                            <option key={model.id} value={model.id}>
+                              {model.id}
+                            </option>
+                          ))}
+                        </select>
+                        <span className="pointer-events-none absolute top-1/2 right-1.5 -translate-y-1/2 text-[10px] text-neutral-500">
+                          ▾
+                        </span>
+                      </label>
+                    )}
                     <button
                       type="button"
                       aria-label={isSending ? 'Stop generating' : 'Send message'}
