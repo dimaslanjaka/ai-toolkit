@@ -25,12 +25,9 @@ app.use(express.json({ limit: '50mb' }));
 const chatFrontendDirectory = path.join(process.cwd(), 'dist/openai-server/frontend');
 const chatFrontendIndex = path.join(chatFrontendDirectory, 'index.html');
 
-app.get('/', (_req, res) => {
-  res.redirect('/chat/');
-});
-
-app.use('/chat', express.static(chatFrontendDirectory));
-app.get(/^\/chat(?:\/.*)?$/, (_req, res, next) => {
+// Serve the frontend at root and all sub-routes
+app.use(express.static(chatFrontendDirectory));
+app.get(/^\/(?:chat(?:\/.*)?)?$/, (_req, res, next) => {
   if (!fs.existsSync(chatFrontendIndex)) {
     next();
     return;

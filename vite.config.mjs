@@ -38,7 +38,7 @@ export default defineConfig(({ mode }) => {
   return {
     root: frontendDirectory,
     envDir: packageDirectory,
-    base: '/chat/',
+    base: '/',
     plugins: [
       react(),
       ...(httpsEnabled
