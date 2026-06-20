@@ -1,11 +1,11 @@
-import { Request } from 'express';
 import fs from 'fs-extra';
-import type OpenAI from 'openai';
-import { isEmpty, writefile } from 'sbg-utility';
-import { ProxyAgent } from 'undici';
 import path from 'upath';
+import { ProxyAgent } from 'undici';
+import { OpenAI } from 'openai';
+import type { Request } from 'express';
+import { isEmpty, writefile } from 'sbg-utility';
 import SQLiteProxy from '../../database/SQLiteProxy.js';
-import { getSharedModels } from '../../database/shared.js';
+import { getSQLite, getSharedModels } from '../../database/shared.js';
 
 import {
   convertChatCompletionsToResponses,
@@ -20,10 +20,11 @@ import type { ProviderResult } from './index.js';
 let opencodeClient: OpenAI | null = null;
 let opencodeClientProxy: string | undefined;
 const LAST_OPENCODE_PROXY_PATH = path.join(process.cwd(), 'tmp', 'database', 'last-opencode-proxy.txt');
-const proxyDb = new SQLiteProxy({
-  db_type: 'sqlite',
-  sqlite_filename: path.join(process.cwd(), 'tmp', 'database', 'opencode-checker.db')
-});
+
+async function getProxyClient() {
+  const sharedDb = await getSQLite();
+  return new SQLiteProxy(sharedDb);
+}
 
 function getProxyUrl(item: {
   password?: string | null;
@@ -31,7 +32,7 @@ function getProxyUrl(item: {
   type?: string | null;
   username?: string | null;
 }): string {
-  let protocol = item.type?.split(/,-/)[0];
+  let protocol = item.type?.split(/[,-]/)[0];
   if (isEmpty(protocol)) protocol = 'http';
   return `${protocol}://${item.username ? `${item.username}:${item.password}@` : ''}${item.proxy}`;
 }
@@ -69,7 +70,8 @@ async function selectProxyUrl(): Promise<string | undefined> {
   const cachedProxy = await readLastWorkingProxy();
   if (cachedProxy) return cachedProxy;
 
-  const item = await proxyDb.getProxyForHost('opencode.ai', { type: 'http' });
+  const proxyClient = await getProxyClient();
+  const item = await proxyClient.getProxyForHost('opencode.ai', { type: 'http' });
   return item ? getProxyUrl(item) : undefined;
 }
 
@@ -87,10 +89,13 @@ async function cacheWorkingProxy(proxyUrl: string | undefined): Promise<void> {
 async function getOpenCode(): Promise<OpenAI> {
   if (!opencodeClient) {
     const { opencodeProvider } = await import('../../provider/opencode/get.js');
-    await proxyDb.initialize();
 
     // Filter for HTTP proxies only since undici ProxyAgent doesn't support SOCKS5.
     opencodeClientProxy = await selectProxyUrl();
+
+    // getSQLite already runs migrations on first call
+    const proxyClient = await getProxyClient();
+    await proxyClient.initialize();
 
     opencodeClient = await opencodeProvider({
       model: 'deepseek-v4-flash-free',
@@ -203,7 +208,8 @@ async function markProxyDeadSafely(proxyUrl: string): Promise<void> {
     const url = new URL(proxyUrl);
     const proxyAddress = `${url.hostname}:${url.port}`;
 
-    await proxyDb.markProxyDead(proxyAddress);
+    const proxyClient = await getProxyClient();
+    await proxyClient.markProxyDead(proxyAddress);
     serverLogger.log(`Marked dead proxy: ${getProxyLabel(proxyUrl)}`);
 
     // Clear the cached proxy file since it's no longer working
