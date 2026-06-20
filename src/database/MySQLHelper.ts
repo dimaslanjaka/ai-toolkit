@@ -1,7 +1,5 @@
 import * as mariadb from 'mariadb';
 import type { Pool, PoolConnection } from 'mariadb';
-import fs from 'fs-extra';
-import path from 'upath';
 
 export interface MySQLConfig {
   host: string;
@@ -31,15 +29,6 @@ export class MySQLHelper {
     }
 
     this.initializing = (async () => {
-      // Skip automatic DB creation.
-      // Users must ensure the database exists and the user has proper privileges.
-
-      const _schemaIndicatorFile = path.join(process.cwd(), 'tmp/database/', `${this.config.database}.schema`);
-      if (!fs.existsSync(_schemaIndicatorFile)) {
-        await fs.ensureDir(path.dirname(_schemaIndicatorFile));
-        await fs.writeFile(_schemaIndicatorFile, `Initialized at ${new Date().toISOString()}\n`, 'utf-8');
-      }
-
       // Create connection pool
       this.pool = mariadb.createPool({
         host: this.config.host,
@@ -66,19 +55,6 @@ export class MySQLHelper {
     if (!this.ready || !this.pool) {
       await this.initialize();
     }
-  }
-
-  private async _ensureDatabase() {
-    const adminConn = await mariadb.createConnection({
-      host: this.config.host,
-      user: this.config.user,
-      password: this.config.password,
-      port: parseInt(String(this.config.port ?? '3306'), 10),
-      connectTimeout: this.config.connectTimeout || 60000,
-      allowPublicKeyRetrieval: true
-    });
-    await adminConn.query(`CREATE DATABASE IF NOT EXISTS \`${this.config.database}\``);
-    await adminConn.end();
   }
 
   /**
