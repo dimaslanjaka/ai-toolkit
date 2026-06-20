@@ -1,10 +1,10 @@
-import { getProductionSQLite } from '../../src/database/shared.js';
+import { ProxyDB } from '../../src/database/ProxyDB.js';
 
 describe('ProxyDB SQLite', () => {
-  let proxy_db: any;
+  let proxy_db: ProxyDB;
 
   beforeAll(async () => {
-    proxy_db = getProductionSQLite();
+    proxy_db = new ProxyDB({ db_type: 'sqlite', sqlite_filename: ':memory:' });
     await proxy_db.initialize();
   });
 
