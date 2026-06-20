@@ -2,10 +2,8 @@ import React, { useState } from 'react';
 
 type Theme = 'dark' | 'light';
 
-interface HomePageProps {
-  theme: Theme;
-  onStartChat: () => void;
-}
+import { useNavigate } from 'react-router';
+import { useSettings } from '../context/SettingsContext';
 
 const API_ENDPOINTS = [
   {
@@ -244,7 +242,10 @@ function ProviderCard({ provider, theme }: { provider: (typeof PROVIDERS)[0]; th
   );
 }
 
-export default function HomePage({ theme, onStartChat }: HomePageProps) {
+export default function HomePage() {
+  const navigate = useNavigate();
+  const { settings } = useSettings();
+  const theme = settings.theme;
   const [activeSection, setActiveSection] = useState<string>('overview');
 
   const sections = [
@@ -284,7 +285,7 @@ export default function HomePage({ theme, onStartChat }: HomePageProps) {
             </div>
           </div>
           <button
-            onClick={onStartChat}
+            onClick={() => navigate('/chat')}
             className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500">
             <i className="fa-solid fa-comments mr-2" />
             Open Chat

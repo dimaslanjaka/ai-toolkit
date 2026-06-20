@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSettings } from '../context/SettingsContext';
 import ProxyControl from './ProxyControl';
 import ProxyList from './ProxyList';
 import { createApiUrl } from '../utils/url';
@@ -43,12 +44,6 @@ interface ProxyActionResponse {
 interface WorkingProxiesResponse {
   ok: boolean;
   proxies: WorkingProxy[];
-}
-
-interface ProxyManagerProps {
-  apiBase: string;
-  apiKey: string;
-  theme: Theme;
 }
 
 const ACTIVE_STATES: ProxyCheckerState[] = ['starting', 'running'];
@@ -186,7 +181,10 @@ function MetricCard({
   );
 }
 
-export default function ProxyManager({ apiBase, apiKey, theme }: ProxyManagerProps) {
+export default function ProxyManager() {
+  const { settings } = useSettings();
+  const { apiBase, apiKey, theme } = settings;
+
   const [status, setStatus] = useState<ProxyCheckerStatus | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
   const [query, setQuery] = useState('');
