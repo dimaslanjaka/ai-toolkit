@@ -1,11 +1,11 @@
-import { MySQLHelper, MySQLConfig } from './MySQLHelper.js';
-import { SQLiteHelper, SQLiteConfig } from './SQLiteHelper.js';
-import type { PoolConnection } from 'mariadb';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
-import { fileURLToPath } from 'url';
-import { createHash } from 'crypto';
 import fs from 'fs-extra';
+import type { PoolConnection } from 'mariadb';
+import { sanitizeFilename } from 'sbg-utility';
 import path from 'upath';
+import { fileURLToPath } from 'url';
+import { MySQLConfig, MySQLHelper } from './MySQLHelper.js';
+import { SQLiteConfig, SQLiteHelper } from './SQLiteHelper.js';
 
 export type DatabaseType = 'mysql' | 'mariadb' | 'sqlite';
 
@@ -145,9 +145,8 @@ export class ProxyDB {
     const schemaPath = path.resolve(
       customSchema && fs.existsSync(customSchema) ? customSchema : path.join(dir, 'schema.sql')
     );
-    const hash = createHash('md5')
-      .update((process.env.SQLITE_DBNAME || '') + schemaPath)
-      .digest('hex');
+    const relativeSchemaPath = path.relative(process.cwd(), schemaPath);
+    const hash = sanitizeFilename(`${process.env.SQLITE_DBNAME}-${relativeSchemaPath}`);
     const lockFile = path.join(process.cwd(), 'tmp', 'database', `${hash}.lock`);
 
     // If SQLite in-memory or DB file missing, do not skip schema application.
@@ -190,7 +189,7 @@ export class ProxyDB {
 
     // Create lock file to mark initialization completed (skip for in-memory)
     if (!isInMemory) {
-      await fs.writeFile(lockFile, 'initialized');
+      await fs.writeFile(lockFile, `${schemaPath} initialized`);
     }
   }
 
