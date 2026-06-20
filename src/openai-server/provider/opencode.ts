@@ -127,10 +127,23 @@ export async function handleModels(_req: Request): Promise<ProviderResult> {
   return { type: 'json', data: { object: 'list', data } };
 }
 
-function resolveModel(model: string | undefined): string {
+async function resolveModel(model: string | undefined) {
   if (!model || model === 'auto') {
     return 'deepseek-v4-flash-free';
   }
+
+  // Check if the model exists in the database
+  const modelDb = await getSharedModels();
+  await modelDb.initialize();
+  const modelsApi = await modelDb.models();
+  const dbModels = await modelsApi.find({ id: model, provider: 'opencode' });
+
+  if (dbModels.length === 0) {
+    // Model not found in database, use deepseek as default
+    serverLogger.log(`Model ${model} not found in database, using deepseek-v4-flash-free instead`);
+    return 'deepseek-v4-flash-free';
+  }
+
   return model;
 }
 
@@ -183,7 +196,7 @@ async function createProxyDispatcher(): Promise<{ dispatcher?: ProxyAgent; proxy
 
 export async function handleChatCompletion(req: Request): Promise<ProviderResult> {
   const { model, messages, stream, temperature, max_tokens } = req.body as any;
-  const resolvedModel = resolveModel(model);
+  const resolvedModel = await resolveModel(model);
 
   const promptPreview = (messages || [])
     .map((m: any) => `${m.role}: ${(m.content || '').toString().substring(0, 80)}`)
@@ -284,7 +297,7 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
   const requestData = req.body as ResponsesRequest;
   const chatReq = convertResponsesRequestToChatCompletions(requestData);
   const { model, messages, stream, temperature, max_tokens } = chatReq;
-  const resolvedModel = resolveModel(model);
+  const resolvedModel = await resolveModel(model);
 
   const promptPreview = (messages || [])
     .map((m: any) => `${m.role}: ${(m.content || '').toString().substring(0, 80)}`)
