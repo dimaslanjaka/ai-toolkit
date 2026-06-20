@@ -1,6 +1,6 @@
 /**
  * Auto-download and extract the latest SQLite precompiled binary
- * for the current OS/arch.
+ * and install it into node_modules/.bin
  */
 
 import https from 'https';
@@ -84,28 +84,20 @@ async function downloadFile(url, dest) {
 
 // === Check if download is needed ===
 async function shouldDownload(url, local) {
-  if (!fs.existsSync(local)) {
-    return true;
-  }
+  if (!fs.existsSync(local)) return true;
 
   const localSize = fs.statSync(local).size;
 
   return new Promise((resolve, reject) => {
-    const req = https.request(
-      url,
-      {
-        method: 'HEAD'
-      },
-      (res) => {
-        const remoteSize = parseInt(res.headers['content-length'], 10);
+    const req = https.request(url, { method: 'HEAD' }, (res) => {
+      const remoteSize = parseInt(res.headers['content-length'], 10);
 
-        if (!remoteSize || Number.isNaN(remoteSize)) {
-          return resolve(true);
-        }
-
-        resolve(localSize !== remoteSize);
+      if (!remoteSize || Number.isNaN(remoteSize)) {
+        return resolve(true);
       }
-    );
+
+      resolve(localSize !== remoteSize);
+    });
 
     req.on('error', reject);
     req.end();
@@ -127,14 +119,14 @@ async function shouldDownload(url, local) {
 
     const ext = path.extname(filename);
 
-    // Save download to process.cwd()/tmp/download
+    // temp download dir
     const tmpDir = path.resolve(process.cwd(), 'tmp', 'download');
     await fs.ensureDir(tmpDir);
 
     const local = path.join(tmpDir, filename);
 
-    // Set extraction directory to /bin in process.cwd()
-    const binDir = path.resolve(process.cwd(), 'bin');
+    // ✅ install target: node_modules/.bin
+    const binDir = path.resolve(process.cwd(), 'node_modules', '.bin');
     await fs.ensureDir(binDir);
 
     let downloaded = false;
@@ -151,20 +143,19 @@ async function shouldDownload(url, local) {
       console.log('Local file is up to date, skipping download.');
     }
 
+    // final binary path inside .bin
     const sqliteBinary = os.platform() === 'win32' ? path.join(binDir, 'sqlite3.exe') : path.join(binDir, 'sqlite3');
 
     const needExtract = downloaded || !fs.existsSync(sqliteBinary);
 
     if (needExtract) {
-      console.log('Extracting...');
+      console.log('Extracting into node_modules/.bin...');
 
       if (ext === '.zip') {
         if (os.platform() === 'win32') {
           execSync(
             `powershell -NoProfile -NonInteractive -Command "Expand-Archive -Path '${local}' -DestinationPath '${binDir}' -Force"`,
-            {
-              stdio: 'inherit'
-            }
+            { stdio: 'inherit' }
           );
         } else {
           execSync(`unzip -o '${local}' -d '${binDir}'`, {
@@ -177,26 +168,22 @@ async function shouldDownload(url, local) {
         });
       }
 
-      // Auto-create bin/sqlite3.cmd for Windows CLI usage, only if sqlite3.exe exists
+      // Windows wrapper for CLI compatibility
       const exePath = path.join(binDir, 'sqlite3.exe');
 
       if (fs.existsSync(exePath)) {
         const cmdScript = `@echo off\r
-REM Forward all arguments to sqlite3.exe in the same directory\r
 set SCRIPT_DIR=%~dp0\r
 "%SCRIPT_DIR%sqlite3.exe" %*\r
 `;
 
-        const cmdPath = path.join(binDir, 'sqlite3.cmd');
-
-        await fs.writeFile(cmdPath, cmdScript, 'utf8');
+        await fs.writeFile(path.join(binDir, 'sqlite3.cmd'), cmdScript, 'utf8');
       }
     } else {
-      console.log('SQLite binary already exists, skipping extraction.');
+      console.log('SQLite already installed in node_modules/.bin');
     }
 
-    console.log('✅ SQLite installed in ./bin/');
-    console.log('Run ./bin/sqlite3[.exe] --version to verify.');
+    console.log('✅ SQLite installed in node_modules/.bin');
   } catch (err) {
     console.error('❌ Error:', err.message);
   }
