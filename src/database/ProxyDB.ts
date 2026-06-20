@@ -3,6 +3,7 @@ import { SQLiteHelper, SQLiteConfig } from './SQLiteHelper.js';
 import type { PoolConnection } from 'mariadb';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { fileURLToPath } from 'url';
+import { createHash } from 'crypto';
 import fs from 'fs-extra';
 import path from 'upath';
 
@@ -140,9 +141,24 @@ export class ProxyDB {
   }
 
   async initializeSchema(customSchema?: string) {
-    // Apply schema if tables don't exist
     const dir = path.dirname(fileURLToPath(import.meta.url));
-    const schemaPath = customSchema && fs.existsSync(customSchema) ? customSchema : path.join(dir, 'schema.sql');
+    const schemaPath = path.resolve(
+      customSchema && fs.existsSync(customSchema) ? customSchema : path.join(dir, 'schema.sql')
+    );
+    const metaKey = `schema_initialized:${createHash('md5').update(schemaPath).digest('hex')}`;
+
+    // Check if schema was already initialized using meta table
+    try {
+      const m = await this.meta();
+      const initialized = await m.get(metaKey);
+      if (initialized !== null) {
+        return; // Already initialized, skip
+      }
+    } catch {
+      // meta table doesn't exist yet — proceed to create schema
+    }
+
+    // Apply schema
     if (fs.existsSync(schemaPath)) {
       const schema = fs.readFileSync(schemaPath, 'utf8');
       // Remove block comments to avoid breaking statements
@@ -165,6 +181,14 @@ export class ProxyDB {
           }
         }
       }
+    }
+
+    // Mark schema as initialized
+    try {
+      const m = await this.meta();
+      await m.set(metaKey, '1');
+    } catch (err) {
+      console.error('Failed to mark schema as initialized:', err);
     }
   }
 
