@@ -36,6 +36,14 @@ export class SQLiteHelper {
         fileMustExist: this.config.fileMustExist ?? false
       });
 
+      // Apply performance tuning PRAGMAs
+      this.db.pragma('journal_mode = WAL');
+      this.db.pragma('synchronous = NORMAL');
+      this.db.pragma('temp_store = MEMORY');
+      this.db.pragma('cache_size = -64000');
+      this.db.pragma('busy_timeout = 5000');
+      this.db.pragma('foreign_keys = ON');
+
       if (this.config.verbose) {
         console.log('Connected to the SQLite database (better-sqlite3).');
       }
