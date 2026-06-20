@@ -5,7 +5,7 @@ import path from 'upath';
 import * as provider from './provider/index.js';
 import { ProxyCheckerManager } from './proxy/proxy-checker-manager.js';
 import { SQLiteProxy } from '../database/SQLiteProxy.js';
-import { getSQLite } from '../database/shared.js';
+import { getSQLite, getSharedModels } from '../database/shared.js';
 
 import { serverLogger } from './utils.js';
 
@@ -137,6 +137,140 @@ app.get('/proxy-checker/proxies', async (req, res) => {
     const proxies = await proxyDb.getProxiesByHost(host);
 
     res.json({ ok: true, proxies });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      message: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+// ── Admin Model Management CRUD ────────────────────────────────────────────
+
+/**
+ * GET /admin/models — list all models (optional ?provider= filter)
+ */
+app.get('/admin/models', async (_req, res) => {
+  try {
+    const modelDb = await getSharedModels();
+    await modelDb.initialize();
+    const modelsApi = await modelDb.models();
+
+    const where = _req.query.provider ? { provider: _req.query.provider as string } : {};
+    const dbModels = await modelsApi.find(where);
+
+    const data = dbModels.map((model: any) => ({
+      id: model.id,
+      object: model.object,
+      created: model.created,
+      owned_by: model.owned_by,
+      permission: model.permission,
+      root: model.root,
+      parent: model.parent,
+      provider: model.provider,
+      enabled: model.enabled !== 0
+    }));
+
+    res.json({ ok: true, data });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      message: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+/**
+ * POST /admin/models — add a new model
+ * Body: { id, provider, object?, created?, owned_by?, permission?, root?, parent?, enabled? }
+ */
+app.post('/admin/models', async (req, res) => {
+  try {
+    const modelDb = await getSharedModels();
+    await modelDb.initialize();
+    const modelsApi = await modelDb.models();
+
+    const { id, provider, object, created, owned_by, permission, root, parent, enabled } = req.body;
+
+    if (!id || !provider) {
+      res.status(400).json({ ok: false, message: 'id and provider are required' });
+      return;
+    }
+
+    await modelsApi.insert({
+      id,
+      provider,
+      object: object || 'model',
+      created: created ?? Math.floor(Date.now() / 1000),
+      owned_by: owned_by || provider,
+      permission: permission ?? '[]',
+      root: root || id,
+      parent: parent ?? null,
+      enabled: enabled !== undefined ? (enabled ? 1 : 0) : 1
+    });
+
+    res.json({ ok: true, message: 'Model added' });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      message: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+/**
+ * PUT /admin/models — update an existing model
+ * Body: { id, provider, ...fields }
+ */
+app.put('/admin/models', async (req, res) => {
+  try {
+    const modelDb = await getSharedModels();
+    await modelDb.initialize();
+    const modelsApi = await modelDb.models();
+
+    const { id, provider, ...updates } = req.body;
+
+    if (!id || !provider) {
+      res.status(400).json({ ok: false, message: 'id and provider are required' });
+      return;
+    }
+
+    const data: any = { ...updates };
+    if (data.enabled !== undefined) {
+      data.enabled = data.enabled ? 1 : 0;
+    }
+
+    await modelsApi.update(data, { id, provider });
+
+    res.json({ ok: true, message: 'Model updated' });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      message: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+/**
+ * DELETE /admin/models — delete a model
+ * Query: ?id=...&provider=...
+ */
+app.delete('/admin/models', async (req, res) => {
+  try {
+    const modelDb = await getSharedModels();
+    await modelDb.initialize();
+    const modelsApi = await modelDb.models();
+
+    const { id, provider } = req.query;
+
+    if (!id || !provider) {
+      res.status(400).json({ ok: false, message: 'id and provider are required' });
+      return;
+    }
+
+    await modelsApi.delete({ id: id as string, provider: provider as string });
+
+    res.json({ ok: true, message: 'Model deleted' });
   } catch (error) {
     res.status(500).json({
       ok: false,
