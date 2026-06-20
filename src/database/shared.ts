@@ -1,6 +1,5 @@
 import path from 'upath';
 import { isDevelopmentMode } from '../utils/env.js';
-import { runMigrations } from './migrations-runner.js';
 import { ProxyDB } from './ProxyDB.js';
 import SQLiteModel from './SQLiteModel.js';
 
@@ -82,8 +81,8 @@ export function getProductionSQLite(): ProxyDB {
  * In development mode (hostname matches DEBUG_DEVICES) the filename gets a "-test"
  * suffix before the .sqlite extension.
  *
- * The function also runs pending migrations from src/database/migrations/ on
- * first connection.
+ * The first call initializes the ProxyDB instance. Callers are responsible for
+ * running any migrations via their own migration files (e.g. SQLiteModel-migration.ts).
  */
 export async function getSQLite(): Promise<ProxyDB> {
   if (!centralizedSQLiteInstance) {
@@ -104,7 +103,6 @@ export async function getSQLite(): Promise<ProxyDB> {
       sqlite_filename: dbPath
     });
     await centralizedSQLiteInstance.initialize();
-    await runMigrations(centralizedSQLiteInstance);
   }
   return centralizedSQLiteInstance;
 }

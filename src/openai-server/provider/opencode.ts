@@ -93,7 +93,7 @@ async function getOpenCode(): Promise<OpenAI> {
     // Filter for HTTP proxies only since undici ProxyAgent doesn't support SOCKS5.
     opencodeClientProxy = await selectProxyUrl();
 
-    // getSQLite already runs migrations on first call
+    // getSQLite provides the centralized SQLite connection
     const proxyClient = await getProxyClient();
     await proxyClient.initialize();
 
