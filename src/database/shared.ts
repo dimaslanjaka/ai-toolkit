@@ -1,13 +1,14 @@
-import { ProxyDB } from './ProxyDB.js';
 import path from 'upath';
-import { OPENCODE_PROXY_DB_PATH } from '../config.js';
+import { isDevelopmentMode } from '../utils/env.js';
+import { runMigrations } from './migrations-runner.js';
+import { ProxyDB } from './ProxyDB.js';
 import SQLiteModel from './SQLiteModel.js';
 
 // Singleton instances for connection reuse
 let productionMySQLInstance: ProxyDB | null = null;
 let localMySQLInstance: ProxyDB | null = null;
 let localSQLiteInstance: ProxyDB | null = null;
-let sharedModelsInstance: SQLiteModel | null = null;
+let centralizedSQLiteInstance: ProxyDB | null = null;
 
 /**
  * Get or create singleton ProxyDB instance for production database (read/add/edit only)
@@ -72,15 +73,48 @@ export function getProductionSQLite(): ProxyDB {
 }
 
 /**
- * Shared SQLiteModel instance for models database
+ * Get or create the centralized SQLite singleton.
+ *
+ * Environment variables:
+ *   SQLITE_DBNAME (required) – base filename, e.g. "myproject.sqlite"
+ *   DEBUG_DEVICES (optional) – comma‑separated hostnames for dev detection
+ *
+ * In development mode (hostname matches DEBUG_DEVICES) the filename gets a "-test"
+ * suffix before the .sqlite extension.
+ *
+ * The function also runs pending migrations from src/database/migrations/ on
+ * first connection.
  */
-export function getSharedModels(): SQLiteModel {
-  if (!sharedModelsInstance) {
-    sharedModelsInstance = new SQLiteModel({
-      sqlite_filename: OPENCODE_PROXY_DB_PATH
+export async function getSQLite(): Promise<ProxyDB> {
+  if (!centralizedSQLiteInstance) {
+    const dbNameBase = process.env.SQLITE_DBNAME;
+    if (!dbNameBase) {
+      throw new Error(
+        'SQLITE_DBNAME environment variable is not set. It is required for SQLite database configuration.'
+      );
+    }
+    // Enforce .sqlite extension and apply dev suffix
+    const ext = path.extname(dbNameBase);
+    const name = path.basename(dbNameBase, ext);
+    const suffix = isDevelopmentMode() ? '-test' : '';
+    const dbName = `${name}${suffix}${ext || '.sqlite'}`;
+    const dbPath = path.join(process.cwd(), 'tmp', 'database', dbName);
+    centralizedSQLiteInstance = new ProxyDB({
+      db_type: 'sqlite',
+      sqlite_filename: dbPath
     });
+    await centralizedSQLiteInstance.initialize();
+    await runMigrations(centralizedSQLiteInstance);
   }
-  return sharedModelsInstance;
+  return centralizedSQLiteInstance;
+}
+
+/**
+ * Shared SQLiteModel instance for models database (uses the centralized SQLite instance)
+ */
+export async function getSharedModels(): Promise<SQLiteModel> {
+  const db = await getSQLite();
+  return new SQLiteModel(db);
 }
 
 /**
@@ -105,9 +139,9 @@ export async function closeAllDatabases(): Promise<void> {
     localSQLiteInstance = null;
   }
 
-  if (sharedModelsInstance) {
-    closePromises.push(sharedModelsInstance.close());
-    sharedModelsInstance = null;
+  if (centralizedSQLiteInstance) {
+    closePromises.push(centralizedSQLiteInstance.close());
+    centralizedSQLiteInstance = null;
   }
 
   await Promise.all(closePromises);
@@ -118,5 +152,6 @@ export default {
   getLocalMySQL,
   getProductionSQLite,
   getSharedModels,
+  getSQLite,
   closeAllDatabases
 };

@@ -8,11 +8,39 @@ const __dirname = path.dirname(__filename);
 
 export { ProxyEntry, HostEntry, ProxyHostEntry } from './types.js';
 
+/**
+ * SQLiteProxy provides proxy-related operations.
+ * Can be initialized with either:
+ * - A ProxyDB instance (shares the same connection)
+ * - A config object (creates a new connection)
+ */
 export class SQLiteProxy extends ProxyDB {
+  private sharedDb?: ProxyDB;
+
+  constructor(config: ProxyDB | any) {
+    // If already a ProxyDB instance, wrap it without creating a new connection
+    if (config instanceof ProxyDB) {
+      super({ db_type: 'sqlite', sqlite_filename: '' });
+      this.sharedDb = config;
+      // Copy over the helper and ready state from the shared instance
+      (this as any).helper = (config as any).helper;
+      this.ready = config.ready;
+      (this as any)._config = (config as any)._config;
+    } else {
+      super(config);
+    }
+  }
+
   /**
    * Initialize the database and apply schema if needed
    */
   async initialize(): Promise<void> {
+    // If sharing an existing ProxyDB, skip re-initialization
+    if (this.sharedDb) {
+      this.ready = true;
+      return;
+    }
+
     await super.initialize();
     await super.initializeSchema(path.join(__dirname, 'SQLiteProxy.sql'));
   }

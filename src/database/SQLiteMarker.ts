@@ -1,7 +1,9 @@
 import Database from 'better-sqlite3';
+import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import fs from 'fs-extra';
 import path from 'upath';
 import moment from 'moment-timezone';
+import { ProxyDB } from './ProxyDB.js';
 
 export type ValidUntil = string | number | null | undefined;
 
@@ -10,6 +12,8 @@ export interface SQLiteMarkerOptions {
   keyColumn?: string;
   baseDir?: string;
   timezone?: string;
+  // Optional: share an existing ProxyDB instance or better-sqlite3 Database
+  sharedDb?: ProxyDB | SQLiteDatabase;
 }
 
 export interface UnseenResultJson {
@@ -67,7 +71,7 @@ export class UnseenResult {
 export class SQLiteMarker {
   private readonly tableName: string;
   private readonly keyColumn: string;
-  private readonly db: Database.Database;
+  private readonly db: SQLiteDatabase;
   private readonly timezone: string;
 
   constructor(
@@ -76,32 +80,46 @@ export class SQLiteMarker {
       tableName = 'markers',
       keyColumn = 'marker',
       baseDir = 'tmp/database',
-      timezone = DEFAULT_TIMEZONE
+      timezone = DEFAULT_TIMEZONE,
+      sharedDb
     }: SQLiteMarkerOptions = {}
   ) {
     this.tableName = this.validateIdentifier(tableName);
     this.keyColumn = this.validateIdentifier(keyColumn);
     this.timezone = timezone;
 
-    // Determine full database path (support absolute or relative paths)
-    let dbPath: string;
-    if (path.isAbsolute(dbFilename)) {
-      // Absolute path provided – use directly
-      dbPath = dbFilename;
-    } else if (dbFilename.includes('/') || dbFilename.includes('\\')) {
-      // Relative path (e.g., "tmp/database/file.db") – resolve against project root
-      dbPath = path.resolve(PROJECT_ROOT, dbFilename);
+    // If sharedDb is provided, use it directly
+    if (sharedDb) {
+      if (sharedDb instanceof ProxyDB) {
+        // Get the underlying better-sqlite3 database from ProxyDB
+        const helper = (sharedDb as any).helper;
+        if (helper && helper.db) {
+          this.db = helper.db;
+        } else {
+          throw new Error('Shared ProxyDB instance is not initialized');
+        }
+      } else {
+        // It's a better-sqlite3 Database instance
+        this.db = sharedDb;
+      }
     } else {
-      // Simple filename – place in baseDir as before
-      const dbDir = this.getRelativePath(baseDir);
-      fs.ensureDirSync(dbDir);
-      dbPath = path.join(dbDir, dbFilename);
+      // Determine full database path (support absolute or relative paths)
+      let dbPath: string;
+      if (path.isAbsolute(dbFilename)) {
+        dbPath = dbFilename;
+      } else if (dbFilename.includes('/') || dbFilename.includes('\\')) {
+        dbPath = path.resolve(PROJECT_ROOT, dbFilename);
+      } else {
+        const dbDir = this.getRelativePath(baseDir);
+        fs.ensureDirSync(dbDir);
+        dbPath = path.join(dbDir, dbFilename);
+      }
+
+      // Ensure the directory exists for any path type
+      fs.ensureDirSync(path.dirname(dbPath));
+
+      this.db = new Database(dbPath);
     }
-
-    // Ensure the directory exists for any path type
-    fs.ensureDirSync(path.dirname(dbPath));
-
-    this.db = new Database(dbPath);
 
     this.configureSqlite();
     this.createTable();

@@ -1,20 +1,29 @@
 import { Proxy } from '../database/ProxyDB.js';
 import SQLiteMarker from '../database/SQLiteMarker.js';
-import { getProductionMySQL } from '../database/shared.js';
+import { getProductionMySQL, getSQLite } from '../database/shared.js';
 import { ProxyEntry } from '../database/types.js';
 import { SQLiteProxy } from '../database/SQLiteProxy.js';
 import { checkProxy, CheckProxyResult } from './checker.js';
-import { OPENCODE_PROXY_DB_PATH } from '../config.js';
 
 const database = getProductionMySQL();
-const marker = new SQLiteMarker(OPENCODE_PROXY_DB_PATH);
-const proxyDb = new SQLiteProxy({ db_type: 'sqlite', sqlite_filename: OPENCODE_PROXY_DB_PATH });
+let sharedSqlite: Awaited<ReturnType<typeof getSQLite>>;
+let marker: SQLiteMarker;
+let proxyDb: SQLiteProxy;
+
+async function initSharedSqlite() {
+  if (!sharedSqlite) {
+    sharedSqlite = await getSQLite();
+    marker = new SQLiteMarker('', { sharedDb: sharedSqlite });
+    proxyDb = new SQLiteProxy(sharedSqlite);
+  }
+}
 
 // Marker durations (in days)
 const WORKING_PROXY_HOURS = 1 / 24; // 1 hour
 const DEAD_PROXY_HOURS = 3 / 24; // 3 hours
 
 async function getRemoteWorkingProxies() {
+  await initSharedSqlite();
   const proxiestable = await database.proxies();
   const proxies = await proxiestable.getWorking();
 
@@ -81,7 +90,6 @@ async function checkSingle(item: Proxy) {
     // mark working for configured hours
     marker.mark(item.proxy, WORKING_PROXY_HOURS);
     // write to SQLiteProxy for opencode.ai
-    await proxyDb.initialize();
     await proxyDb.addProxy({
       proxy: item.proxy,
       type: item.type as ProxyEntry['type'],
@@ -96,6 +104,7 @@ async function checkSingle(item: Proxy) {
 }
 
 export async function opencodeCheckProxy() {
+  await initSharedSqlite();
   const proxies = await getRemoteWorkingProxies();
   for (let index = 0; index < proxies.length; index++) {
     const item = proxies[index];
@@ -108,5 +117,5 @@ export async function opencodeCheckProxy() {
 
   await database.close();
   marker.close();
-  await proxyDb.close();
+  // proxyDb.close() is now handled by the shared instance
 }

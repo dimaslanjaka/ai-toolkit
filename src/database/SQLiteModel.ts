@@ -11,14 +11,36 @@ const __dirname = path.dirname(__filename);
  * SQLiteModel provides CRUD operations for the "models" table which stores
  * provider model metadata. It mirrors the pattern of `SQLiteProxy` but operates
  * on the `models` schema defined in `SQLiteModel.sql`.
+ *
+ * Can be initialized with either:
+ * - A ProxyDB instance (shares the same connection)
+ * - A config object (creates a new connection)
  */
 export class SQLiteModel extends ProxyDB {
-  constructor(config: any) {
-    super(config);
+  private sharedDb?: ProxyDB;
+
+  constructor(config: ProxyDB | any) {
+    // If already a ProxyDB instance, wrap it without creating a new connection
+    if (config instanceof ProxyDB) {
+      super({ db_type: 'sqlite', sqlite_filename: '' });
+      this.sharedDb = config;
+      // Copy over the helper and ready state from the shared instance
+      (this as any).helper = (config as any).helper;
+      this.ready = config.ready;
+      (this as any)._config = (config as any)._config;
+    } else {
+      super(config);
+    }
   }
 
   /** Initialize the DB and apply the models schema */
   async initialize() {
+    // If sharing an existing ProxyDB, skip re-initialization
+    if (this.sharedDb) {
+      this.ready = true;
+      return;
+    }
+
     await super.initialize();
     // Apply the SQLiteModel schema explicitly
     await super.initializeSchema(path.join(__dirname, 'SQLiteModel.sql'));

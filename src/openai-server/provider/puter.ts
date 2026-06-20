@@ -97,7 +97,7 @@ export const PUTER_MODEL_LIST = [
  */
 export async function handleModels(_req: Request): Promise<ProviderResult> {
   try {
-    const modelDb = getSharedModels();
+    const modelDb = await getSharedModels();
     await modelDb.initialize();
 
     const modelsApi = await modelDb.models();
