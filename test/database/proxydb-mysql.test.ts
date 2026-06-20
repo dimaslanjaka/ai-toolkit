@@ -1,11 +1,11 @@
-import { createLocalMySQL } from '../../src/database/shared.js';
+import { getLocalMySQL } from '../../src/database/shared.js';
 
 describe('ProxyDB MySQL', () => {
   jest.setTimeout(20000);
   let proxy_db: any;
 
   beforeAll(async () => {
-    proxy_db = createLocalMySQL();
+    proxy_db = getLocalMySQL();
     await proxy_db.initialize();
   });
 

@@ -1,10 +1,10 @@
-import { createLocalSQLite } from '../../src/database/shared.js';
+import { getProductionSQLite } from '../../src/database/shared.js';
 
 describe('ProxyDB SQLite', () => {
   let proxy_db: any;
 
   beforeAll(async () => {
-    proxy_db = createLocalSQLite();
+    proxy_db = getProductionSQLite();
     await proxy_db.initialize();
   });
 

@@ -1,12 +1,12 @@
 import Bluebird from 'bluebird';
 import ProxyDB from '../database/ProxyDB.js';
-import { createProductionMySQL } from '../database/shared.js';
+import { getProductionMySQL } from '../database/shared.js';
 import { checkProxy, CheckProxyResult } from './checker.js';
 
 const databases: Record<string, ProxyDB> = {};
 
 async function getRemoteWorkingProxies() {
-  if (!databases.remote) databases.remote = createProductionMySQL();
+  if (!databases.remote) databases.remote = getProductionMySQL();
   const proxiestable = await databases.remote.proxies();
   const proxies = await proxiestable.getWorking();
   return proxies;
