@@ -2,8 +2,20 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import process from 'node:process';
 import fs from 'fs-extra';
 import path from 'upath';
-import { PROXY_CHECKER_EXTERNAL_LOCK_ENV } from '../../proxy/proxy-checker-lock.js';
-import { createProxyCheckerNodeArgs, resolveProxyCheckerRunner } from './proxy-checker-runner.js';
+import {
+  PROXY_CHECKER_EXTERNAL_LOCK_ENV,
+  createProxyCheckerLockEnv,
+  releaseProxyCheckerLock,
+  tryAcquireProxyCheckerLock
+} from '../../proxy/proxy-checker-lock.js';
+import { spawnNewTerminal } from '../../utils/spawn-new-terminal.js';
+
+export type ProxyCheckerRunnerKind = 'ts' | 'mjs' | 'cjs';
+
+export interface ResolvedProxyCheckerRunner {
+  kind: ProxyCheckerRunnerKind;
+  file: string;
+}
 
 export type ProxyCheckerState = 'idle' | 'starting' | 'running' | 'finished' | 'failed' | 'stopped' | 'locked';
 
@@ -47,6 +59,89 @@ export class ProxyCheckerManager {
     this.lockFile = path.join(tmpDir, 'logs/proxy-checker.lock');
   }
 
+  getProxyCheckerRunnerCandidates(): ResolvedProxyCheckerRunner[] {
+    const packageRoot = path.join(this.projectRoot, 'node_modules', '@dimaslanjaka', 'ai-toolkit');
+
+    return [
+      // Local development.
+      {
+        kind: 'ts',
+        file: path.join(this.projectRoot, 'src', 'proxy', 'opencode-checker.runner.ts')
+      },
+      {
+        kind: 'mjs',
+        file: path.join(this.projectRoot, 'dist', 'proxy', 'opencode-checker.runner.mjs')
+      },
+      {
+        kind: 'cjs',
+        file: path.join(this.projectRoot, 'dist', 'proxy', 'opencode-checker.runner.cjs')
+      },
+
+      // Installed package.
+      {
+        kind: 'mjs',
+        file: path.join(packageRoot, 'dist', 'proxy', 'opencode-checker.runner.mjs')
+      },
+      {
+        kind: 'cjs',
+        file: path.join(packageRoot, 'dist', 'proxy', 'opencode-checker.runner.cjs')
+      },
+      {
+        kind: 'ts',
+        file: path.join(packageRoot, 'src', 'proxy', 'opencode-checker.runner.ts')
+      }
+    ];
+  }
+
+  resolveProxyCheckerRunner(): ResolvedProxyCheckerRunner {
+    const candidates = this.getProxyCheckerRunnerCandidates();
+    const found = candidates.find((candidate) => fs.existsSync(candidate.file));
+
+    if (found) {
+      return found;
+    }
+
+    throw new Error(
+      ['Proxy checker runner not found.', ...candidates.map((candidate) => `Checked: ${candidate.file}`)].join('\n')
+    );
+  }
+
+  createProxyCheckerNodeArgs(runner: ResolvedProxyCheckerRunner, extraArgs: string[] = []): string[] {
+    if (runner.kind === 'ts') {
+      return ['--no-warnings=ExperimentalWarning', '--loader', 'ts-node/esm', runner.file, ...extraArgs];
+    }
+
+    return [runner.file, ...extraArgs];
+  }
+
+  startProxyCheckerNewTerminal(args: string[] = [], keepOpen = false) {
+    const lock = tryAcquireProxyCheckerLock(this.projectRoot);
+
+    if (!lock.acquired) {
+      return null;
+    }
+
+    try {
+      const runner = this.resolveProxyCheckerRunner();
+      const nodeArgs = this.createProxyCheckerNodeArgs(runner, args);
+      const terminal = spawnNewTerminal('node', nodeArgs, {
+        cwd: this.projectRoot,
+        keepOpen,
+        title: keepOpen ? 'Proxy Checker Debug' : 'Proxy Checker',
+        env: createProxyCheckerLockEnv(lock.handle)
+      });
+
+      terminal.once('error', () => {
+        releaseProxyCheckerLock(lock.handle);
+      });
+
+      return terminal;
+    } catch (error) {
+      releaseProxyCheckerLock(lock.handle);
+      throw error;
+    }
+  }
+
   async start() {
     await fs.ensureDir(path.dirname(this.logFile));
 
@@ -84,8 +179,8 @@ export class ProxyCheckerManager {
       this.signal = null;
       this.lastError = null;
 
-      const runner = resolveProxyCheckerRunner(this.projectRoot);
-      const args = createProxyCheckerNodeArgs(runner);
+      const runner = this.resolveProxyCheckerRunner();
+      const args = this.createProxyCheckerNodeArgs(runner);
 
       await this.writeLog('Starting proxy checker');
       await this.writeLog(`Runner: ${runner.kind} ${runner.file}`);

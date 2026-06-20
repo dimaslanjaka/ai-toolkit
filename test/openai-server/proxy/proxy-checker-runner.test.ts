@@ -1,11 +1,8 @@
 import { afterEach, describe, expect, it } from '@jest/globals';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import path from 'node:path';
-import {
-  createProxyCheckerNodeArgs,
-  resolveProxyCheckerRunner
-} from '../../../src/openai-server/proxy/proxy-checker-runner.js';
+import path from 'upath';
+import { ProxyCheckerManager } from '../../../src/openai-server/proxy/proxy-checker-manager.js';
 
 const temporaryRoots: string[] = [];
 
@@ -39,7 +36,8 @@ describe('resolveProxyCheckerRunner', () => {
 
     createFile(root, 'dist/proxy/opencode-checker.runner.mjs');
 
-    expect(resolveProxyCheckerRunner(root)).toEqual({
+    const manager = new ProxyCheckerManager(root);
+    expect(manager.resolveProxyCheckerRunner()).toEqual({
       kind: 'ts',
       file: sourceRunner
     });
@@ -51,7 +49,8 @@ describe('resolveProxyCheckerRunner', () => {
 
     createFile(root, 'dist/proxy/opencode-checker.runner.cjs');
 
-    expect(resolveProxyCheckerRunner(root)).toEqual({
+    const manager = new ProxyCheckerManager(root);
+    expect(manager.resolveProxyCheckerRunner()).toEqual({
       kind: 'mjs',
       file: esmRunner
     });
@@ -64,7 +63,8 @@ describe('resolveProxyCheckerRunner', () => {
       'node_modules/@dimaslanjaka/ai-toolkit/dist/proxy/opencode-checker.runner.mjs'
     );
 
-    expect(resolveProxyCheckerRunner(root)).toEqual({
+    const manager = new ProxyCheckerManager(root);
+    expect(manager.resolveProxyCheckerRunner()).toEqual({
       kind: 'mjs',
       file: installedRunner
     });
@@ -73,7 +73,8 @@ describe('resolveProxyCheckerRunner', () => {
   it('reports every checked path when no runner exists', () => {
     const root = createTemporaryRoot();
 
-    expect(() => resolveProxyCheckerRunner(root)).toThrow(
+    const manager = new ProxyCheckerManager(root);
+    expect(() => manager.resolveProxyCheckerRunner()).toThrow(
       expect.objectContaining({
         message: expect.stringContaining(path.join(root, 'dist', 'proxy', 'opencode-checker.runner.mjs'))
       })
@@ -83,7 +84,8 @@ describe('resolveProxyCheckerRunner', () => {
 
 describe('createProxyCheckerNodeArgs', () => {
   it('uses ts-node only for a TypeScript runner', () => {
-    expect(createProxyCheckerNodeArgs({ kind: 'ts', file: 'runner.ts' }, ['--debug'])).toEqual([
+    const manager = new ProxyCheckerManager();
+    expect(manager.createProxyCheckerNodeArgs({ kind: 'ts', file: 'runner.ts' }, ['--debug'])).toEqual([
       '--no-warnings=ExperimentalWarning',
       '--loader',
       'ts-node/esm',
@@ -93,7 +95,8 @@ describe('createProxyCheckerNodeArgs', () => {
   });
 
   it('runs built JavaScript directly', () => {
-    expect(createProxyCheckerNodeArgs({ kind: 'mjs', file: 'runner.mjs' }, ['--debug'])).toEqual([
+    const manager = new ProxyCheckerManager();
+    expect(manager.createProxyCheckerNodeArgs({ kind: 'mjs', file: 'runner.mjs' }, ['--debug'])).toEqual([
       'runner.mjs',
       '--debug'
     ]);

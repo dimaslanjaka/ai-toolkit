@@ -18,6 +18,7 @@ const __dirname = path.dirname(__filename);
  */
 export class SQLiteModel extends ProxyDB {
   private sharedDb?: ProxyDB;
+  private initializingSchema?: Promise<void>;
 
   constructor(config: any) {
     // If already a ProxyDB instance, wrap it without creating a new connection
@@ -35,35 +36,44 @@ export class SQLiteModel extends ProxyDB {
 
   /** Initialize the DB and apply the models schema */
   async initialize() {
-    if (this.sharedDb) {
-      this.ready = true;
-    } else {
-      await super.initialize();
+    if (this.initializingSchema) {
+      return this.initializingSchema;
     }
 
-    // Apply the SQLiteModel schema explicitly
-    await this.initializeSchema(path.join(__dirname, 'SQLiteModel.sql'));
-    // Run migrations
-    await migrateSQLiteModel(this);
-    // Run seed script once
-    const meta = await this.meta();
-    const seeded = await meta.get('models_seeded');
-    if (!seeded) {
-      const seedPath = path.join(__dirname, 'SQLiteModel-seed.sql');
-      const sql = await fs.readFile(seedPath, 'utf8');
-      const statements = sql
-        .split(';')
-        .map((s) => s.trim())
-        .filter((s) => s.length > 0);
-      for (const stmt of statements) {
-        await this.execute(stmt);
+    this.initializingSchema = (async () => {
+      if (this.sharedDb) {
+        this.ready = true;
+      } else {
+        await super.initialize();
       }
-      await meta.set('models_seeded', 'true');
-    }
+
+      // Apply the SQLiteModel schema explicitly
+      await this.initializeSchema(path.join(__dirname, 'SQLiteModel.sql'));
+      // Run migrations
+      await migrateSQLiteModel(this);
+      // Run seed script once
+      const meta = await this.meta();
+      const seeded = await meta.get('models_seeded');
+      if (!seeded) {
+        const seedPath = path.join(__dirname, 'SQLiteModel-seed.sql');
+        const sql = await fs.readFile(seedPath, 'utf8');
+        const statements = sql
+          .split(';')
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0);
+        for (const stmt of statements) {
+          await this.execute(stmt);
+        }
+        await meta.set('models_seeded', 'true');
+      }
+    })();
+
+    return this.initializingSchema;
   }
 
   /** CRUD helpers for the models table */
   async models() {
+    await this.initialize();
     return {
       find: (where: Partial<any> = {}) => this.select<any>('models', where),
       findOne: async (where: Partial<any>) => {

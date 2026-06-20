@@ -16,15 +16,8 @@ jest.unstable_mockModule('../../../src/proxy/proxy-checker-lock.js', () => ({
     AI_TOOLKIT_PROXY_CHECKER_LOCK_TOKEN: 'token'
   })),
   releaseProxyCheckerLock,
-  tryAcquireProxyCheckerLock
-}));
-
-jest.unstable_mockModule('../../../src/openai-server/proxy/proxy-checker-runner.js', () => ({
-  createProxyCheckerNodeArgs: jest.fn(() => ['runner.mjs']),
-  resolveProxyCheckerRunner: jest.fn(() => ({
-    kind: 'mjs',
-    file: 'runner.mjs'
-  }))
+  tryAcquireProxyCheckerLock,
+  PROXY_CHECKER_EXTERNAL_LOCK_ENV: 'AI_TOOLKIT_PROXY_CHECKER_EXTERNAL_LOCK'
 }));
 
 describe('startProxyChecker', () => {
@@ -40,10 +33,15 @@ describe('startProxyChecker', () => {
       ownerPid: 123
     });
 
-    const { startProxyCheckerNewTerminal: startProxyChecker } =
-      await import('../../../src/openai-server/proxy/start-proxy-checker-new-terminal.js');
+    const { ProxyCheckerManager } = await import('../../../src/openai-server/proxy/proxy-checker-manager.js');
+    jest.spyOn(ProxyCheckerManager.prototype, 'resolveProxyCheckerRunner').mockReturnValue({
+      kind: 'mjs',
+      file: 'runner.mjs'
+    });
+    jest.spyOn(ProxyCheckerManager.prototype, 'createProxyCheckerNodeArgs').mockReturnValue(['runner.mjs']);
 
-    expect(startProxyChecker()).toBeNull();
+    const manager = new ProxyCheckerManager();
+    expect(manager.startProxyCheckerNewTerminal()).toBeNull();
     expect(spawnNewTerminal).not.toHaveBeenCalled();
   });
 
@@ -57,10 +55,15 @@ describe('startProxyChecker', () => {
       }
     });
 
-    const { startProxyCheckerNewTerminal: startProxyChecker } =
-      await import('../../../src/openai-server/proxy/start-proxy-checker-new-terminal.js');
+    const { ProxyCheckerManager } = await import('../../../src/openai-server/proxy/proxy-checker-manager.js');
+    jest.spyOn(ProxyCheckerManager.prototype, 'resolveProxyCheckerRunner').mockReturnValue({
+      kind: 'mjs',
+      file: 'runner.mjs'
+    });
+    jest.spyOn(ProxyCheckerManager.prototype, 'createProxyCheckerNodeArgs').mockReturnValue(['runner.mjs']);
 
-    expect(startProxyChecker()).toBe(terminal);
+    const manager = new ProxyCheckerManager();
+    expect(manager.startProxyCheckerNewTerminal()).toBe(terminal);
     expect(spawnNewTerminal).toHaveBeenCalledTimes(1);
   });
 });

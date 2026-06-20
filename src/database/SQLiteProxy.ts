@@ -16,6 +16,7 @@ export type { ProxyEntry, HostEntry, ProxyHostEntry } from './types.js';
  */
 export class SQLiteProxy extends ProxyDB {
   private sharedDb?: ProxyDB;
+  private initializingSchema?: Promise<void>;
 
   constructor(config: any) {
     // If already a ProxyDB instance, wrap it without creating a new connection
@@ -35,19 +36,28 @@ export class SQLiteProxy extends ProxyDB {
    * Initialize the database and apply schema if needed
    */
   async initialize(): Promise<void> {
-    if (this.sharedDb) {
-      this.ready = true;
-    } else {
-      await super.initialize();
+    if (this.initializingSchema) {
+      return this.initializingSchema;
     }
 
-    await this.initializeSchema(path.join(__dirname, 'SQLiteProxy.sql'));
+    this.initializingSchema = (async () => {
+      if (this.sharedDb) {
+        this.ready = true;
+      } else {
+        await super.initialize();
+      }
+
+      await this.initializeSchema(path.join(__dirname, 'SQLiteProxy.sql'));
+    })();
+
+    return this.initializingSchema;
   }
 
   /**
    * hosts table operations
    */
   async hosts() {
+    await this.initialize();
     return {
       find: (where: Partial<HostEntry> = {}) => this.select<HostEntry>('hosts', where),
       findOne: async (where: Partial<HostEntry>): Promise<HostEntry | null> => {
@@ -64,6 +74,7 @@ export class SQLiteProxy extends ProxyDB {
    * proxy_hosts table operations
    */
   async proxy_hosts() {
+    await this.initialize();
     return {
       find: (where: Partial<ProxyHostEntry> = {}) => this.select<ProxyHostEntry>('proxy_hosts', where),
       findOne: async (where: Partial<ProxyHostEntry>): Promise<ProxyHostEntry | null> => {
@@ -84,6 +95,7 @@ export class SQLiteProxy extends ProxyDB {
    * proxies table operations
    */
   async proxy_entries() {
+    await this.initialize();
     return {
       find: (where: Partial<ProxyEntry> = {}) => this.select<ProxyEntry>('proxies', where),
       findOne: async (where: Partial<ProxyEntry>): Promise<ProxyEntry | null> => {
@@ -160,6 +172,7 @@ export class SQLiteProxy extends ProxyDB {
    * @returns Array of proxy entries with status and last_check info
    */
   async getProxiesByHost(host: string): Promise<(ProxyEntry & { status?: string; last_check?: string })[]> {
+    await this.initialize();
     return this.query<ProxyEntry & { status?: string; last_check?: string }>(
       `SELECT p.*, ph.status, ph.last_check
        FROM proxies p
