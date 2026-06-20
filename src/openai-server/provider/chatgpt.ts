@@ -10,54 +10,25 @@ import {
 import type { ProviderResult } from './index.js';
 import { chatgptProvider } from '../../provider/chatgpt/get.js';
 
-const CHATGPT_MODEL_LIST = [
-  { id: 'gpt-4o', provider: 'chatgpt' },
-  { id: 'gpt-4', provider: 'chatgpt' }
-];
-
 /**
  * Handle listing models for ChatGPT provider
  */
 export async function handleModels(_req: Request): Promise<ProviderResult> {
-  try {
-    const modelDb = await getSharedModels();
-    await modelDb.initialize();
+  const modelDb = await getSharedModels();
+  await modelDb.initialize();
 
-    const modelsApi = await modelDb.models();
-    const dbModels = await modelsApi.find({ provider: 'chatgpt' });
+  const modelsApi = await modelDb.models();
+  const dbModels = await modelsApi.find({ provider: 'chatgpt' });
 
-    if (dbModels.length > 0) {
-      const models = dbModels.map((model: any) => ({
-        id: model.id,
-        object: model.object,
-        created: model.created,
-        owned_by: model.owned_by,
-        permission: JSON.parse(model.permission),
-        root: model.root,
-        parent: model.parent,
-        enabled: model.enabled !== 0
-      }));
-
-      return {
-        type: 'json',
-        data: {
-          object: 'list',
-          data: models
-        }
-      };
-    }
-  } catch {
-    // Fall through to static list if database fetch fails
-  }
-
-  const models = CHATGPT_MODEL_LIST.map((model) => ({
+  const models = dbModels.map((model: any) => ({
     id: model.id,
-    object: 'model',
-    created: 1718380395,
-    owned_by: model.provider,
-    permission: [],
-    root: model.id,
-    parent: null
+    object: model.object,
+    created: model.created,
+    owned_by: model.owned_by,
+    permission: JSON.parse(model.permission),
+    root: model.root,
+    parent: model.parent,
+    enabled: model.enabled !== 0
   }));
 
   return {

@@ -19,122 +19,25 @@ async function getPuter() {
   return puterInstance;
 }
 
-// Curated models from Puter documentation tutorials
-// Source: https://developer.puter.com/tutorials/free-unlimited-openai-api/
-// Source: https://developer.puter.com/tutorials/free-unlimited-claude-35-sonnet-api/
-// Source: https://developer.puter.com/tutorials/free-llm-api/
-export const PUTER_MODEL_LIST = [
-  // OpenAI Models
-  { id: 'gpt-5.5-pro', provider: 'openai' },
-  { id: 'gpt-5.5', provider: 'openai' },
-  { id: 'gpt-5.4-mini', provider: 'openai' },
-  { id: 'gpt-5.4-nano', provider: 'openai' },
-  { id: 'gpt-5.4', provider: 'openai' },
-  { id: 'gpt-5.4-pro', provider: 'openai' },
-  { id: 'gpt-5.3-chat', provider: 'openai' },
-  { id: 'gpt-5.3-codex', provider: 'openai' },
-  { id: 'gpt-5.2', provider: 'openai' },
-  { id: 'gpt-5.2-chat', provider: 'openai' },
-  { id: 'gpt-5.2-codex', provider: 'openai' },
-  { id: 'gpt-5.2-pro', provider: 'openai' },
-  { id: 'gpt-5.1', provider: 'openai' },
-  { id: 'gpt-5.1-chat-latest', provider: 'openai' },
-  { id: 'gpt-5.1-codex', provider: 'openai' },
-  { id: 'gpt-5.1-codex-mini', provider: 'openai' },
-  { id: 'gpt-5.1-codex-max', provider: 'openai' },
-  { id: 'gpt-5-codex', provider: 'openai' },
-  { id: 'gpt-5', provider: 'openai' },
-  { id: 'gpt-5-mini', provider: 'openai' },
-  { id: 'gpt-5-nano', provider: 'openai' },
-  { id: 'gpt-5-chat-latest', provider: 'openai' },
-  { id: 'gpt-4.1', provider: 'openai' },
-  { id: 'gpt-4.1-mini', provider: 'openai' },
-  { id: 'gpt-4.1-nano', provider: 'openai' },
-  { id: 'gpt-4.5-preview', provider: 'openai' },
-  { id: 'gpt-4o', provider: 'openai' },
-  { id: 'gpt-4o-mini', provider: 'openai' },
-  { id: 'o1', provider: 'openai' },
-  { id: 'o1-mini', provider: 'openai' },
-  { id: 'o1-pro', provider: 'openai' },
-  { id: 'o3', provider: 'openai' },
-  { id: 'o3-mini', provider: 'openai' },
-  { id: 'o4-mini', provider: 'openai' },
-  { id: 'gpt-image-2', provider: 'openai' },
-  { id: 'gpt-image-1.5', provider: 'openai' },
-  { id: 'gpt-image-1-mini', provider: 'openai' },
-  { id: 'gpt-image-1', provider: 'openai' },
-  { id: 'dall-e-3', provider: 'openai' },
-  { id: 'dall-e-2', provider: 'openai' },
-  { id: 'gpt-4o-mini-tts', provider: 'openai' },
-  { id: 'tts-1', provider: 'openai' },
-  { id: 'tts-1-hd', provider: 'openai' },
-  { id: 'gpt-oss-120b', provider: 'openai' },
-
-  // Claude Models
-  { id: 'claude-fable-5', provider: 'anthropic' },
-  { id: 'claude-opus-4.8-fast', provider: 'anthropic' },
-  { id: 'claude-opus-4-8', provider: 'anthropic' },
-  { id: 'claude-opus-4.7-fast', provider: 'anthropic' },
-  { id: 'claude-opus-4-7', provider: 'anthropic' },
-  { id: 'claude-opus-4.6-fast', provider: 'anthropic' },
-  { id: 'claude-sonnet-4-6', provider: 'anthropic' },
-  { id: 'claude-opus-4-6', provider: 'anthropic' },
-  { id: 'claude-opus-4-5', provider: 'anthropic' },
-  { id: 'claude-haiku-4-5', provider: 'anthropic' },
-  { id: 'claude-sonnet-4-5', provider: 'anthropic' },
-  { id: 'claude-opus-4-1', provider: 'anthropic' },
-  { id: 'claude-opus-4', provider: 'anthropic' },
-  { id: 'claude-sonnet-4', provider: 'anthropic' },
-
-  // Other providers (from free-llm-api tutorial)
-  { id: 'deepseek-r1-0528', provider: 'deepseek' },
-  { id: 'anthropic/claude-sonnet-4-6', provider: 'anthropic' },
-  { id: 'openai/gpt-5.4-nano', provider: 'openai' }
-];
-
 /**
  * Handle listing models for Puter provider.
  */
 export async function handleModels(_req: Request): Promise<ProviderResult> {
-  try {
-    const modelDb = await getSharedModels();
-    await modelDb.initialize();
+  const modelDb = await getSharedModels();
+  await modelDb.initialize();
 
-    const modelsApi = await modelDb.models();
-    const dbModels = await modelsApi.find({ provider: 'puter' });
+  const modelsApi = await modelDb.models();
+  const dbModels = await modelsApi.find({ provider: 'puter' });
 
-    if (dbModels.length > 0) {
-      const openaiModels = dbModels.map((model: any) => ({
-        id: model.id,
-        object: model.object,
-        created: model.created,
-        owned_by: model.owned_by,
-        permission: JSON.parse(model.permission),
-        root: model.root,
-        parent: model.parent,
-        enabled: model.enabled !== 0
-      }));
-      return {
-        type: 'json',
-        data: {
-          object: 'list',
-          data: openaiModels
-        }
-      };
-    }
-  } catch {
-    // Fall through to static list if database fetch fails
-  }
-
-  // Fallback to static model list
-  const openaiModels = PUTER_MODEL_LIST.map((model) => ({
+  const openaiModels = dbModels.map((model: any) => ({
     id: model.id,
-    object: 'model',
-    created: 1718380395,
-    owned_by: model.provider,
-    permission: [],
-    root: model.id,
-    parent: null
+    object: model.object,
+    created: model.created,
+    owned_by: model.owned_by,
+    permission: JSON.parse(model.permission),
+    root: model.root,
+    parent: model.parent,
+    enabled: model.enabled !== 0
   }));
 
   return {

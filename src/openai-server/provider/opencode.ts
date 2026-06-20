@@ -106,79 +106,29 @@ async function getOpenCode(): Promise<OpenAI> {
   return opencodeClient;
 }
 
-export const OPENCODE_MODEL_LIST = [
-  // Free models (opencode.ai/zen/v1 with apiKey='public')
-  { id: 'deepseek-v4-flash-free', provider: 'opencode' },
-  { id: 'big-pickle', provider: 'opencode' },
-  { id: 'mimo-v2.5-free', provider: 'opencode' },
-  { id: 'qwen3.6-plus-free', provider: 'opencode' },
-  { id: 'minimax-m3-free', provider: 'opencode' },
-  { id: 'nemotron-3-ultra-free', provider: 'opencode' },
-  { id: 'north-mini-code-free', provider: 'opencode' }
-];
-
 export async function handleModels(_req: Request): Promise<ProviderResult> {
-  try {
-    const modelDb = await getSharedModels();
-    await modelDb.initialize();
+  const modelDb = await getSharedModels();
+  await modelDb.initialize();
 
-    const modelsApi = await modelDb.models();
-    const dbModels = await modelsApi.find({ provider: 'opencode' });
+  const modelsApi = await modelDb.models();
+  const dbModels = await modelsApi.find({ provider: 'opencode' });
 
-    if (dbModels.length > 0) {
-      const data = dbModels.map((model: any) => ({
-        id: model.id,
-        object: model.object,
-        created: model.created,
-        owned_by: model.owned_by,
-        permission: JSON.parse(model.permission),
-        root: model.root,
-        parent: model.parent,
-        enabled: model.enabled !== 0
-      }));
-      return { type: 'json', data: { object: 'list', data } };
-    }
-  } catch {
-    // Fall through to API call if database fetch fails
-  }
+  const data = dbModels.map((model: any) => ({
+    id: model.id,
+    object: model.object,
+    created: model.created,
+    owned_by: model.owned_by,
+    permission: JSON.parse(model.permission),
+    root: model.root,
+    parent: model.parent,
+    enabled: model.enabled !== 0
+  }));
 
-  try {
-    const client = await getOpenCode();
-    const allModels = await client.models.list();
-    // Filter to only opencode provider models
-    const filtered = allModels.data.filter((m: any) => m.provider === 'opencode');
-    await cacheWorkingProxy(opencodeClientProxy);
-    const data = filtered.map((m: any) => ({
-      id: m.id,
-      object: 'model',
-      created: m.created || 1718380395,
-      owned_by: m.owned_by || 'opencode',
-      permission: [],
-      provider: m.provider || 'opencode',
-      enabled: true
-    }));
-    return { type: 'json', data: { object: 'list', data } };
-  } catch {
-    // Fallback to static model list if API call fails
-    const data = OPENCODE_MODEL_LIST.map((model) => ({
-      id: model.id,
-      object: 'model',
-      created: 1718380395,
-      owned_by: model.provider,
-      permission: [],
-      root: model.id,
-      parent: null
-    }));
-    return { type: 'json', data: { object: 'list', data } };
-  }
+  return { type: 'json', data: { object: 'list', data } };
 }
 
 function resolveModel(model: string | undefined): string {
-  // If caller passes undefined or 'auto', pick a random model from the provider list
   if (!model || model === 'auto') {
-    // const randomIdx = Math.floor(Math.random() * OPENCODE_MODEL_LIST.length);
-    // return OPENCODE_MODEL_LIST[randomIdx].id;
-    // make deepsek by default
     return 'deepseek-v4-flash-free';
   }
   return model;
