@@ -130,3 +130,4 @@ coverage.*
 !.opencode/memory/openai-compatible.md
 binary-collection*
 **/*superpowers/**
+.slim/
