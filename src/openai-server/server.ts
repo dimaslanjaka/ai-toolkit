@@ -5,7 +5,8 @@ import path from 'upath';
 import * as provider from './provider/index.js';
 import { ProxyCheckerManager } from './proxy/proxy-checker-manager.js';
 import { SQLiteProxy } from '../database/SQLiteProxy.js';
-import { OPENCODE_PROXY_DB_PATH } from '../proxy/opencode-checker.js';
+import { OPENCODE_PROXY_DB_PATH } from '../config.js';
+
 import { serverLogger } from './utils.js';
 
 const proxyChecker = new ProxyCheckerManager();
@@ -133,7 +134,10 @@ app.get('/proxy-checker/proxies', async (req, res) => {
       return;
     }
 
-    const proxyDb = new SQLiteProxy({ db_type: 'sqlite', sqlite_filename: OPENCODE_PROXY_DB_PATH });
+    const proxyDb = new SQLiteProxy({
+      db_type: 'sqlite',
+      sqlite_filename: OPENCODE_PROXY_DB_PATH
+    });
     await proxyDb.initialize();
 
     const proxies = await proxyDb.getProxiesByHost(host);

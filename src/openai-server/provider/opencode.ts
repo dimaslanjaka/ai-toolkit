@@ -6,7 +6,7 @@ import { ProxyAgent } from 'undici';
 import path from 'upath';
 import SQLiteProxy from '../../database/SQLiteProxy.js';
 import { getSharedModels } from '../../database/shared.js';
-import { OPENCODE_PROXY_DB_PATH } from '../../proxy/opencode-checker.js';
+
 import {
   convertChatCompletionsToResponses,
   convertResponsesRequestToChatCompletions,
@@ -22,7 +22,7 @@ let opencodeClientProxy: string | undefined;
 const LAST_OPENCODE_PROXY_PATH = path.join(process.cwd(), 'tmp', 'database', 'last-opencode-proxy.txt');
 const proxyDb = new SQLiteProxy({
   db_type: 'sqlite',
-  sqlite_filename: OPENCODE_PROXY_DB_PATH
+  sqlite_filename: path.join(process.cwd(), 'tmp', 'database', 'opencode-checker.db')
 });
 
 function getProxyUrl(item: {

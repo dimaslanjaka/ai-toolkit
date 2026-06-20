@@ -1,7 +1,7 @@
 import { ProxyDB } from './ProxyDB.js';
 import path from 'upath';
+import { OPENCODE_PROXY_DB_PATH } from '../config.js';
 import SQLiteModel from './SQLiteModel.js';
-import { OPENCODE_PROXY_DB_PATH } from '../proxy/opencode-checker.js';
 
 // Singleton instances for connection reuse
 let productionMySQLInstance: ProxyDB | null = null;
@@ -76,7 +76,9 @@ export function getProductionSQLite(): ProxyDB {
  */
 export function getSharedModels(): SQLiteModel {
   if (!sharedModelsInstance) {
-    sharedModelsInstance = new SQLiteModel({ sqlite_filename: OPENCODE_PROXY_DB_PATH });
+    sharedModelsInstance = new SQLiteModel({
+      sqlite_filename: OPENCODE_PROXY_DB_PATH
+    });
   }
   return sharedModelsInstance;
 }

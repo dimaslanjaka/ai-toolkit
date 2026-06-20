@@ -1,13 +1,12 @@
-import path from 'upath';
 import { Proxy } from '../database/ProxyDB.js';
 import SQLiteMarker from '../database/SQLiteMarker.js';
 import { getProductionMySQL } from '../database/shared.js';
 import { ProxyEntry } from '../database/types.js';
 import { SQLiteProxy } from '../database/SQLiteProxy.js';
 import { checkProxy, CheckProxyResult } from './checker.js';
+import { OPENCODE_PROXY_DB_PATH } from '../config.js';
 
 const database = getProductionMySQL();
-export const OPENCODE_PROXY_DB_PATH = path.join(process.cwd(), 'tmp', 'database', 'opencode-checker.db');
 const marker = new SQLiteMarker(OPENCODE_PROXY_DB_PATH);
 const proxyDb = new SQLiteProxy({ db_type: 'sqlite', sqlite_filename: OPENCODE_PROXY_DB_PATH });
 
