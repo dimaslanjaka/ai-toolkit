@@ -1,4 +1,5 @@
 import { Request } from 'express';
+import { getSharedModels } from '../../database/shared.js';
 import {
   convertChatCompletionsToResponses,
   convertResponsesRequestToChatCompletions,
@@ -95,6 +96,37 @@ export const PUTER_MODEL_LIST = [
  * Handle listing models for Puter provider.
  */
 export async function handleModels(_req: Request): Promise<ProviderResult> {
+  try {
+    const modelDb = getSharedModels();
+    await modelDb.initialize();
+
+    const modelsApi = await modelDb.models();
+    const dbModels = await modelsApi.find({ provider: 'puter' });
+
+    if (dbModels.length > 0) {
+      const openaiModels = dbModels.map((model: any) => ({
+        id: model.id,
+        object: model.object,
+        created: model.created,
+        owned_by: model.owned_by,
+        permission: JSON.parse(model.permission),
+        root: model.root,
+        parent: model.parent,
+        enabled: model.enabled !== 0
+      }));
+      return {
+        type: 'json',
+        data: {
+          object: 'list',
+          data: openaiModels
+        }
+      };
+    }
+  } catch {
+    // Fall through to static list if database fetch fails
+  }
+
+  // Fallback to static model list
   const openaiModels = PUTER_MODEL_LIST.map((model) => ({
     id: model.id,
     object: 'model',

@@ -5,6 +5,7 @@ import { isEmpty, writefile } from 'sbg-utility';
 import { ProxyAgent } from 'undici';
 import path from 'upath';
 import SQLiteProxy from '../../database/SQLiteProxy.js';
+import { getSharedModels } from '../../database/shared.js';
 import { OPENCODE_PROXY_DB_PATH } from '../../proxy/opencode-checker.js';
 import {
   convertChatCompletionsToResponses,
@@ -112,6 +113,30 @@ export const OPENCODE_MODEL_LIST = [
 ];
 
 export async function handleModels(_req: Request): Promise<ProviderResult> {
+  try {
+    const modelDb = getSharedModels();
+    await modelDb.initialize();
+
+    const modelsApi = await modelDb.models();
+    const dbModels = await modelsApi.find({ provider: 'opencode' });
+
+    if (dbModels.length > 0) {
+      const data = dbModels.map((model: any) => ({
+        id: model.id,
+        object: model.object,
+        created: model.created,
+        owned_by: model.owned_by,
+        permission: JSON.parse(model.permission),
+        root: model.root,
+        parent: model.parent,
+        enabled: model.enabled !== 0
+      }));
+      return { type: 'json', data: { object: 'list', data } };
+    }
+  } catch {
+    // Fall through to API call if database fetch fails
+  }
+
   try {
     const client = await getOpenCode();
     const models = await client.models.list();

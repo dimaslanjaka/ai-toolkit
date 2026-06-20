@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { getSharedModels } from '../../database/shared.js';
 import { serverLogger, logMessageToFile, appendMessageToFile } from '../utils.js';
 import {
   convertResponsesRequestToChatCompletions,
@@ -9,30 +10,55 @@ import {
 import type { ProviderResult } from './index.js';
 import { chatgptProvider } from '../../provider/chatgpt/get.js';
 
+const CHATGPT_MODEL_LIST = [
+  { id: 'gpt-4o', provider: 'chatgpt' },
+  { id: 'gpt-4', provider: 'chatgpt' }
+];
+
 /**
  * Handle listing models for ChatGPT provider
  */
 export async function handleModels(_req: Request): Promise<ProviderResult> {
-  const models = [
-    {
-      id: 'gpt-4o',
-      object: 'model',
-      created: 1718380395,
-      owned_by: 'openai',
-      permission: [],
-      root: 'gpt-4o',
-      parent: null
-    },
-    {
-      id: 'gpt-4',
-      object: 'model',
-      created: 1687882411,
-      owned_by: 'openai',
-      permission: [],
-      root: 'gpt-4',
-      parent: null
+  try {
+    const modelDb = getSharedModels();
+    await modelDb.initialize();
+
+    const modelsApi = await modelDb.models();
+    const dbModels = await modelsApi.find({ provider: 'chatgpt' });
+
+    if (dbModels.length > 0) {
+      const models = dbModels.map((model: any) => ({
+        id: model.id,
+        object: model.object,
+        created: model.created,
+        owned_by: model.owned_by,
+        permission: JSON.parse(model.permission),
+        root: model.root,
+        parent: model.parent,
+        enabled: model.enabled !== 0
+      }));
+
+      return {
+        type: 'json',
+        data: {
+          object: 'list',
+          data: models
+        }
+      };
     }
-  ];
+  } catch {
+    // Fall through to static list if database fetch fails
+  }
+
+  const models = CHATGPT_MODEL_LIST.map((model) => ({
+    id: model.id,
+    object: 'model',
+    created: 1718380395,
+    owned_by: model.provider,
+    permission: [],
+    root: model.id,
+    parent: null
+  }));
 
   return {
     type: 'json',
