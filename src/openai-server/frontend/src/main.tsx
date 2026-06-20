@@ -1062,10 +1062,11 @@ function App() {
                       ? 'border-neutral-600 bg-neutral-800 text-white'
                       : 'border-neutral-300 bg-white'
                   }`}>
-                  <option value="auto">Auto — OpenCode → Puter → ChatGPT</option>
-                  <option value="opencode">OpenCode</option>
-                  <option value="puter">Puter</option>
-                  <option value="chatgpt">ChatGPT browser</option>
+                  {PROVIDER_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
               </label>
 
