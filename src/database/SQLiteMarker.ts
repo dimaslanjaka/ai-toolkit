@@ -339,6 +339,74 @@ export class SQLiteMarker {
   close(): void {
     this.db.close();
   }
+
+  /**
+   * Remove expired markers from the table.
+   * @param asOf - Optional timestamp to use as "now" for expiration check (ISO format).
+   *   Defaults to current time in the configured timezone.
+   * @returns Number of deleted rows.
+   */
+  cleanupExpired(asOf: string | null = null): number {
+    const asOfValue = asOf ? this.normalizeDate(asOf) : this.now();
+
+    const table = this.quoteIdentifier(this.tableName);
+
+    const sql = `
+      DELETE FROM ${table}
+      WHERE expires_at IS NOT NULL
+      AND expires_at <= ?
+    `;
+
+    const result = this.db.prepare(sql).run(asOfValue);
+
+    return result.changes;
+  }
+
+  /**
+   * Remove all markers older than the specified number of days, regardless of expiration.
+   * Useful for cleaning up markers that never had an expiration set.
+   * @param olderThanDays - Delete markers created before this many days ago.
+   * @param asOf - Optional timestamp to use as "now" (ISO format). Defaults to current time.
+   * @returns Number of deleted rows.
+   */
+  cleanupOlderThan(olderThanDays: number, asOf: string | null = null): number {
+    if (olderThanDays <= 0) {
+      return 0;
+    }
+
+    const asOfValue = asOf ? this.normalizeDate(asOf) : this.now();
+    const cutoff = moment(asOfValue).tz(this.timezone).subtract(olderThanDays, 'days').format(DATE_FORMAT);
+
+    const table = this.quoteIdentifier(this.tableName);
+
+    const sql = `
+      DELETE FROM ${table}
+      WHERE created_at <= ?
+    `;
+
+    const result = this.db.prepare(sql).run(cutoff);
+
+    return result.changes;
+  }
+
+  /**
+   * Run both cleanup operations: expired markers and old markers without expiration.
+   * @param options - Cleanup options
+   * @returns Object with counts of deleted rows from each operation.
+   */
+  cleanup(
+    options: {
+      maxAgeDays?: number;
+      asOf?: string | null;
+    } = {}
+  ): { expired: number; old: number; total: number } {
+    const { maxAgeDays = 30, asOf = null } = options;
+
+    const expired = this.cleanupExpired(asOf);
+    const old = this.cleanupOlderThan(maxAgeDays, asOf);
+
+    return { expired, old, total: expired + old };
+  }
 }
 
 export default SQLiteMarker;
