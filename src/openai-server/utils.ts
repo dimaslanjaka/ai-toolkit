@@ -111,8 +111,8 @@ export function getServerState(): ServerState | null {
  * Start the OpenAI-compatible server on a free port and save state
  */
 export async function startServer(
-  app: any,
-  preferredPort: number = 5758,
+  app: import('express').Express,
+  preferredPort: number | undefined = 5758,
   options: StartServerOptions = {}
 ): Promise<{ state: ServerState; server: net.Server }> {
   // Reset log on startup

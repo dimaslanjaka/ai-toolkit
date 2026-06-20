@@ -3,6 +3,7 @@ import fs from 'fs-extra';
 import path from 'upath';
 import { app } from './server.js';
 import { serverLogger, startServer } from './utils.js';
+import { closeAllDatabases } from '../database/shared.js';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env'), quiet: true });
 
@@ -34,6 +35,16 @@ const logDir = 'tmp/logs/openai-compatible/messages';
 fs.rmSync(logDir, { recursive: true, force: true });
 fs.mkdirSync(logDir, { recursive: true });
 
+// Graceful shutdown: close database connections on exit
+async function gracefulShutdown(signal: string) {
+  serverLogger.logSync(`${signal} received, closing databases...`);
+  await closeAllDatabases();
+  process.exit(0);
+}
+
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+
 // Global error handlers to prevent server crash
 process.on('unhandledRejection', (reason, promise) => {
   serverLogger.logSync(`Unhandled Rejection at: ${promise} reason: ${reason}`);
@@ -41,6 +52,7 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 process.on('uncaughtException', (error) => {
+  console.log(`Uncaught Exception: ${error}`);
   serverLogger.logSync(`Uncaught Exception: ${error}`);
   // Don't exit - keep server running
 });
