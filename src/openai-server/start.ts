@@ -1,11 +1,11 @@
-import dotenv from 'dotenv';
+import { loadDotenv } from 'binary-collections';
 import fs from 'fs-extra';
 import path from 'upath';
+import { closeAllDatabases } from '../database/shared.js';
 import { app } from './server.js';
 import { serverLogger, startServer } from './utils.js';
-import { closeAllDatabases } from '../database/shared.js';
 
-dotenv.config({ path: path.resolve(process.cwd(), '.env'), quiet: true });
+loadDotenv();
 
 const httpsEnabled = process.env.OPENAI_SERVER_HTTPS !== 'false';
 const httpsKeyFile = path.resolve(process.env.OPENAI_SERVER_HTTPS_KEY_FILE || '.cert/dev.pem');

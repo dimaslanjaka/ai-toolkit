@@ -1,4 +1,4 @@
-import dotenv from 'dotenv';
+import { loadDotenv } from 'binary-collections';
 import OpenAI from 'openai';
 import path from 'upath';
 import { fileURLToPath } from 'url';
@@ -7,10 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // --- ROBUST ENV LOADING ---
-// Try loading from the script's directory (in case script is in root)
-dotenv.config({ path: path.resolve(__dirname, '.env'), quiet: true, override: true });
-// Try loading from parent directory (in case script is in ./src)
-dotenv.config({ path: path.resolve(__dirname, '../.env'), quiet: true, override: true });
+loadDotenv();
 
 const client = new OpenAI({
   baseURL: 'http://localhost:11434/v1',

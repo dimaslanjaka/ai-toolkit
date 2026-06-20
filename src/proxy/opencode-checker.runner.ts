@@ -7,6 +7,9 @@ import {
   type ProxyCheckerLockHandle
 } from './proxy-checker-lock.js';
 import { opencodeCheckProxy } from './opencode-checker.js';
+import { loadDotenv } from 'binary-collections';
+
+loadDotenv();
 
 async function run() {
   const externalLock = process.env[PROXY_CHECKER_EXTERNAL_LOCK_ENV] === '1';
