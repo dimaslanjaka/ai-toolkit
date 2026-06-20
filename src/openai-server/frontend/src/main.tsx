@@ -44,27 +44,7 @@ interface ModelEntry {
 }
 
 const STORAGE_KEY = 'ai-toolkit-chat-state-v1';
-const DEFAULT_MODEL = 'deepseek-v4-flash-free';
-
-const FALLBACK_MODELS: Record<Provider, ModelEntry[]> = {
-  auto: [
-    { id: DEFAULT_MODEL, owned_by: 'auto' },
-    { id: 'gpt-5-nano', owned_by: 'auto' },
-    { id: 'gpt-4o', owned_by: 'auto' }
-  ],
-  opencode: [
-    { id: DEFAULT_MODEL, owned_by: 'opencode' },
-    { id: 'glm-4.7-free', owned_by: 'opencode' }
-  ],
-  puter: [
-    { id: 'gpt-5-nano', owned_by: 'puter' },
-    { id: 'auto', owned_by: 'puter' }
-  ],
-  chatgpt: [
-    { id: 'gpt-4o', owned_by: 'chatgpt' },
-    { id: 'gpt-4', owned_by: 'chatgpt' }
-  ]
-};
+const DEFAULT_MODEL = '';
 
 const DEFAULT_SETTINGS: ChatSettings = {
   apiBase: '',
@@ -259,7 +239,7 @@ function App() {
   const [conversations, setConversations] = useState<Conversation[]>(initial.conversations);
   const [activeId, setActiveId] = useState(initial.activeId);
   const [settings, setSettings] = useState<ChatSettings>(initial.settings);
-  const [models, setModels] = useState<ModelEntry[]>(FALLBACK_MODELS[initial.settings.provider]);
+  const [models, setModels] = useState<ModelEntry[]>([]);
   const [connectionState, setConnectionState] = useState<'checking' | 'online' | 'offline'>('checking');
   const [activeView, setActiveView] = useState<AppView>(getViewFromPath);
   const [composer, setComposer] = useState('');
@@ -351,7 +331,7 @@ function App() {
 
         const payload = await response.json();
         const nextModels = Array.isArray(payload?.data)
-          ? payload.data.filter((model: any) => typeof model?.id === 'string')
+          ? payload.data.filter((model: any) => typeof model?.id === 'string' && model.enabled !== false)
           : [];
 
         if (!nextModels.length) {
@@ -369,12 +349,7 @@ function App() {
           return;
         }
 
-        const fallback = FALLBACK_MODELS[provider];
-        setModels(fallback);
-        setSettings((current) => ({
-          ...current,
-          model: fallback.some((model) => model.id === current.model) ? current.model : fallback[0].id
-        }));
+        setModels([]);
         setConnectionState('offline');
       }
     }
@@ -1155,7 +1130,7 @@ function App() {
                 <span className="ml-3 text-sm">
                   {connectionState === 'online'
                     ? 'The model endpoint is responding.'
-                    : 'Using fallback model names until the server responds.'}
+                    : 'Models unavailable until the server responds.'}
                 </span>
               </div>
             </div>
