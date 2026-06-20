@@ -8,6 +8,14 @@ import { fallbackTitleFromPrompt, normalizeGeneratedTitle } from './utils/title'
 import { createApiUrl, sanitizeStoredApiBase } from './utils/url';
 
 type Provider = 'auto' | 'opencode' | 'puter' | 'chatgpt';
+
+const PROVIDER_OPTIONS: { value: Provider; label: string }[] = [
+  { value: 'auto', label: 'Auto' },
+  { value: 'opencode', label: 'OpenCode' },
+  { value: 'puter', label: 'Puter' },
+  { value: 'chatgpt', label: 'ChatGPT' }
+];
+
 type Theme = 'dark' | 'light';
 type AppView = 'chat' | 'proxy-manager';
 type MessageRole = 'user' | 'assistant';
@@ -770,35 +778,7 @@ function App() {
             <i aria-hidden="true" className="fa-solid fa-bars" />
           </IconButton>
 
-          {activeView === 'chat' ? (
-            <>
-              <label className="relative min-w-0">
-                <span className="sr-only">Model</span>
-                <select
-                  value={settings.model}
-                  onChange={(event) => setSettings((current) => ({ ...current, model: event.target.value }))}
-                  className={`max-w-[13rem] appearance-none truncate rounded-lg border-0 bg-transparent py-2 pr-7 pl-2 text-sm font-semibold focus:ring-2 focus:ring-emerald-500 md:max-w-xs ${
-                    settings.theme === 'dark' ? 'text-neutral-100' : 'text-neutral-900'
-                  }`}>
-                  {models.map((model) => (
-                    <option key={model.id} value={model.id} className="bg-neutral-800 text-neutral-100">
-                      {model.id}
-                    </option>
-                  ))}
-                </select>
-                <span className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-xs text-neutral-500">
-                  ▾
-                </span>
-              </label>
-
-              <span
-                className={`hidden rounded-full px-2 py-1 text-[11px] font-medium sm:inline ${
-                  settings.theme === 'dark' ? 'bg-neutral-800 text-neutral-400' : 'bg-neutral-100 text-neutral-500'
-                }`}>
-                {providerLabel}
-              </span>
-            </>
-          ) : (
+          {activeView === 'proxy-manager' && (
             <div className="min-w-0 px-2">
               <p className="truncate text-sm font-semibold">Proxy manager</p>
               <p className="hidden text-[11px] text-neutral-500 sm:block">OpenCode proxy operations</p>
