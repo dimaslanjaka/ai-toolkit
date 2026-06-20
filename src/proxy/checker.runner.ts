@@ -15,12 +15,13 @@ async function getRemoteWorkingProxies() {
 async function _check() {
   const proxies = await getRemoteWorkingProxies();
   let result: CheckProxyResult | undefined = undefined;
-  for (const proxy of proxies) {
-    let protocols = proxy.type?.split(/,-/) || ['http', 'https', 'socks4', 'socks5'];
+  for (const item of proxies) {
+    let protocols = item.type?.split(/,-/) || ['http', 'https', 'socks4', 'socks5'];
     if (protocols.length === 0) protocols = ['http', 'https', 'socks4', 'socks5'];
     let shouldBreak = false;
-    for (const protocol of protocols) {
-      const proxyUrl = `${protocol}://${proxy.username ? `${proxy.username}:${proxy.password}@` : ''}${proxy.proxy}`;
+    let protocol;
+    for (protocol of protocols) {
+      const proxyUrl = `${protocol}://${item.username ? `${item.username}:${item.password}@` : ''}${item.proxy}`;
       console.log(`Checking proxy: ${proxyUrl}`);
       result = await checkProxy({
         proxy: proxyUrl,
@@ -48,11 +49,15 @@ async function _check() {
         break;
       }
     }
+
+    const table_proxies = await databases.remote.proxies();
     if (shouldBreak) {
       // got working proxy
+      await table_proxies.update({ status: 'active', type: protocol, https: 'true' }, { proxy: item.proxy });
       break;
     } else {
       // all protocols dead
+      await table_proxies.update({ status: 'dead', type: '' }, { proxy: item.proxy });
     }
   }
   return result;
