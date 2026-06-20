@@ -37,7 +37,16 @@ export function buildTs() {
 
 // Copy SQL schema files to tmp/dist
 export function copySql() {
-  return src('src/database/*.sql').pipe(dest('tmp/dist/src/database/'));
+  return new Promise((resolve, reject) => {
+    const destinations = ['tmp/dist/src/database/', 'dist/src/database/', 'dist/database/'];
+    let pending = destinations.length;
+    const check = () => {
+      if (--pending === 0) resolve();
+    };
+    destinations.forEach((destPath) => {
+      src('src/database/*.sql').pipe(dest(destPath)).on('finish', check).on('error', reject);
+    });
+  });
 }
 
 // Rollup build
