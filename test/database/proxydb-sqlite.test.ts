@@ -29,8 +29,8 @@ describe('ProxyDB SQLite', () => {
     // 2. Find
     const found = await proxiesTable.findOne({ proxy: proxyAddress });
     expect(found).toBeDefined();
-    expect(found.proxy).toBe(proxyAddress);
-    expect(found.status).toBe('alive');
+    expect(found!.proxy).toBe(proxyAddress);
+    expect(found!.status).toBe('alive');
 
     // 3. Update
     const updateResult = await proxiesTable.update({ status: 'dead', latency: '200ms' }, { proxy: proxyAddress });
@@ -38,8 +38,8 @@ describe('ProxyDB SQLite', () => {
 
     // 4. Verify update
     const updated = await proxiesTable.findOne({ proxy: proxyAddress });
-    expect(updated.status).toBe('dead');
-    expect(updated.latency).toBe('200ms');
+    expect(updated!.status).toBe('dead');
+    expect(updated!.latency).toBe('200ms');
 
     // 5. Delete
     const deleteResult = await proxiesTable.delete({ proxy: proxyAddress });
