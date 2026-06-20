@@ -16,8 +16,9 @@ async function _check() {
   const proxies = await getRemoteWorkingProxies();
   let result: CheckProxyResult | undefined = undefined;
   for (const item of proxies) {
-    let protocols = item.type?.split(/,-/) || ['http', 'https', 'socks4', 'socks5'];
-    if (protocols.length === 0) protocols = ['http', 'https', 'socks4', 'socks5'];
+    const VALID_PROTOCOLS = ['http', 'socks4', 'socks5'];
+    let protocols = item.type?.split(/[,|-]+/).filter((p: string) => VALID_PROTOCOLS.includes(p)) || [];
+    if (protocols.length === 0) protocols = [...VALID_PROTOCOLS];
     let shouldBreak = false;
     let protocol;
     for (protocol of protocols) {

@@ -61,36 +61,21 @@ export class ProxyCheckerManager {
 
   getProxyCheckerRunnerCandidates(): ResolvedProxyCheckerRunner[] {
     const packageRoot = path.join(this.projectRoot, 'node_modules', '@dimaslanjaka', 'ai-toolkit');
+    const runnerNames = ['checker.runner', 'opencode-checker.runner'];
 
-    return [
-      // Local development.
-      {
-        kind: 'ts',
-        file: path.join(this.projectRoot, 'src', 'proxy', 'opencode-checker.runner.ts')
-      },
-      {
-        kind: 'mjs',
-        file: path.join(this.projectRoot, 'dist', 'proxy', 'opencode-checker.runner.mjs')
-      },
-      {
-        kind: 'cjs',
-        file: path.join(this.projectRoot, 'dist', 'proxy', 'opencode-checker.runner.cjs')
-      },
+    const localCandidates = runnerNames.flatMap((name) => [
+      { kind: 'ts' as const, file: path.join(this.projectRoot, 'src', 'proxy', `${name}.ts`) },
+      { kind: 'mjs' as const, file: path.join(this.projectRoot, 'dist', 'proxy', `${name}.mjs`) },
+      { kind: 'cjs' as const, file: path.join(this.projectRoot, 'dist', 'proxy', `${name}.cjs`) }
+    ]);
 
-      // Installed package.
-      {
-        kind: 'mjs',
-        file: path.join(packageRoot, 'dist', 'proxy', 'opencode-checker.runner.mjs')
-      },
-      {
-        kind: 'cjs',
-        file: path.join(packageRoot, 'dist', 'proxy', 'opencode-checker.runner.cjs')
-      },
-      {
-        kind: 'ts',
-        file: path.join(packageRoot, 'src', 'proxy', 'opencode-checker.runner.ts')
-      }
-    ];
+    const packageCandidates = runnerNames.flatMap((name) => [
+      { kind: 'mjs' as const, file: path.join(packageRoot, 'dist', 'proxy', `${name}.mjs`) },
+      { kind: 'cjs' as const, file: path.join(packageRoot, 'dist', 'proxy', `${name}.cjs`) },
+      { kind: 'ts' as const, file: path.join(packageRoot, 'src', 'proxy', `${name}.ts`) }
+    ]);
+
+    return [...localCandidates, ...packageCandidates];
   }
 
   resolveProxyCheckerRunner(): ResolvedProxyCheckerRunner {
@@ -104,6 +89,19 @@ export class ProxyCheckerManager {
     throw new Error(
       ['Proxy checker runner not found.', ...candidates.map((candidate) => `Checked: ${candidate.file}`)].join('\n')
     );
+  }
+
+  resolveAllProxyCheckerRunners(): ResolvedProxyCheckerRunner[] {
+    const candidates = this.getProxyCheckerRunnerCandidates();
+    const found = candidates.filter((candidate) => fs.existsSync(candidate.file));
+
+    if (found.length === 0) {
+      throw new Error(
+        ['Proxy checker runner not found.', ...candidates.map((candidate) => `Checked: ${candidate.file}`)].join('\n')
+      );
+    }
+
+    return found;
   }
 
   createProxyCheckerNodeArgs(runner: ResolvedProxyCheckerRunner, extraArgs: string[] = []): string[] {
@@ -179,13 +177,37 @@ export class ProxyCheckerManager {
       this.signal = null;
       this.lastError = null;
 
-      const runner = this.resolveProxyCheckerRunner();
+      const runners = this.resolveAllProxyCheckerRunners();
+
+      await this.writeLog(`Found ${runners.length} runner(s) to execute`);
+
+      for (const runner of runners) {
+        await this.writeLog(`Executing runner: ${runner.kind} ${runner.file}`);
+        await this.executeRunner(runner);
+      }
+
+      return {
+        ok: true,
+        message: `Proxy checker started with ${runners.length} runner(s)`,
+        status: await this.getStatus()
+      };
+    } catch (error) {
+      await this.cleanupRuntimeFiles();
+
+      this.state = 'failed';
+      this.finishedAt = new Date().toISOString();
+      this.lastError = error instanceof Error ? error.message : String(error);
+
+      throw error;
+    }
+  }
+
+  private async executeRunner(runner: ResolvedProxyCheckerRunner): Promise<void> {
+    return new Promise((resolve, reject) => {
       const args = this.createProxyCheckerNodeArgs(runner);
 
-      await this.writeLog('Starting proxy checker');
-      await this.writeLog(`Runner: ${runner.kind} ${runner.file}`);
-      await this.writeLog(`Command: ${process.execPath} ${args.join(' ')}`);
-      await this.writeLog(`CWD: ${this.projectRoot}`);
+      this.writeLog(`Command: ${process.execPath} ${args.join(' ')}`);
+      this.writeLog(`CWD: ${this.projectRoot}`);
 
       const child = spawn(process.execPath, args, {
         cwd: this.projectRoot,
@@ -203,8 +225,8 @@ export class ProxyCheckerManager {
       this.state = 'running';
 
       if (child.pid) {
-        await fs.writeFile(this.pidFile, String(child.pid), 'utf8');
-        await this.writeLog(`Proxy checker PID: ${child.pid}`);
+        void fs.writeFile(this.pidFile, String(child.pid), 'utf8');
+        void this.writeLog(`Runner PID: ${child.pid}`);
       }
 
       child.stdout.setEncoding('utf8');
@@ -220,44 +242,26 @@ export class ProxyCheckerManager {
 
       child.once('error', (error) => {
         this.state = 'failed';
-        this.finishedAt = new Date().toISOString();
         this.lastError = error.message;
 
         void this.writeLog(`Process error: ${error.message}`);
-        void this.cleanupRuntimeFiles();
-
         this.child = null;
+        reject(error);
       });
 
       child.once('close', (code, signal) => {
         this.exitCode = code;
         this.signal = signal;
-        this.finishedAt = new Date().toISOString();
 
         if (this.state !== 'stopped') {
           this.state = code === 0 ? 'finished' : 'failed';
         }
 
         void this.writeLog(`Process closed. code=${code}, signal=${signal}`);
-        void this.cleanupRuntimeFiles();
-
         this.child = null;
+        resolve();
       });
-
-      return {
-        ok: true,
-        message: 'Proxy checker started',
-        status: await this.getStatus()
-      };
-    } catch (error) {
-      await this.cleanupRuntimeFiles();
-
-      this.state = 'failed';
-      this.finishedAt = new Date().toISOString();
-      this.lastError = error instanceof Error ? error.message : String(error);
-
-      throw error;
-    }
+    });
   }
 
   async stop() {
