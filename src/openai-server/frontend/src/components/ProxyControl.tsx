@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo } from 'react';
+import { useRef, useEffect, useCallback, useMemo } from 'react';
 import { convertAnsiToHtml } from '../utils/ansi-to-html';
 
 type ProxyCheckerState = 'idle' | 'starting' | 'running' | 'finished' | 'failed' | 'stopped' | 'locked';
@@ -58,25 +58,53 @@ export default function ProxyControl({
   loadStatus: _loadStatus,
   theme
 }: ProxyControlProps) {
-  const logEndRef = useRef<HTMLDivElement | null>(null);
   const logContainerRef = useRef<HTMLDivElement | null>(null);
+  const preRef = useRef<HTMLPreElement | null>(null);
   const initialLoadRef = useRef(true);
+  const prevHtmlRef = useRef('');
+  const logEndRef = useRef<HTMLDivElement | null>(null);
 
   const panelClass =
     theme === 'dark'
       ? 'border-white/10 bg-[#272727] shadow-black/10'
       : 'border-neutral-200 bg-white shadow-neutral-200/50';
 
+  const normalizedQuery = query.trim().toLowerCase();
+
   const filteredLogs = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
     if (!normalizedQuery) return logs;
     return logs.filter((line) => line.toLowerCase().includes(normalizedQuery));
-  }, [logs, query]);
+  }, [logs, normalizedQuery]);
+
+  const logHtml = useMemo(
+    () => (filteredLogs.length ? convertAnsiToHtml(filteredLogs.join('\n')) : ''),
+    [filteredLogs]
+  );
+
+  // Imperatively update innerHTML only when content actually changes.
+  // This bypasses React reconciliation entirely, preserving text selection.
+  useEffect(() => {
+    if (!preRef.current) return;
+    if (prevHtmlRef.current === logHtml) return;
+    preRef.current.innerHTML = logHtml;
+    prevHtmlRef.current = logHtml;
+  }, [logHtml]);
+
+  const scrollToEnd = useCallback(() => {
+    const el = logContainerRef.current;
+    if (!el) return;
+    const sel = window.getSelection();
+    if (sel && sel.toString().length > 0) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    if (nearBottom) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, []);
 
   useEffect(() => {
-    if (query || initialLoadRef.current || !logContainerRef.current) return;
-    logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
-  }, [logs, query]);
+    if (initialLoadRef.current) return;
+    scrollToEnd();
+  }, [logs, query, scrollToEnd]);
 
   useEffect(() => {
     if (!notice) return;
@@ -149,14 +177,9 @@ export default function ProxyControl({
 
       <div
         ref={logContainerRef}
-        className="flex-1 min-h-0 overflow-auto bg-[#111315] p-4 font-mono text-[12px] leading-6 whitespace-pre-wrap">
+        className="flex-1 min-h-0 overflow-auto bg-[#111315] p-4 font-mono text-[12px] leading-6 whitespace-pre-wrap select-text">
         {filteredLogs.length ? (
-          <pre
-            className="min-h-0"
-            dangerouslySetInnerHTML={{
-              __html: convertAnsiToHtml(filteredLogs.join('\n'))
-            }}
-          />
+          <pre ref={preRef} className="min-h-0" />
         ) : (
           <div className="flex h-full min-h-72 flex-col items-center justify-center text-center">
             <span className="flex size-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-neutral-600">
