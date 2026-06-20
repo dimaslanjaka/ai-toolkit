@@ -6,7 +6,6 @@ import SQLiteModel from './SQLiteModel.js';
 // Singleton instances for connection reuse
 let productionMySQLInstance: ProxyDB | null = null;
 let localMySQLInstance: ProxyDB | null = null;
-let localSQLiteInstance: ProxyDB | null = null;
 let centralizedSQLiteInstance: ProxyDB | null = null;
 
 /**
@@ -49,26 +48,6 @@ export function getLocalMySQL(): ProxyDB {
     });
   }
   return localMySQLInstance;
-}
-
-/**
- * Get or create singleton ProxyDB instance for local SQLite database (file path: ./tmp/database/proxy-db-test.sqlite)
- *
- * ⚠️ WARNING: This is a PRODUCTION database connection.
- * This function connects to an existing SQLite database file that contains real data.
- * Do NOT use this in tests - it will read/write production data and may cause data loss.
- *
- * For testing, create an in-memory SQLite database instead:
- *   new ProxyDB({ db_type: 'sqlite', sqlite_filename: ':memory:' });
- */
-export function getProductionSQLite(): ProxyDB {
-  if (!localSQLiteInstance) {
-    localSQLiteInstance = new ProxyDB({
-      db_type: 'sqlite',
-      sqlite_filename: path.join(process.cwd(), 'tmp/database/proxy-db-test.sqlite')
-    });
-  }
-  return localSQLiteInstance;
 }
 
 /**
@@ -132,11 +111,6 @@ export async function closeAllDatabases(): Promise<void> {
     localMySQLInstance = null;
   }
 
-  if (localSQLiteInstance) {
-    closePromises.push(localSQLiteInstance.close());
-    localSQLiteInstance = null;
-  }
-
   if (centralizedSQLiteInstance) {
     closePromises.push(centralizedSQLiteInstance.close());
     centralizedSQLiteInstance = null;
@@ -148,7 +122,6 @@ export async function closeAllDatabases(): Promise<void> {
 export default {
   getProductionMySQL,
   getLocalMySQL,
-  getProductionSQLite,
   getSharedModels,
   getSQLite,
   closeAllDatabases
