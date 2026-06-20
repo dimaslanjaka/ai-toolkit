@@ -1,7 +1,6 @@
 import path from 'upath';
 import { fileURLToPath } from 'url';
 import { ProxyDB } from './ProxyDB.js';
-import fs from 'fs-extra';
 import { migrateSQLiteModel } from './SQLiteModel-migration.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -49,23 +48,10 @@ export class SQLiteModel extends ProxyDB {
 
       // Apply the SQLiteModel schema explicitly
       await this.initializeSchema(path.join(__dirname, 'SQLiteModel.sql'));
+      await this.initializeSchema(path.join(__dirname, 'SQLiteModel-seed.sql'));
+
       // Run migrations
       await migrateSQLiteModel(this);
-      // Run seed script once
-      const meta = await this.meta();
-      const seeded = await meta.get('models_seeded');
-      if (!seeded) {
-        const seedPath = path.join(__dirname, 'SQLiteModel-seed.sql');
-        const sql = await fs.readFile(seedPath, 'utf8');
-        const statements = sql
-          .split(';')
-          .map((s) => s.trim())
-          .filter((s) => s.length > 0);
-        for (const stmt of statements) {
-          await this.execute(stmt);
-        }
-        await meta.set('models_seeded', 'true');
-      }
     })();
 
     return this.initializingSchema;
