@@ -948,7 +948,9 @@ function App() {
                       <span className="sr-only">Provider</span>
                       <select
                         value={settings.provider}
-                        onChange={(event) => setSettings((current) => ({ ...current, provider: event.target.value as Provider }))}
+                        onChange={(event) =>
+                          setSettings((current) => ({ ...current, provider: event.target.value as Provider }))
+                        }
                         className={`max-w-[6rem] appearance-none truncate rounded-lg border-0 bg-transparent py-1 pr-5 pl-1.5 text-xs focus:ring-2 focus:ring-emerald-500 md:max-w-[8rem] ${
                           settings.theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'
                         }`}>
