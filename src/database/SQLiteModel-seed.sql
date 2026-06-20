@@ -1,18 +1,18 @@
 -- -------------------------------------------------
 -- chatgpt provider (src\openai-server\provider\chatgpt.ts)
 -- -------------------------------------------------
-INSERT INTO
-  "models" (
-    "id",
-    "object",
-    "created",
-    "owned_by",
-    "permission",
-    "root",
-    "parent",
-    "provider",
-    "enabled"
-  )
+INSERT
+OR IGNORE INTO "models" (
+  "id",
+  "object",
+  "created",
+  "owned_by",
+  "permission",
+  "root",
+  "parent",
+  "provider",
+  "enabled"
+)
 VALUES
   (
     'gpt-4o',
@@ -24,7 +24,21 @@ VALUES
     NULL,
     'chatgpt',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models" (
+  "id",
+  "object",
+  "created",
+  "owned_by",
+  "permission",
+  "root",
+  "parent",
+  "provider",
+  "enabled"
+)
+VALUES
   (
     'gpt-4',
     'model',
@@ -40,18 +54,18 @@ VALUES
 -- -------------------------------------------------
 -- opencode provider (src\openai-server\provider\opencode.ts)
 -- -------------------------------------------------
-INSERT INTO
-  "models" (
-    "id",
-    "object",
-    "created",
-    "owned_by",
-    "permission",
-    "root",
-    "parent",
-    "provider",
-    "enabled"
-  )
+INSERT
+OR IGNORE INTO "models" (
+  "id",
+  "object",
+  "created",
+  "owned_by",
+  "permission",
+  "root",
+  "parent",
+  "provider",
+  "enabled"
+)
 VALUES
   (
     'deepseek-v4-flash-free',
@@ -63,7 +77,21 @@ VALUES
     NULL,
     'opencode',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models" (
+  "id",
+  "object",
+  "created",
+  "owned_by",
+  "permission",
+  "root",
+  "parent",
+  "provider",
+  "enabled"
+)
+VALUES
   (
     'big-pickle',
     'model',
@@ -74,7 +102,21 @@ VALUES
     NULL,
     'opencode',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models" (
+  "id",
+  "object",
+  "created",
+  "owned_by",
+  "permission",
+  "root",
+  "parent",
+  "provider",
+  "enabled"
+)
+VALUES
   (
     'mimo-v2.5-free',
     'model',
@@ -85,7 +127,21 @@ VALUES
     NULL,
     'opencode',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models" (
+  "id",
+  "object",
+  "created",
+  "owned_by",
+  "permission",
+  "root",
+  "parent",
+  "provider",
+  "enabled"
+)
+VALUES
   (
     'qwen3.6-plus-free',
     'model',
@@ -96,7 +152,21 @@ VALUES
     NULL,
     'opencode',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models" (
+  "id",
+  "object",
+  "created",
+  "owned_by",
+  "permission",
+  "root",
+  "parent",
+  "provider",
+  "enabled"
+)
+VALUES
   (
     'minimax-m3-free',
     'model',
@@ -107,7 +177,21 @@ VALUES
     NULL,
     'opencode',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models" (
+  "id",
+  "object",
+  "created",
+  "owned_by",
+  "permission",
+  "root",
+  "parent",
+  "provider",
+  "enabled"
+)
+VALUES
   (
     'nemotron-3-ultra-free',
     'model',
@@ -118,7 +202,21 @@ VALUES
     NULL,
     'opencode',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models" (
+  "id",
+  "object",
+  "created",
+  "owned_by",
+  "permission",
+  "root",
+  "parent",
+  "provider",
+  "enabled"
+)
+VALUES
   (
     'north-mini-code-free',
     'model',
@@ -134,18 +232,8 @@ VALUES
 -- -------------------------------------------------
 -- puter provider (src\openai-server\provider\puter.ts)
 -- -------------------------------------------------
-INSERT INTO
-  "models" (
-    "id",
-    "object",
-    "created",
-    "owned_by",
-    "permission",
-    "root",
-    "parent",
-    "provider",
-    "enabled"
-  )
+INSERT
+OR IGNORE INTO "models"
 VALUES
   (
     'gpt-5.5-pro',
@@ -157,7 +245,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-5.5',
     'model',
@@ -168,7 +260,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-5.4-mini',
     'model',
@@ -179,7 +275,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-5.4-nano',
     'model',
@@ -190,7 +290,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-5.4',
     'model',
@@ -201,7 +305,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-5.4-pro',
     'model',
@@ -212,7 +320,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-5.3-chat',
     'model',
@@ -223,7 +335,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-5.3-codex',
     'model',
@@ -234,7 +350,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-5.2',
     'model',
@@ -245,7 +365,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-5.2-chat',
     'model',
@@ -256,7 +380,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-5.2-codex',
     'model',
@@ -267,7 +395,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-5.2-pro',
     'model',
@@ -278,7 +410,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-5.1',
     'model',
@@ -289,7 +425,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-5.1-chat-latest',
     'model',
@@ -300,7 +440,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-5.1-codex',
     'model',
@@ -311,7 +455,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-5.1-codex-mini',
     'model',
@@ -322,7 +470,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-5.1-codex-max',
     'model',
@@ -333,7 +485,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-5-codex',
     'model',
@@ -344,7 +500,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-5',
     'model',
@@ -355,7 +515,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-5-mini',
     'model',
@@ -366,7 +530,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-5-nano',
     'model',
@@ -377,7 +545,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-5-chat-latest',
     'model',
@@ -388,7 +560,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-4.1',
     'model',
@@ -399,7 +575,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-4.1-mini',
     'model',
@@ -410,7 +590,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-4.1-nano',
     'model',
@@ -421,7 +605,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-4.5-preview',
     'model',
@@ -432,7 +620,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-4o',
     'model',
@@ -443,7 +635,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-4o-mini',
     'model',
@@ -454,7 +650,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'o1',
     'model',
@@ -465,7 +665,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'o1-mini',
     'model',
@@ -476,7 +680,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'o1-pro',
     'model',
@@ -487,7 +695,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'o3',
     'model',
@@ -498,7 +710,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'o3-mini',
     'model',
@@ -509,7 +725,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'o4-mini',
     'model',
@@ -520,7 +740,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-image-2',
     'model',
@@ -531,7 +755,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-image-1.5',
     'model',
@@ -542,7 +770,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-image-1-mini',
     'model',
@@ -553,7 +785,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-image-1',
     'model',
@@ -564,7 +800,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'dall-e-3',
     'model',
@@ -575,7 +815,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'dall-e-2',
     'model',
@@ -586,7 +830,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-4o-mini-tts',
     'model',
@@ -597,7 +845,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'tts-1',
     'model',
@@ -608,7 +860,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'tts-1-hd',
     'model',
@@ -619,7 +875,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'gpt-oss-120b',
     'model',
@@ -630,8 +890,12 @@ VALUES
     NULL,
     'puter',
     1
-  ),
-  -- Claude models (provider = anthro​pic)
+  );
+
+-- Claude models (provider = anthropic)
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'claude-fable-5',
     'model',
@@ -642,7 +906,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'claude-opus-4.8-fast',
     'model',
@@ -653,7 +921,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'claude-opus-4-8',
     'model',
@@ -664,7 +936,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'claude-opus-4.7-fast',
     'model',
@@ -675,7 +951,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'claude-opus-4-7',
     'model',
@@ -686,7 +966,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'claude-opus-4.6-fast',
     'model',
@@ -697,7 +981,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'claude-sonnet-4-6',
     'model',
@@ -708,7 +996,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'claude-opus-4-6',
     'model',
@@ -719,7 +1011,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'claude-opus-4-5',
     'model',
@@ -730,7 +1026,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'claude-haiku-4-5',
     'model',
@@ -741,7 +1041,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'claude-sonnet-4-5',
     'model',
@@ -752,7 +1056,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'claude-opus-4-1',
     'model',
@@ -763,7 +1071,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'claude-opus-4',
     'model',
@@ -774,7 +1086,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'claude-sonnet-4',
     'model',
@@ -785,8 +1101,12 @@ VALUES
     NULL,
     'puter',
     1
-  ),
-  -- Deepseek model (provider = deepseek)
+  );
+
+-- Deepseek model (provider = deepseek)
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'deepseek-r1-0528',
     'model',
@@ -797,8 +1117,12 @@ VALUES
     NULL,
     'puter',
     1
-  ),
-  -- Additional mixed entries from the list
+  );
+
+-- Additional mixed entries
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'anthropic/claude-sonnet-4-6',
     'model',
@@ -809,7 +1133,11 @@ VALUES
     NULL,
     'puter',
     1
-  ),
+  );
+
+INSERT
+OR IGNORE INTO "models"
+VALUES
   (
     'openai/gpt-5.4-nano',
     'model',

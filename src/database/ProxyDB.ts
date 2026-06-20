@@ -158,17 +158,18 @@ export class ProxyDB {
       const statements = cleanedSchema
         .split(';')
         .map((s) => s.trim())
-        .filter((s) => s.length > 0 && !s.startsWith('--'));
+        .map((s) =>
+          s
+            .split('\n')
+            .map((l) => l.trim())
+            .filter((l) => !l.startsWith('--'))
+            .join('\n')
+            .trim()
+        )
+        .filter((s) => s.length > 0);
 
       for (const statement of statements) {
-        try {
-          await this.execute(statement);
-        } catch (err) {
-          if (!(err as Error).message.includes('contains no statements')) {
-            console.error(`Failed statement: ${statement}`);
-            throw err;
-          }
-        }
+        await this.execute(statement);
       }
     }
   }

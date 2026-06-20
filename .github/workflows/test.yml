@@ -53,6 +53,15 @@ jobs:
           else
             echo "Skipping missing test file: test/database/SQLiteMarker.test.ts"
           fi
+      - name: 🧪 Run tests in test/database/SQLiteModel-seed.test.ts
+        id: run-test-database-SQLiteModel-seed-test-ts
+        shell: bash
+        run: >-
+          if [ -f "test/database/SQLiteModel-seed.test.ts" ]; then
+            node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --forceExit --testTimeout=120000 --detectOpenHandles --bail=1 --testPathPatterns="database/SQLiteModel-seed.test.ts"
+          else
+            echo "Skipping missing test file: test/database/SQLiteModel-seed.test.ts"
+          fi
       - name: 🧪 Run tests in test/database/SQLiteProxy-hosts.test.ts
         id: run-test-database-SQLiteProxy-hosts-test-ts
         shell: bash
