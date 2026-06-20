@@ -951,11 +951,24 @@ function App() {
                     }`}
                   />
                   <div className="flex items-center gap-2 px-1 pb-1">
-                    <span className="truncate px-2 text-xs text-neutral-500">
-                      {settings.provider === 'chatgpt'
-                        ? 'ChatGPT browser uses only the latest user message'
-                        : `${providerLabel} · ${settings.model}`}
-                    </span>
+                    <label className="relative">
+                      <span className="sr-only">Provider</span>
+                      <select
+                        value={settings.provider}
+                        onChange={(event) => setSettings((current) => ({ ...current, provider: event.target.value as Provider }))}
+                        className={`max-w-[6rem] appearance-none truncate rounded-lg border-0 bg-transparent py-1 pr-5 pl-1.5 text-xs focus:ring-2 focus:ring-emerald-500 md:max-w-[8rem] ${
+                          settings.theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'
+                        }`}>
+                        {PROVIDER_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="pointer-events-none absolute top-1/2 right-1.5 -translate-y-1/2 text-[10px] text-neutral-500">
+                        ▾
+                      </span>
+                    </label>
                     <button
                       type="button"
                       aria-label={isSending ? 'Stop generating' : 'Send message'}
