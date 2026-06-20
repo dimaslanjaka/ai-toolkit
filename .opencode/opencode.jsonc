@@ -1,5 +1,27 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "nodejs-openai-compatible": {
+      "name": "nodejs openai compatible",
+      "npm": "@ai-sdk/openai-compatible",
+      "options": {
+        "baseURL": "https://localhost:5758/v1",
+        "apiKey": "sk-c2aafb0983f2f86b-9gjb00-e3f39ea4",
+        "timeout": 300000
+      },
+      "models": {
+        "auto": {
+          "name": "Auto Model"
+        },
+        "opencode": {
+          "name": "OpenCode + Proxy",
+          "headers": {
+            "X-Request-Provider": "opencode"
+          }
+        }
+      }
+    }
+  },
   "mode": {
     "build": {
       "disable": true
@@ -12,6 +34,7 @@
   "snapshot": true,
   "formatter": false,
   "lsp": true,
+  "shell": "cmd",
   "plugin": [
     "opencode-helicone-session@latest",
     "oh-my-opencode-slim@latest",
@@ -20,17 +43,20 @@
     "opencode-agent-memory@https://github.com/dimaslanjaka/opencode-file-memory/raw/refs/heads/main/release/opencode-agent-memory.tgz",
     "@tarquinen/opencode-smart-title@latest",
     "@tarquinen/opencode-dcp@latest",
-    "opencode-request-logger@https://github.com/Opencode-DCP/opencode-request-logger.git"
+    "opencode-request-logger@https://github.com/Opencode-DCP/opencode-request-logger.git",
+    "superpowers@git+https://github.com/obra/superpowers.git",
+    "@zenobius/opencode-skillful"
   ],
   "instructions": [
     "AGENTS.md",
     // ".github/instructions/*.md",
-    ".github/*.md",
+    // ".github/*.md",
     // "packages/*/AGENTS.md"
   ],
   "mcp": {
     "context-compress": {
       "enabled": false,
+      "timeout": 300000,
       "type": "local",
       "command": [
         "node",
@@ -39,6 +65,7 @@
     },
     "playwright": {
       "enabled": false,
+      "timeout": 300000,
       "type": "local",
       "command": [
         "npx",
@@ -47,13 +74,31 @@
       ]
     },
     "everything": {
-      "enabled": false,
+      "enabled": true,
+      "timeout": 300000,
       "type": "local",
       "command": [
         "npx",
         "-y",
         "@modelcontextprotocol/server-everything"
       ]
+    },
+    "MCP SQLite Server": {
+      "enabled": true,
+      "timeout": 300000,
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "mcp-sqlite",
+        "D:\\Repositories\\workspace\\packages\\ai-toolkit\\tmp\\database\\ai-toolkit.db"
+      ]
+    },
+    "ai-memory": {
+      "type": "local",
+      "timeout": 300000,
+      "command": ["ai-memory", "--db", "C:/Users/Dell/.local/share/ai-memory/memories.db", "mcp", "--tier", "smart"],
+      "enabled": true
     }
   }
 }
