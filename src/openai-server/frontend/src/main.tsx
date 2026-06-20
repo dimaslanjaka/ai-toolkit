@@ -666,13 +666,6 @@ function App() {
     }
   }
 
-  const providerLabel =
-    settings.provider === 'auto'
-      ? 'Auto fallback'
-      : settings.provider === 'chatgpt'
-        ? 'ChatGPT browser'
-        : settings.provider[0].toUpperCase() + settings.provider.slice(1);
-
   return (
     <div
       className={`flex h-dvh overflow-hidden ${
