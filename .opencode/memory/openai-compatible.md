@@ -43,8 +43,17 @@ read_only: false
 - OpenCode provider:
   - Uses the OpenAI SDK at `https://opencode.ai/zen/v1`; auth comes from `buildOpenAIClient()`/`binary-collections`.
   - The default model is `deepseek-v4-flash-free`; model listing falls back to a static free-model list if the remote list fails.
-  - Proxy DB: `tmp/database/opencode-checker.db`; last-working cache: `tmp/database/last-opencode-proxy.txt`.
-  - It prefers the cache, then an `opencode.ai` HTTP proxy from SQLite. Requests use Undici `ProxyAgent`; connection failures mark the proxy dead and clear the cache.
+- Proxy DB: The centralized SQLite database (`SQLITE_DBNAME` from .env) is used via `getProxyClient()` helper.
+  - `getProxyClient()` returns `new SQLiteProxy(await getSQLite())` - shares the singleton connection.
+  - Proxy operations (`getProxyForHost`, `markProxyDead`, `initialize`) called on this `SQLiteProxy` instance.
+- SQLite tuning (set via PRAGMA in `SQLiteHelper.initialize()` after opening the database):
+  - `journal_mode = WAL` — write-ahead logging for concurrent reads during writes
+  - `synchronous = NORMAL` — balanced durability vs. write speed
+  - `temp_store = MEMORY` — temp tables and spills in RAM
+  - `cache_size = -64000` — 64 MB page cache (negative = KB)
+  - `busy_timeout = 5000` — wait up to 5s on lock contention before returning SQLITE_BUSY
+  - `foreign_keys = ON` — enforce foreign key constraints
+- It prefers a cached proxy, then an `opencode.ai` HTTP proxy from SQLite. Requests use Undici `ProxyAgent`; connection failures mark the proxy dead and clear the cache.
 - Puter provider:
   - Lazily initializes `@heyputer/puter.js` through `src/provider/puter/get.ts`.
   - Token: `tmp/database/puter.txt`; when absent, `getAuthToken()` fetches and saves it.
@@ -60,4 +69,4 @@ read_only: false
   - Detached startup uses a token-owned atomic lock; the checker adopts it, writes its PID, and releases it on completion or signals.
   - API startup uses `ProxyCheckerManager`, which owns the child and lock lifecycle.
   - Runtime files: `tmp/logs/proxy-checker.{lock,pid,log}`.
-  - It tests remote working proxies over HTTP/SOCKS against `https://opencode.ai/zen/v1/responses` and stores the first success for `opencode.ai` in `tmp/database/opencode-checker.db`.
+  - It tests remote working proxies over HTTP/SOCKS against `https://opencode.ai/zen/v1/responses` and stores the first success for `opencode.ai` in the centralized SQLite database.

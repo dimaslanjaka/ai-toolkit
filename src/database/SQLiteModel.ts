@@ -35,19 +35,18 @@ export class SQLiteModel extends ProxyDB {
 
   /** Initialize the DB and apply the models schema */
   async initialize() {
-    // If sharing an existing ProxyDB, skip re-initialization
     if (this.sharedDb) {
       this.ready = true;
-      return;
+    } else {
+      await super.initialize();
     }
 
-    await super.initialize();
     // Apply the SQLiteModel schema explicitly
-    await super.initializeSchema(path.join(__dirname, 'SQLiteModel.sql'));
+    await this.initializeSchema(path.join(__dirname, 'SQLiteModel.sql'));
     // Run migrations
     await migrateSQLiteModel(this);
     // Run seed script once
-    const meta = await super.meta();
+    const meta = await this.meta();
     const seeded = await meta.get('models_seeded');
     if (!seeded) {
       const seedPath = path.join(__dirname, 'SQLiteModel-seed.sql');

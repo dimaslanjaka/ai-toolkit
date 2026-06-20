@@ -146,12 +146,24 @@ export class ProxyDB {
       customSchema && fs.existsSync(customSchema) ? customSchema : path.join(dir, 'schema.sql')
     );
     const hash = createHash('md5')
-      .update(process.env.SQLITE_DBNAME + schemaPath)
+      .update((process.env.SQLITE_DBNAME || '') + schemaPath)
       .digest('hex');
     const lockFile = path.join(process.cwd(), 'tmp', 'database', `${hash}.lock`);
 
-    // If lock file exists, assume schema already applied
-    if (await fs.pathExists(lockFile)) {
+    // If SQLite in-memory or DB file missing, do not skip schema application.
+    // Otherwise, check lock file.
+    const isSQLite = this._config.db_type === 'sqlite';
+    const isInMemory = isSQLite && this._config.sqlite_filename === ':memory:';
+
+    let shouldCheckLock = !isInMemory;
+    if (isSQLite && !isInMemory && this._config.sqlite_filename) {
+      const dbFileExists = await fs.pathExists(this._config.sqlite_filename);
+      if (!dbFileExists) {
+        shouldCheckLock = false;
+      }
+    }
+
+    if (shouldCheckLock && (await fs.pathExists(lockFile))) {
       return;
     }
 
@@ -176,8 +188,10 @@ export class ProxyDB {
       }
     }
 
-    // Create lock file to mark initialization completed
-    await fs.writeFile(lockFile, 'initialized');
+    // Create lock file to mark initialization completed (skip for in-memory)
+    if (!isInMemory) {
+      await fs.writeFile(lockFile, 'initialized');
+    }
   }
 
   /**

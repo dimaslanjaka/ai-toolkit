@@ -1,12 +1,12 @@
 import path from 'upath';
 import { ProxyDB } from './ProxyDB.js';
 import { fileURLToPath } from 'url';
-import { ProxyEntry, HostEntry, ProxyHostEntry } from './types.js';
+import type { ProxyEntry, HostEntry, ProxyHostEntry } from './types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export { ProxyEntry, HostEntry, ProxyHostEntry } from './types.js';
+export type { ProxyEntry, HostEntry, ProxyHostEntry } from './types.js';
 
 /**
  * SQLiteProxy provides proxy-related operations.
@@ -35,14 +35,13 @@ export class SQLiteProxy extends ProxyDB {
    * Initialize the database and apply schema if needed
    */
   async initialize(): Promise<void> {
-    // If sharing an existing ProxyDB, skip re-initialization
     if (this.sharedDb) {
       this.ready = true;
-      return;
+    } else {
+      await super.initialize();
     }
 
-    await super.initialize();
-    await super.initializeSchema(path.join(__dirname, 'SQLiteProxy.sql'));
+    await this.initializeSchema(path.join(__dirname, 'SQLiteProxy.sql'));
   }
 
   /**

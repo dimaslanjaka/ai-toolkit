@@ -1,7 +1,7 @@
 import { Proxy } from '../database/ProxyDB.js';
 import SQLiteMarker from '../database/SQLiteMarker.js';
 import { getProductionMySQL, getSQLite } from '../database/shared.js';
-import { ProxyEntry } from '../database/types.js';
+import type { ProxyEntry } from '../database/types.js';
 import { SQLiteProxy } from '../database/SQLiteProxy.js';
 import { checkProxy, CheckProxyResult } from './checker.js';
 
