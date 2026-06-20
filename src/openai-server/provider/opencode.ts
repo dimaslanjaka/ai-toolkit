@@ -138,18 +138,20 @@ export async function handleModels(_req: Request): Promise<ProviderResult> {
   }
 
   try {
-    const client = await getOpenCode();
-    const models = await client.models.list();
-    await cacheWorkingProxy(opencodeClientProxy);
-    const data = models.data.map((m: any) => ({
-      id: m.id,
-      object: 'model',
-      created: m.created || 1718380395,
-      owned_by: m.owned_by || 'opencode',
-      permission: [],
-      root: m.id,
-      parent: null
-    }));
+      const client = await getOpenCode();
+      const allModels = await client.models.list();
+      // Filter to only opencode provider models
+      const filtered = allModels.data.filter((m: any) => m.provider === 'opencode');
+      await cacheWorkingProxy(opencodeClientProxy);
+      const data = filtered.map((m: any) => ({
+        id: m.id,
+        object: 'model',
+        created: m.created || 1718380395,
+        owned_by: m.owned_by || 'opencode',
+        permission: [],
+        provider: m.provider || 'opencode',
+        enabled: true
+      }));
     return { type: 'json', data: { object: 'list', data } };
   } catch {
     // Fallback to static model list if API call fails
