@@ -1,9 +1,10 @@
 import * as cp from 'cross-spawn';
-import path from 'upath';
 import { fileURLToPath } from 'node:url';
+import { copySql } from './build-copy.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+
+await copySql();
 
 cp.spawnSync('rollup', ['-c'], {
   stdio: 'inherit',
