@@ -19,7 +19,7 @@ const __dirname = path.dirname(__filename);
 export class SQLiteModel extends ProxyDB {
   private sharedDb?: ProxyDB;
 
-  constructor(config: ProxyDB | any) {
+  constructor(config: any) {
     // If already a ProxyDB instance, wrap it without creating a new connection
     if (config instanceof ProxyDB) {
       super({ db_type: 'sqlite', sqlite_filename: '' });

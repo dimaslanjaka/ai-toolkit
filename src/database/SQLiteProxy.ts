@@ -17,7 +17,7 @@ export { ProxyEntry, HostEntry, ProxyHostEntry } from './types.js';
 export class SQLiteProxy extends ProxyDB {
   private sharedDb?: ProxyDB;
 
-  constructor(config: ProxyDB | any) {
+  constructor(config: any) {
     // If already a ProxyDB instance, wrap it without creating a new connection
     if (config instanceof ProxyDB) {
       super({ db_type: 'sqlite', sqlite_filename: '' });

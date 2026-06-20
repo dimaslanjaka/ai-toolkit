@@ -145,12 +145,10 @@ export class ProxyDB {
     const schemaPath = path.resolve(
       customSchema && fs.existsSync(customSchema) ? customSchema : path.join(dir, 'schema.sql')
     );
-    const hash = createHash('md5').update(schemaPath).digest('hex');
-    const lockDir = path.join(process.cwd(), 'tmp', 'locks');
-    const lockFile = path.join(lockDir, `${hash}.lock`);
-
-    // Ensure lock directory exists
-    await fs.ensureDir(lockDir);
+    const hash = createHash('md5')
+      .update(process.env.SQLITE_DBNAME + schemaPath)
+      .digest('hex');
+    const lockFile = path.join(process.cwd(), 'tmp', 'database', `${hash}.lock`);
 
     // If lock file exists, assume schema already applied
     if (await fs.pathExists(lockFile)) {
