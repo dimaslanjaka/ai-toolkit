@@ -1,18 +1,18 @@
 -- -------------------------------------------------
 -- chatgpt provider (src\openai-server\provider\chatgpt.ts)
 -- -------------------------------------------------
-INSERT INTO
-  "models" (
-    "id",
-    "object",
-    "created",
-    "owned_by",
-    "permission",
-    "root",
-    "parent",
-    "provider",
-    "enabled"
-  )
+INSERT
+OR IGNORE INTO "models" (
+  "id",
+  "object",
+  "created",
+  "owned_by",
+  "permission",
+  "root",
+  "parent",
+  "provider",
+  "enabled"
+)
 VALUES
   (
     'gpt-4o',
@@ -40,18 +40,18 @@ VALUES
 -- -------------------------------------------------
 -- opencode provider (src\openai-server\provider\opencode.ts)
 -- -------------------------------------------------
-INSERT INTO
-  "models" (
-    "id",
-    "object",
-    "created",
-    "owned_by",
-    "permission",
-    "root",
-    "parent",
-    "provider",
-    "enabled"
-  )
+INSERT
+OR IGNORE INTO "models" (
+  "id",
+  "object",
+  "created",
+  "owned_by",
+  "permission",
+  "root",
+  "parent",
+  "provider",
+  "enabled"
+)
 VALUES
   (
     'deepseek-v4-flash-free',
@@ -134,18 +134,18 @@ VALUES
 -- -------------------------------------------------
 -- puter provider (src\openai-server\provider\puter.ts)
 -- -------------------------------------------------
-INSERT INTO
-  "models" (
-    "id",
-    "object",
-    "created",
-    "owned_by",
-    "permission",
-    "root",
-    "parent",
-    "provider",
-    "enabled"
-  )
+INSERT
+OR IGNORE INTO "models" (
+  "id",
+  "object",
+  "created",
+  "owned_by",
+  "permission",
+  "root",
+  "parent",
+  "provider",
+  "enabled"
+)
 VALUES
   (
     'gpt-5.5-pro',
