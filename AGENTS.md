@@ -34,3 +34,30 @@
 - React/TSX guidelines (`*.tsx, *.jsx`): Tailwind utility classes, Flowbite patterns, Font Awesome Pro icons; no CDN tags; PascalCase filenames; functional components default export.
 - Python files (`*.py`): PEP 8, Black formatting, type hints, tests with pytest.
 - PHP files (`*.php`): PSR‑12, PHP 8.1+, typed properties, PHPDoc for public API.
+
+## AI-Memory guidance
+
+> source code ai-memory at https://github.com/alphaonedev/ai-memory-mcp/tree/main
+
+You have access to a persistent memory system (ai-memory). Follow these rules:
+1. RECALL FIRST: At conversation start, call memory_recall with the user's apparent topic. Before answering any question about prior work, recall first.
+2. STORE LEARNINGS: When the user corrects you or teaches something, call memory_store with tier:long, priority:9.
+3. TOON FORMAT: All recall/list/search responses default to TOON compact (79% smaller than JSON). Pass format:"json" only if you need structured parsing.
+4. TIERS: short=6h ephemeral, mid=7d working knowledge, long=permanent. Mid auto-promotes to long at 5 accesses.
+5. DEDUP: Storing with an existing title+namespace updates the existing memory, not a duplicate.
+6. NAMESPACES: Organize by project/topic. Always pass namespace when storing and recalling.
+7. CAPABILITIES: Call memory_capabilities once per session to discover available features (tier-dependent).
+8. TAGS: Use tags for cross-cutting concerns. memory_auto_tag can generate them if available. Scope recall to namespace "" when relevant.
+
+### AI-memory workflows
+STORE: memory_store(title, content, tier, namespace, tags, priority) — dedup by title+ns
+RECALL: memory_recall(context, namespace) → ranked results (TOON compact default)
+SEARCH: memory_search(query, namespace) → exact AND match (TOON compact default)
+LIST: memory_list(namespace, tier) → browse with filters (TOON compact default)
+GET: memory_get(id) → single memory with links
+PROMOTE: memory_promote(id) — mid→long, clears expiry
+CONSOLIDATE: memory_consolidate(ids, title) — merge N→1, LLM summary if available
+LINK: memory_link(source_id, target_id, relation) — related_to|supersedes|contradicts|derived_from|reflects_on
+TAG: memory_auto_tag(id) — LLM generates tags (smart+ tier)
+EXPAND: memory_expand_query(query) — LLM broadens search terms (smart+ tier)
+CONTRADICT: memory_detect_contradiction(id_a, id_b) — LLM checks conflict (smart+ tier)
