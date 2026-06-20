@@ -42,14 +42,20 @@ async function _check() {
           }
         }
       });
-      console.log(result);
+      // console.log(result);
       if (result.working) {
         shouldBreak = true;
         break;
       }
     }
-    if (shouldBreak) break;
+    if (shouldBreak) {
+      // got working proxy
+      break;
+    } else {
+      // all protocols dead
+    }
   }
+  return result;
 }
 
 _check()

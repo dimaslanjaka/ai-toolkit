@@ -15,6 +15,7 @@ async function initSharedSqlite() {
     sharedSqlite = await getSQLite();
     marker = new SQLiteMarker('', { sharedDb: sharedSqlite });
     proxyDb = new SQLiteProxy(sharedSqlite);
+    await proxyDb.initialize();
   }
 }
 
