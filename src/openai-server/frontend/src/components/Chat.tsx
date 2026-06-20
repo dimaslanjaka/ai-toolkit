@@ -106,10 +106,6 @@ export default function Chat() {
         }
 
         setModels(nextModels);
-        setSettings((current) => ({
-          ...current,
-          model: nextModels.some((model: ModelEntry) => model.id === current.model) ? current.model : nextModels[0].id
-        }));
         setConnectionState('online');
       } catch (error) {
         if ((error as Error).name === 'AbortError') {
@@ -124,7 +120,7 @@ export default function Chat() {
     void loadModels();
 
     return () => controller.abort();
-  }, [settings, setSettings]);
+  }, [settings]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
