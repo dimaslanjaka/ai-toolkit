@@ -1,7 +1,6 @@
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import fs from 'fs-extra';
 import type { PoolConnection } from 'mariadb';
-import { sanitizeFilename } from 'sbg-utility';
 import path from 'upath';
 import { fileURLToPath } from 'url';
 import { MySQLConfig, MySQLHelper } from './MySQLHelper.js';
@@ -106,6 +105,7 @@ export class ProxyDB {
   private helper: IDBHelper;
   private _config: ProxyDBConfig;
   public ready = false;
+  temporarily = false;
 
   constructor(config: ProxyDBConfig) {
     this._config = config;
@@ -145,26 +145,11 @@ export class ProxyDB {
     const schemaPath = path.resolve(
       customSchema && fs.existsSync(customSchema) ? customSchema : path.join(dir, 'schema.sql')
     );
-    const relativeSchemaPath = path.relative(process.cwd(), schemaPath);
-    const hash = sanitizeFilename(`${process.env.SQLITE_DBNAME}-${relativeSchemaPath}`);
-    const lockFile = path.join(process.cwd(), 'tmp', 'database', `${hash}.lock`);
 
     // If SQLite in-memory or DB file missing, do not skip schema application.
     // Otherwise, check lock file.
     const isSQLite = this._config.db_type === 'sqlite';
-    const isInMemory = isSQLite && this._config.sqlite_filename === ':memory:';
-
-    let shouldCheckLock = !isInMemory;
-    if (isSQLite && !isInMemory && this._config.sqlite_filename) {
-      const dbFileExists = await fs.pathExists(this._config.sqlite_filename);
-      if (!dbFileExists) {
-        shouldCheckLock = false;
-      }
-    }
-
-    if (shouldCheckLock && (await fs.pathExists(lockFile))) {
-      return;
-    }
+    this.temporarily = isSQLite && this._config.sqlite_filename === ':memory:';
 
     // Apply schema
     if (await fs.pathExists(schemaPath)) {
@@ -185,11 +170,6 @@ export class ProxyDB {
           }
         }
       }
-    }
-
-    // Create lock file to mark initialization completed (skip for in-memory)
-    if (!isInMemory) {
-      await fs.writeFile(lockFile, `${schemaPath} initialized`);
     }
   }
 

@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS "models" (
-  "id" TEXT PRIMARY KEY,
+  "id" TEXT NOT NULL,
   "object" TEXT NOT NULL,
   "created" INTEGER,
   "owned_by" TEXT,
@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS "models" (
   "root" TEXT,
   "parent" TEXT,
   "provider" TEXT NOT NULL,
-  "enabled" INTEGER NOT NULL DEFAULT 1
+  "enabled" INTEGER NOT NULL DEFAULT 1,
+  PRIMARY KEY ("id", "provider")
 );
 
 CREATE TABLE IF NOT EXISTS "meta" (key TEXT PRIMARY KEY, value TEXT);
