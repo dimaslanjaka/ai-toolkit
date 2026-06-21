@@ -2,19 +2,23 @@ import axios from 'axios';
 import https from 'https';
 import { Server } from 'net';
 import { app } from '../../../src/openai-server/server.js';
-import { checkServerPort, getServerState } from '../../../src/openai-server/utils-server-state.cjs';
+import { getServerState } from '../../../src/openai-server/utils-server-state.cjs';
 import { findFreePort, startServer, stopServer } from '../../../src/openai-server/utils.js';
+
+type ServerState = NonNullable<Awaited<ReturnType<typeof getServerState>>>;
 
 describe('Weather tool call (streaming)', () => {
   let server: Server | undefined = undefined;
-  let state = getServerState()!;
+  let state: ServerState | null = null;
   const jestTimeout = 120000;
 
   beforeAll(async () => {
-    if (!state || (state && !(await checkServerPort({ port: state.port })))) {
+    state = await getServerState();
+    if (!state) {
       ({ state, server } = await startServer(app, await findFreePort()));
     }
 
+    if (!state) throw new Error('Server state not available');
     console.log('Server running at', state.url);
   }, jestTimeout);
 
@@ -25,6 +29,7 @@ describe('Weather tool call (streaming)', () => {
   it(
     'streams tool_calls for get_weather with location parameter',
     async () => {
+      if (!state) throw new Error('Server state not available');
       const res = await axios.post(
         `${state.url}/v1/chat/completions`,
         {
@@ -92,7 +97,8 @@ describe('Complex multi-tool scenario', () => {
   it(
     'routes to the correct tool when multiple tools are defined',
     async () => {
-      const state = getServerState()!;
+      const state = await getServerState();
+      if (!state) throw new Error('Server state not available');
       const res = await axios.post(
         `${state.url}/v1/chat/completions`,
         {
@@ -171,7 +177,8 @@ describe('Complex multi-tool scenario', () => {
   it(
     'handles finish_reason=tool_calls in the final streaming chunk',
     async () => {
-      const state = getServerState()!;
+      const state = await getServerState();
+      if (!state) throw new Error('Server state not available');
       const res = await axios.post(
         `${state.url}/v1/chat/completions`,
         {

@@ -1,6 +1,7 @@
 const { writefile, readfile } = require('sbg-utility');
 const path = require('upath');
 const net = require('net');
+const fs = require('fs-extra');
 
 const STATE_FILE = path.join(process.cwd(), 'tmp/database/openai-server.json');
 
@@ -23,14 +24,29 @@ function saveServerState(state) {
 }
 
 /**
- * Read server state from the persistent file
- * @returns {ServerState | null} The server state, or null if not found or an error occurred.
+ * Read server state from the persistent file.
+ * Automatically deletes the state file if the port is unreachable.
+ * @returns {Promise<ServerState | null>} The server state, or null if not found, not reachable, or an error occurred.
  */
-function getServerState() {
+async function getServerState() {
   try {
     const content = readfile(STATE_FILE);
     if (!content) return null;
-    return JSON.parse(content);
+    /** @type {ServerState} */
+    const state = JSON.parse(content);
+
+    // Auto-delete if the port is unreachable
+    if (state && state.port) {
+      const reachable = await checkServerPort({ port: state.port });
+      if (!reachable) {
+        if (fs.existsSync(STATE_FILE)) {
+          fs.unlinkSync(STATE_FILE);
+        }
+        return null;
+      }
+    }
+
+    return state;
   } catch {
     return null;
   }

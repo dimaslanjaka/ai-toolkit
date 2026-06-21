@@ -2,19 +2,23 @@ import axios from 'axios';
 import https from 'https';
 import { Server } from 'net';
 import { app } from '../../../src/openai-server/server.js';
-import { checkServerPort, getServerState } from '../../../src/openai-server/utils-server-state.cjs';
+import { getServerState } from '../../../src/openai-server/utils-server-state.cjs';
 import { findFreePort, startServer, stopServer } from '../../../src/openai-server/utils.js';
+
+type ServerState = NonNullable<Awaited<ReturnType<typeof getServerState>>>;
 
 describe('Streaming API', () => {
   let server: Server | undefined = undefined;
-  let state = getServerState()!;
+  let state: ServerState | null = null;
   const jestTimeout = 120000;
 
   beforeAll(async () => {
-    if (!state || (state && !(await checkServerPort({ port: state.port })))) {
+    state = await getServerState();
+    if (!state) {
       ({ state, server } = await startServer(app, await findFreePort()));
     }
 
+    if (!state) throw new Error('Server state not available');
     console.log('Server running at', state.url);
   }, jestTimeout);
 
@@ -26,7 +30,7 @@ describe('Streaming API', () => {
     'streams chunks',
     async () => {
       const res = await axios.post(
-        `${state.url}/v1/chat/completions`,
+        `${state!.url}/v1/chat/completions`,
         {
           model: 'deepseek-v4-flash-free',
           messages: [{ role: 'user', content: 'count from 1 to 3' }],

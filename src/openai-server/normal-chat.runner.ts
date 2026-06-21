@@ -5,7 +5,7 @@ import fs from 'fs-extra';
 
 async function main() {
   // Get server state from saved file
-  const serverState = getServerState();
+  const serverState = await getServerState();
 
   if (!serverState) {
     const statFile = ['.ts', '.js', '.mjs', '.cjs']

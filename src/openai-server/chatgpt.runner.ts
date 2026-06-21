@@ -21,7 +21,7 @@ import { getServerState } from './utils-server-state.cjs';
 
 async function main() {
   // Get server state
-  const serverState = getServerState();
+  const serverState = await getServerState();
 
   if (!serverState) {
     console.error('❌ Server not running. Start it with: PROVIDER=chatgpt node dist/openai-server/start.mjs');

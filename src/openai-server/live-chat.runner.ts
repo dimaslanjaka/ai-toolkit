@@ -3,7 +3,7 @@ import { getServerState } from './utils-server-state.cjs';
 
 async function main() {
   // Get server state from saved file
-  const serverState = getServerState();
+  const serverState = await getServerState();
 
   if (!serverState) {
     console.error('❌ Server state not found. Start the server first with: node dist/openai-server/start.mjs');

@@ -5,7 +5,7 @@
 
 import { loadDotenv } from 'binary-collections';
 import fs from 'fs-extra';
-import { checkServerPort, getServerState } from './utils-server-state.cjs';
+import { getServerState } from './utils-server-state.cjs';
 import { fetch, Agent } from 'undici';
 import { findFreePort, startServer, stopServer } from './utils.js';
 import { app } from './server.js';
@@ -19,9 +19,9 @@ async function main() {
   fs.rmSync(logDir, { recursive: true, force: true });
   fs.mkdirSync(logDir, { recursive: true });
 
-  let state = getServerState();
   let server: Server | undefined = undefined;
-  if (!state || (state && !(await checkServerPort({ port: state.port })))) {
+  let state = await getServerState();
+  if (!state) {
     ({ state, server } = await startServer(app, await findFreePort()));
   }
   if (!state) throw new Error('Server state not available');
