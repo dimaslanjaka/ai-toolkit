@@ -16,6 +16,10 @@
   - Windows: `bin/`, `node_modules/.bin/`, `venv/Scripts/`, `.venv/Scripts/`, `vendor/bin/`.
   - Linux/macOS: `bin/`, `node_modules/.bin/`, `venv/bin/`, `.venv/bin/`, `vendor/bin/`.
 
+- Scripts in `scripts/` (standalone Node.js tooling bootstrappers):
+  - `scripts/ai-memory-installer.js` — Downloads the latest `ai-memory-mcp` binary from GitHub releases and installs to `node_modules/.bin/`.
+  - `scripts/sqlite-installer.js` — Downloads the latest SQLite precompiled binary from sqlite.org and installs to `node_modules/.bin/`.
+
 - Filesystem imports: use the default import `import fs from 'fs-extra'`; do not import from `fs` or `node:fs`.
 - Path imports: use the default import `import path from 'upath'`; do not import from `path` or `node:path`.
 - OpenAI-compatible server architecture and provider details: see `.opencode/memory/openai-compatible.md`.
