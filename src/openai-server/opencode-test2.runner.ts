@@ -21,7 +21,7 @@ async function main() {
 
   let state = getServerState();
   let server: Server | undefined = undefined;
-  if (!state && !checkServerPort({ port: state.port })) {
+  if (!state || (state && !(await checkServerPort({ port: state.port })))) {
     ({ state, server } = await startServer(app, 15758));
   }
   if (!state) throw new Error('Server state not available');
