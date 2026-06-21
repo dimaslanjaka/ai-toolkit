@@ -117,6 +117,42 @@ jobs:
           else
             echo "Skipping missing test file: test/openai-server/proxy/start-proxy-checker.test.ts"
           fi
+      - name: 🧪 Run tests in test/openai-server/server.test.ts
+        id: run-test-openai-server-server-test-ts
+        shell: bash
+        run: >-
+          if [ -f "test/openai-server/server.test.ts" ]; then
+            node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --forceExit --testTimeout=120000 --detectOpenHandles --bail=1 --testPathPatterns="openai-server/server.test.ts"
+          else
+            echo "Skipping missing test file: test/openai-server/server.test.ts"
+          fi
+      - name: 🧪 Run tests in test/openai-server/streaming.test.ts
+        id: run-test-openai-server-streaming-test-ts
+        shell: bash
+        run: >-
+          if [ -f "test/openai-server/streaming.test.ts" ]; then
+            node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --forceExit --testTimeout=120000 --detectOpenHandles --bail=1 --testPathPatterns="openai-server/streaming.test.ts"
+          else
+            echo "Skipping missing test file: test/openai-server/streaming.test.ts"
+          fi
+      - name: 🧪 Run tests in test/openai-server/tool-calling.test.ts
+        id: run-test-openai-server-tool-calling-test-ts
+        shell: bash
+        run: >-
+          if [ -f "test/openai-server/tool-calling.test.ts" ]; then
+            node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --forceExit --testTimeout=120000 --detectOpenHandles --bail=1 --testPathPatterns="openai-server/tool-calling.test.ts"
+          else
+            echo "Skipping missing test file: test/openai-server/tool-calling.test.ts"
+          fi
+      - name: 🧪 Run tests in test/openai-server/weather.test.ts
+        id: run-test-openai-server-weather-test-ts
+        shell: bash
+        run: >-
+          if [ -f "test/openai-server/weather.test.ts" ]; then
+            node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --forceExit --testTimeout=120000 --detectOpenHandles --bail=1 --testPathPatterns="openai-server/weather.test.ts"
+          else
+            echo "Skipping missing test file: test/openai-server/weather.test.ts"
+          fi
       - name: 🧪 Run tests in test/proxy/proxy-checker-lock.test.ts
         id: run-test-proxy-proxy-checker-lock-test-ts
         shell: bash
