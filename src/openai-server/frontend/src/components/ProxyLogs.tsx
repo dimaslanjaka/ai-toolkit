@@ -9,6 +9,7 @@ interface WorkingProxy {
   type?: string;
   status?: string;
   last_check?: string;
+  hosts?: string[];
 }
 
 type ProxyCheckerState = 'idle' | 'starting' | 'running' | 'finished' | 'failed' | 'stopped' | 'locked';

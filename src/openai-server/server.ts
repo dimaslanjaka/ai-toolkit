@@ -262,7 +262,7 @@ app.get('/proxy-checker/logs', async (req, res) => {
 });
 
 /**
- * List all active proxies for a given host.
+ * List all active proxies for a given host, including all hosts each proxy works for.
  * Query params: host (required)
  */
 app.get('/proxy-checker/proxies', async (req, res) => {
@@ -276,7 +276,7 @@ app.get('/proxy-checker/proxies', async (req, res) => {
     const db = await getSQLite();
     const proxyDb = new SQLiteProxy(db);
 
-    const proxies = await proxyDb.getProxiesByHost(host);
+    const proxies = await proxyDb.getProxiesByHostWithAllHosts(host);
 
     res.json({ ok: true, proxies });
   } catch (error) {
