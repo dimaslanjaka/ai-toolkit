@@ -65,24 +65,41 @@ export interface StartServerOptions {
 
 /**
  * Find a free port starting from a preferred port
+ * @param startPort The port to start searching from (default: 5758)
+ * @param maxAttempts Maximum number of ports to try (default: 100)
  */
-export function findFreePort(startPort: number = 5758): Promise<number> {
+export function findFreePort(startPort: number = 5758, maxAttempts: number = 100): Promise<number> {
   return new Promise((resolve, reject) => {
-    const server = net.createServer();
-    server.unref();
-    server.on('error', (err: any) => {
-      if (err.code === 'EADDRINUSE') {
-        resolve(findFreePort(startPort + 1));
-      } else {
-        reject(err);
+    const attemptPort = (port: number, attemptsLeft: number): void => {
+      if (attemptsLeft <= 0) {
+        reject(new Error(`Could not find a free port after ${maxAttempts} attempts starting from port ${startPort}`));
+        return;
       }
-    });
-    server.listen(startPort, () => {
-      const { port } = server.address() as net.AddressInfo;
-      server.close(() => {
-        resolve(port);
+
+      const server = net.createServer();
+      server.unref();
+      server.on('error', (err: any) => {
+        if (err.code === 'EADDRINUSE') {
+          if (port === startPort) {
+            serverLogger.log(`Port ${startPort} is in use, searching for free port...`);
+          }
+          attemptPort(port + 1, attemptsLeft - 1);
+        } else {
+          reject(err);
+        }
       });
-    });
+      server.listen(port, () => {
+        const { port: foundPort } = server.address() as net.AddressInfo;
+        server.close(() => {
+          if (foundPort !== startPort) {
+            serverLogger.log(`Preferred port ${startPort} was in use, using port ${foundPort} instead`);
+          }
+          resolve(foundPort);
+        });
+      });
+    };
+
+    attemptPort(startPort, maxAttempts);
   });
 }
 

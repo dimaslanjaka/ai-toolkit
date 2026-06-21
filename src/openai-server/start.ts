@@ -10,6 +10,7 @@ loadDotenv();
 const httpsEnabled = process.env.OPENAI_SERVER_HTTPS !== 'false';
 const httpsKeyFile = path.resolve(process.env.OPENAI_SERVER_HTTPS_KEY_FILE || '.cert/dev.pem');
 const httpsCertFile = path.resolve(process.env.OPENAI_SERVER_HTTPS_CERT_FILE || '.cert/cert.pem');
+const preferredPort = parseInt(process.env.OPENAI_SERVER_PORT || '5758');
 
 function getHttpsOptions() {
   if (!httpsEnabled) {
@@ -65,7 +66,7 @@ app.use((err: any, _req: any, res: any, _next: any) => {
   }
 });
 
-startServer(app, 5758, { https: getHttpsOptions() }).then(({ state }) => {
+startServer(app, preferredPort, { https: getHttpsOptions() }).then(({ state }) => {
   const endpoints = [
     ['GET', '/chat/'],
     ['GET', '/v1/models'],
