@@ -18,8 +18,9 @@ const Configuration = {
    * Any rules defined here will override rules from @commitlint/config-conventional
    */
   rules: {
-    'header-trim': [1, 'always'], // change level from 2 (error) to 1 (warning)
-    'body-max-line-length': [1, 'always', 100]
+    'header-trim': [1, 'always'],
+    'header-max-length': [1, 'always', 140],
+    'body-max-line-length': [1, 'always', 120]
   },
   /*
    * Array of functions that return true if commitlint should ignore the given message.
