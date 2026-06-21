@@ -13,14 +13,16 @@ Run `git diff --staged` to capture all staged changes. Analyze the diff output t
 ### Step 2 — Generate Conventional Commit Message
 Format: `<type>(<scope>): <subject>`
 
-**Allowed types:** build, ci, docs, feat, fix, perf, refactor, style, test, chore
+**Allowed types:** build, chore, ci, docs, feat, fix, perf, refactor, revert, style, test
 
 **Subject rules:**
 - Imperative mood, present tense ("add" not "added" or "adds")
 - No capital first letter, no period at end
 - ≤72 characters
 
-**Body (optional):** Explain what changed and why, in imperative mood. Skip if subject is clear.
+**Body (optional):**
+- Explain what changed and why, in imperative mood.
+- Max line length: 100 characters.
 
 **Footer (optional):** Include `BREAKING CHANGE:` for breaking API changes, or `Closes #123` / `Fixes #456` for issue references.
 
@@ -29,7 +31,7 @@ Format: `<type>(<scope>): <subject>`
 2. Run `git commit -F tmp/commit.txt`
 
 ## Rules
-- Do NOT validate styling (let git hooks handle linting)
+- Ensure compliance with `commitlint.config.js` (config-conventional + 100 char body limit)
 - Do NOT modify staged files — only analyze and commit
 - Always follow conventional commit format strictly
 - For breaking changes, always use `BREAKING CHANGE:` footer

@@ -53,18 +53,15 @@ Run the appropriate diff command based on the target:
 ### Step 3 — Generate Commit Message via @Conventional Commit Creator
 
 Pass the diff output to **@Conventional Commit Creator**. It analyzes the changes
-and returns a conventional commit message in the format:
+and returns a conventional commit message that complies with `commitlint.config.js`.
 
-```
-type(scope): description
-
-[optional body]
-
-[optional footer]
-```
+**Quality Gates:**
+1. **Header**: `<type>(<scope>): <subject>` (all lowercase description, imperative, max 72 chars).
+2. **Body**: Imperative mood, max 100 chars per line.
+3. **Types**: build, chore, ci, docs, feat, fix, perf, refactor, revert, style, test.
 
 The agent **never** writes its own commit message — it always delegates to
-@Conventional Commit Creator.
+@Conventional Commit Creator to ensure consistency and linting compliance.
 
 ---
 

@@ -146,6 +146,16 @@ chore(deps)
 | `chore`    | Updates maintenance tasks, scripts, generated metadata, or tooling config        |
 | `revert`   | Reverts a previous commit                                                        |
 
+## Commit Quality Rules (from commitlint.config.js)
+
+1. **Header Length**: Keep under 72 characters.
+2. **Header Case**: Start description with lowercase.
+3. **Header Punctuation**: Do not end with a period.
+4. **Body Length**: Max line length is 100 characters.
+5. **Types**: Use only allowed types (feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert).
+6. **Mood**: Use imperative mood for both header and body.
+7. **Trimming**: Ensure header is trimmed of leading/trailing whitespace.
+
 ## Scope Rules
 
 Infer scope from the most specific meaningful path, module, feature, or package.
