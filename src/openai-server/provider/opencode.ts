@@ -6,6 +6,7 @@ import type { Request } from 'express';
 import { isEmpty, writefile } from 'sbg-utility';
 import SQLiteProxy from '../../database/SQLiteProxy.js';
 import { getSQLite, getSharedModels } from '../../database/shared.js';
+import { opencodeProvider } from '../../provider/opencode/get.js';
 
 import {
   convertChatCompletionsToResponses,
@@ -88,8 +89,6 @@ async function cacheWorkingProxy(proxyUrl: string | undefined): Promise<void> {
 
 async function getOpenCode(): Promise<OpenAI> {
   if (!opencodeClient) {
-    const { opencodeProvider } = await import('../../provider/opencode/get.js');
-
     // Filter for HTTP proxies only since undici ProxyAgent doesn't support SOCKS5.
     opencodeClientProxy = await selectProxyUrl();
 
