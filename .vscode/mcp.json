@@ -1,0 +1,24 @@
+{
+  "servers": {
+    "ai-memory": {
+      "type": "stdio",
+      "command": "ai-memory",
+      "args": ["--db", "C:/Users/Dell/.local/share/ai-memory/memories.db", "mcp", "--tier", "smart"]
+    },
+    "sequential-thinking": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+    },
+    "octocode": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "octocode-mcp@latest"],
+      "env": {
+        "ALLOWED_PATHS": "D:/"
+      },
+      "envFile": "${workspaceFolder}/.env"
+    }
+  },
+  "inputs": []
+}
