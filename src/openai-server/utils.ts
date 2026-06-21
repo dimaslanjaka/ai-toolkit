@@ -1,9 +1,9 @@
-import net from 'net';
 import https from 'https';
-import { writefile, readfile } from 'sbg-utility';
-import path from 'upath';
 import moment from 'moment';
+import net from 'net';
+import path from 'upath';
 import { PersistentLogger } from '../utils/logs.cjs';
+import { saveServerState, ServerState } from './utils-server-state.cjs';
 
 const STATE_FILE = path.join(process.cwd(), 'tmp/database/openai-server.json');
 const LOG_FILE = path.join(process.cwd(), 'tmp/logs/openai-compatible/server.log');
@@ -50,14 +50,6 @@ export function appendMessageToFile(filePath: string, prefix: string, content: s
   console.log(infoMsg);
 }
 
-export interface ServerState {
-  port: number;
-  pid: number;
-  startedAt: string;
-  url: string;
-  server?: net.Server;
-}
-
 export interface StartServerOptions {
   hostname?: string;
   https?: https.ServerOptions;
@@ -101,27 +93,6 @@ export function findFreePort(startPort: number = 5758, maxAttempts: number = 100
 
     attemptPort(startPort, maxAttempts);
   });
-}
-
-/**
- * Save server state to a persistent file (excludes server instance)
- */
-export function saveServerState(state: ServerState) {
-  const { server: _server, ...serializableState } = state;
-  writefile(STATE_FILE, JSON.stringify(serializableState, null, 2));
-}
-
-/**
- * Read server state from the persistent file
- */
-export function getServerState(): ServerState | null {
-  try {
-    const content = readfile(STATE_FILE);
-    if (!content) return null;
-    return JSON.parse(content);
-  } catch {
-    return null;
-  }
 }
 
 /**

@@ -5,9 +5,11 @@
 
 import { loadDotenv } from 'binary-collections';
 import fs from 'fs-extra';
-import { getServerState } from './utils.js';
-
+import { checkServerPort, getServerState } from './utils-server-state.cjs';
 import { fetch, Agent } from 'undici';
+import { startServer, stopServer } from './utils.js';
+import { app } from './server.js';
+import { Server } from 'node:net';
 
 loadDotenv();
 
@@ -17,7 +19,11 @@ async function main() {
   fs.rmSync(logDir, { recursive: true, force: true });
   fs.mkdirSync(logDir, { recursive: true });
 
-  const state = getServerState();
+  let state = getServerState();
+  let server: Server | undefined = undefined;
+  if (!state && !checkServerPort({ port: state.port })) {
+    ({ state, server } = await startServer(app, 15758));
+  }
   if (!state) throw new Error('Server state not available');
 
   console.log('Server running at', state.url);
@@ -65,6 +71,8 @@ async function main() {
     console.log(`\n--- ${file} ---`);
     console.log(content.substring(0, 500));
   }
+
+  if (server) await stopServer(server);
 }
 
 main().catch((err) => {
