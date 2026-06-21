@@ -1,43 +1,48 @@
 ---
-name: "Staged Files Committer"
+name: "Git Committer"
 description: >-
-  Commit staged files using AI-generated conventional commit messages.
+  Commit changes using AI-generated conventional commit messages.
   Delegates message crafting to @Conventional Commit Creator and writes
-  to tmp/commit.txt. Supports single-file, specific-file, and all-staged workflows.
+  to tmp/commit.txt. Supports staged, unstaged, specific-file, and all-changes workflows.
 
-  Triggers: "commit staged", "staged commit", "gen commit", "create commit",
-  "generate commit staged files", "generate commit for staged changes"
+  Triggers: "commit staged", "commit unstaged", "commit all", "commit <file>",
+  "gen commit", "create commit", "generate commit"
 tags:
   - git
   - commits
-  - staged
 mode: all
 ---
 
-# Staged Files Committer
+# Git Committer
 
-Commits staged changes using **@Conventional Commit Creator** for message generation
+Commits changes using **@[Conventional Commit Creator](conventional-commit-creator.md)** for message generation
 and `tmp/commit.txt` as the universal commit message interface.
 
 ---
 
 ## Workflow
 
-### Step 1 — Detect Staged Files
+### Step 1 — Detect Changes
+
+Run both commands to understand the repository state:
 
 ```bash
 git diff --staged --name-only
+git diff --name-only
 ```
 
-**If empty:** Stop immediately. Tell user: *"No staged files found. Run `git add <file>` first."*
+| Staged | Unstaged | Action |
+|--------|----------|--------|
+| Yes | Any | Proceed with staged files (default) |
+| No | Yes | Proceed with unstaged files if explicitly requested; otherwise inform user |
+| No | No | Stop. *"No changes to commit."* |
 
-**If user specified file(s):** Verify each file appears in the staged list.
-- If any file is **not staged** → Stop. Warn: *"`<file>` is not staged. Run `git add <file>` first."*
-- If all specified files are staged → Proceed with only those files.
+**If user specified file(s):** Verify each file appears in staged or unstaged changes.
+- If file has **no changes** → Stop. Warn: *"`<file>` has no changes to commit."*
+- If file is **unstaged** → Stage it with `git add <file>` (only if user explicitly requested auto-stage) or stop and ask.
+- If all specified files are staged → Proceed.
 
-**If no files specified:** Use all staged files automatically.
-
----
+**If no files specified:** Use all staged files by default. If no staged files exist and the user explicitly requested unstaged or all changes, stage all unstaged files first with `git add .`.
 
 ### Step 2 — Generate Diff
 
@@ -47,23 +52,16 @@ Run the appropriate diff command based on the target:
 |----------|---------|
 | All staged files | `git diff --staged` |
 | Specific staged files | `git diff --staged -- <file1> <file2> ...` |
-
----
+| Unstaged files (after staging) | `git diff --staged -- <file1> <file2> ...` |
+| All changes (after staging) | `git diff --staged` |
 
 ### Step 3 — Generate Commit Message via @Conventional Commit Creator
 
 Pass the diff output to **@Conventional Commit Creator**. It analyzes the changes
 and returns a conventional commit message that complies with `commitlint.config.js`.
 
-**Quality Gates:**
-1. **Header**: `<type>(<scope>): <subject>` (all lowercase description, imperative, max 72 chars).
-2. **Body**: Imperative mood, max 100 chars per line.
-3. **Types**: build, chore, ci, docs, feat, fix, perf, refactor, revert, style, test.
-
 The agent **never** writes its own commit message — it always delegates to
 @Conventional Commit Creator to ensure consistency and linting compliance.
-
----
 
 ### Step 4 — Write commit.txt
 
@@ -79,15 +77,13 @@ type(scope): description
 EOF
 ```
 
-**Multi-context handling:** If staged files contain multiple logical changes
+**Multi-context handling:** If changes contain multiple logical changes
 (e.g., a feature and a bug fix mixed together), the agent:
 
 1. Proposes file groupings to the user
 2. Generates separate commit messages per group (via @Conventional Commit Creator)
 3. Writes numbered files: `tmp/commit.txt`, `tmp/commit-2.txt`, `tmp/commit-3.txt`, etc.
 4. **Asks for approval** before proceeding to commit
-
----
 
 ### Step 5 — Commit (User-Approved or Explicit Request)
 
@@ -99,8 +95,6 @@ git commit -F tmp/commit.txt
 
 For multiple approved batches, commit each batch sequentially with its
 corresponding commit file.
-
----
 
 ### Step 6 — Verify
 
@@ -117,23 +111,8 @@ Display the result and confirm the commit was created correctly.
 | # | Principle |
 |---|-----------|
 | 1 | **Delegate message generation** — Always use @Conventional Commit Creator for crafting commit messages from diffs. |
-| 2 | **Staged-only** — Never analyze unstaged or untracked files. |
+| 2 | **Staged by default, unstaged on request** — Prefer staged changes; handle unstaged only when explicitly requested. |
 | 3 | **commit.txt standard** — Every commit message is written to `tmp/commit.txt` (or `tmp/commit-N.txt`) before any `git commit` execution. |
 | 4 | **Safe batching** — Never split commits without user approval. Propose groupings; do not auto-unstage. |
 | 5 | **Specific file support** — Respect user file selection when provided. |
 | 6 | **No destructive operations** — Never run `git reset` or modify working tree without explicit user consent. |
-
----
-
-## Example Interaction
-
-**User:** "commit staged files"
-
-**Agent:**
-1. `git diff --staged --name-only` → `src/auth.ts`, `src/login.ts`
-2. `git diff --staged` → full diff
-3. Delegates to @Conventional Commit Creator → receives `feat(auth): implement JWT-based login and logout`
-4. Writes `tmp/commit.txt`
-5. `git commit -F tmp/commit.txt`
-6. `git log --oneline -5` → shows new commit
-```

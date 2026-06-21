@@ -18,9 +18,37 @@ const Configuration = {
    * Any rules defined here will override rules from @commitlint/config-conventional
    */
   rules: {
+    // Subject (description) rules
+    'subject-case': [2, 'always', 'lower-case'],
+    'subject-full-stop': [2, 'never', '.'],
+    'subject-empty': [2, 'never'],
+    'subject-min-length': [2, 'always', 4],
+
+    // Body rules
     'header-trim': [1, 'always'],
     'header-max-length': [1, 'always', 140],
-    'body-max-line-length': [1, 'always', 120]
+    'body-max-line-length': [1, 'always', 120],
+
+    // Type rules
+    'type-enum': [
+      2,
+      'always',
+      ['feat', 'fix', 'docs', 'style', 'refactor', 'perf', 'test', 'build', 'ci', 'chore', 'revert']
+    ],
+    'type-case': [2, 'always', 'lower-case'],
+    'type-empty': [2, 'never'],
+
+    // Scope rules
+    'scope-case': [2, 'always', 'lower-case'],
+    'scope-empty': [0, 'never'],
+    'scope-max-length': [2, 'always', 16],
+
+    // Footer rules
+    'footer-leading-blank': [2, 'always'],
+    'footer-max-line-length': [2, 'always', 100],
+
+    // Referenced issues
+    'references-empty': [0, 'never']
   },
   /*
    * Array of functions that return true if commitlint should ignore the given message.
