@@ -11,7 +11,7 @@ describe('Streaming API', () => {
         stream: true
       },
       {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Request-Provider': 'opencode' },
         responseType: 'stream',
         httpsAgent: new https.Agent({ rejectUnauthorized: false })
       }

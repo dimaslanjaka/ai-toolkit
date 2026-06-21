@@ -28,7 +28,7 @@ describe('Weather tool call (streaming)', () => {
         stream: true
       },
       {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Request-Provider': 'opencode' },
         responseType: 'stream',
         httpsAgent
       }
@@ -104,7 +104,7 @@ describe('Complex multi-tool scenario', () => {
         stream: true
       },
       {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Request-Provider': 'opencode' },
         responseType: 'stream',
         httpsAgent
       }
@@ -168,7 +168,7 @@ describe('Complex multi-tool scenario', () => {
         stream: true
       },
       {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Request-Provider': 'opencode' },
         responseType: 'stream',
         httpsAgent
       }

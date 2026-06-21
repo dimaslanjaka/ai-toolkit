@@ -27,7 +27,7 @@ describe('Tool calling', () => {
         stream: false
       },
       {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Request-Provider': 'opencode' },
         httpsAgent: new https.Agent({ rejectUnauthorized: false })
       }
     );

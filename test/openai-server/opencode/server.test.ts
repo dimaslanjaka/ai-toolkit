@@ -16,7 +16,8 @@ describe('OpenAI-compatible API', () => {
       },
       {
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-Request-Provider': 'opencode'
         },
         httpsAgent
       }
