@@ -2,6 +2,8 @@
 ## Releases
 | version | tarball url |
 | :--- | :--- |
+| latest | https://github.com/dimaslanjaka/ai-toolkit/raw/4633c02/release/ai-toolkit.tgz |
+| latest | https://github.com/dimaslanjaka/ai-toolkit/raw/master/release/ai-toolkit.tgz |
 
 use this tarball with `resolutions`:
 ```json
