@@ -1,7 +1,8 @@
-import Bluebird from 'bluebird';
-import ProxyDB, { Proxy } from '../database/ProxyDB.js';
-import { getLocalMySQL, getProductionMySQL, getSQLite } from '../database/shared.js';
+import { loadDotenv } from 'binary-collections';
+import { Proxy } from '../database/ProxyDB.js';
+import { closeAllDatabases, getProductionMySQL } from '../database/shared.js';
 import { checkProxy, CheckProxyResult } from './checker.js';
+import { getWorkingProxies } from './proxies-data.js';
 import {
   adoptProxyCheckerLock,
   getProxyCheckerLockFromEnv,
@@ -10,38 +11,8 @@ import {
   tryAcquireProxyCheckerLock,
   type ProxyCheckerLockHandle
 } from './proxy-checker-lock.js';
-import { loadDotenv } from 'binary-collections';
 
 loadDotenv();
-
-const databases: Record<string, ProxyDB> = {};
-
-async function getWorkingProxies(limit = 100) {
-  const proxiesMap = new Map<string, Proxy>();
-
-  if (!databases.remote) databases.remote = getProductionMySQL();
-  let proxiestable = await databases.remote.proxies();
-  const remoteProxies = await proxiestable.getWorking(limit);
-  for (const proxy of remoteProxies) {
-    proxiesMap.set(proxy.proxy, proxy);
-  }
-
-  if (!databases.local) databases.local = getLocalMySQL();
-  proxiestable = await databases.local.proxies();
-  const localProxies = await proxiestable.getWorking(limit);
-  for (const proxy of localProxies) {
-    proxiesMap.set(proxy.proxy, proxy);
-  }
-
-  if (!databases.local_sqlite) databases.local_sqlite = await getSQLite();
-  proxiestable = await databases.local_sqlite.proxies();
-  const sqliteProxies = await proxiestable.getWorking(limit);
-  for (const proxy of sqliteProxies) {
-    proxiesMap.set(proxy.proxy, proxy);
-  }
-
-  return Array.from(proxiesMap.values());
-}
 
 async function checkHttps(proxies: Proxy[]) {
   let result: CheckProxyResult | undefined = undefined;
@@ -81,7 +52,7 @@ async function checkHttps(proxies: Proxy[]) {
       }
     }
 
-    const table_proxies = await databases.remote.proxies();
+    const table_proxies = await getProductionMySQL().proxies();
     if (shouldBreak) {
       // got working proxy
       await table_proxies.update({ status: 'active', type: protocol, https: 'true' }, { proxy: item.proxy });
@@ -138,7 +109,7 @@ async function run() {
     process.off('SIGINT', stop);
     process.off('SIGTERM', stop);
     cleanup();
-    await Bluebird.each(Object.values(databases), (db) => db.close());
+    await closeAllDatabases();
   }
 }
 

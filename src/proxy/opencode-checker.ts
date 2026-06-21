@@ -2,8 +2,9 @@ import ansiColors from 'ansi-colors';
 import { Proxy } from '../database/ProxyDB.js';
 import SQLiteMarker from '../database/SQLiteMarker.js';
 import { SQLiteProxy } from '../database/SQLiteProxy.js';
-import { getProductionMySQL, getSQLite } from '../database/shared.js';
+import { closeAllDatabases, getProductionMySQL, getSQLite } from '../database/shared.js';
 import { checkProxy, CheckProxyResult } from './checker.js';
+import { getWorkingProxies } from './proxies-data.js';
 
 const productionMySQL = getProductionMySQL();
 let sharedSqlite: Awaited<ReturnType<typeof getSQLite>>;
@@ -23,10 +24,9 @@ async function initSharedSqlite() {
 const WORKING_PROXY_HOURS = 1 / 24; // 1 hour
 const DEAD_PROXY_HOURS = 3 / 24; // 3 hours
 
-async function getRemoteWorkingProxies() {
+async function getUnseenWorkingProxies() {
   await initSharedSqlite();
-  const proxiestable = await productionMySQL.proxies();
-  const proxies = await proxiestable.getWorking();
+  const proxies = await getWorkingProxies();
 
   const result = marker.filterUnseen(proxies.map((p) => p.proxy));
   const filtered = proxies.filter((p) => result.pending.has(p.proxy));
@@ -108,7 +108,7 @@ async function checkSingle(item: Proxy) {
 
 export async function opencodeCheckProxy() {
   await initSharedSqlite();
-  const proxies = await getRemoteWorkingProxies();
+  const proxies = await getUnseenWorkingProxies();
   for (let index = 0; index < proxies.length; index++) {
     const item = proxies[index];
     const result = await checkSingle(item);
@@ -119,7 +119,7 @@ export async function opencodeCheckProxy() {
     }
   }
 
-  await productionMySQL.close();
+  await closeAllDatabases();
   marker.close();
   // proxyDb.close() is now handled by the shared instance
 }
