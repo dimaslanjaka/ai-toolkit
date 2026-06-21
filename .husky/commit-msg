@@ -1,0 +1,3 @@
+#!/bin/sh
+
+corepack yarn exec commitlint --edit $1 || npx -y commitlint --edit $1
