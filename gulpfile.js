@@ -69,7 +69,7 @@ export function buildWeb() {
 
 // OpenAI-compatible server build
 export function buildServer() {
-  return series(parallel(buildTs, copySql), buildRollup);
+  return series(parallel(buildTs, copySql), buildRollup)();
 }
 
 // Clean build artifacts
