@@ -33,7 +33,8 @@ const config = {
   },
   clearMocks: true,
   resetMocks: false,
-  restoreMocks: false
+  restoreMocks: false,
+  setupFiles: ['<rootDir>/jest.setup.js']
 };
 
 export default config;
