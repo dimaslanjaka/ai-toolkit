@@ -1,19 +1,49 @@
 import Bluebird from 'bluebird';
-import ProxyDB from '../database/ProxyDB.js';
-import { getProductionMySQL } from '../database/shared.js';
+import ProxyDB, { Proxy } from '../database/ProxyDB.js';
+import { getLocalMySQL, getProductionMySQL, getSQLite } from '../database/shared.js';
 import { checkProxy, CheckProxyResult } from './checker.js';
+import {
+  adoptProxyCheckerLock,
+  getProxyCheckerLockFromEnv,
+  PROXY_CHECKER_EXTERNAL_LOCK_ENV,
+  releaseProxyCheckerLock,
+  tryAcquireProxyCheckerLock,
+  type ProxyCheckerLockHandle
+} from './proxy-checker-lock.js';
+import { loadDotenv } from 'binary-collections';
+
+loadDotenv();
 
 const databases: Record<string, ProxyDB> = {};
 
-async function getRemoteWorkingProxies() {
+async function getWorkingProxies(limit = 100) {
+  const proxiesMap = new Map<string, Proxy>();
+
   if (!databases.remote) databases.remote = getProductionMySQL();
-  const proxiestable = await databases.remote.proxies();
-  const proxies = await proxiestable.getWorking();
-  return proxies;
+  let proxiestable = await databases.remote.proxies();
+  const remoteProxies = await proxiestable.getWorking(limit);
+  for (const proxy of remoteProxies) {
+    proxiesMap.set(proxy.proxy, proxy);
+  }
+
+  if (!databases.local) databases.local = getLocalMySQL();
+  proxiestable = await databases.local.proxies();
+  const localProxies = await proxiestable.getWorking(limit);
+  for (const proxy of localProxies) {
+    proxiesMap.set(proxy.proxy, proxy);
+  }
+
+  if (!databases.local_sqlite) databases.local_sqlite = await getSQLite();
+  proxiestable = await databases.local_sqlite.proxies();
+  const sqliteProxies = await proxiestable.getWorking(limit);
+  for (const proxy of sqliteProxies) {
+    proxiesMap.set(proxy.proxy, proxy);
+  }
+
+  return Array.from(proxiesMap.values());
 }
 
-async function _check() {
-  const proxies = await getRemoteWorkingProxies();
+async function checkHttps(proxies: Proxy[]) {
   let result: CheckProxyResult | undefined = undefined;
   for (const item of proxies) {
     const VALID_PROTOCOLS = ['http', 'socks4', 'socks5'];
@@ -64,9 +94,55 @@ async function _check() {
   return result;
 }
 
-_check()
-  .then(console.log)
-  .catch(console.error)
-  .finally(() => {
-    Bluebird.each(Object.values(databases), (db) => db.close());
-  });
+async function run() {
+  const externalLock = process.env[PROXY_CHECKER_EXTERNAL_LOCK_ENV] === '1';
+  let lock: ProxyCheckerLockHandle | null = getProxyCheckerLockFromEnv();
+
+  if (!externalLock && !lock) {
+    const acquired = tryAcquireProxyCheckerLock();
+
+    if (!acquired.acquired) {
+      console.log(
+        acquired.ownerPid
+          ? `Proxy checker is already running with PID ${acquired.ownerPid}`
+          : 'Proxy checker is already running'
+      );
+      return;
+    }
+
+    lock = acquired.handle;
+  }
+
+  if (lock && !adoptProxyCheckerLock(lock)) {
+    console.log('Proxy checker lock ownership changed before startup');
+    return;
+  }
+
+  const cleanup = () => {
+    if (lock) {
+      releaseProxyCheckerLock(lock);
+    }
+  };
+  const stop = () => {
+    cleanup();
+    process.exit(0);
+  };
+
+  process.once('SIGINT', stop);
+  process.once('SIGTERM', stop);
+
+  try {
+    const result = await getWorkingProxies().then(checkHttps);
+    console.log(result);
+  } finally {
+    process.off('SIGINT', stop);
+    process.off('SIGTERM', stop);
+    cleanup();
+    await Bluebird.each(Object.values(databases), (db) => db.close());
+  }
+}
+
+run().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
