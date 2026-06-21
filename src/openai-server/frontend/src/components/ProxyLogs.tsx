@@ -12,7 +12,6 @@ interface WorkingProxy {
 }
 
 type ProxyCheckerState = 'idle' | 'starting' | 'running' | 'finished' | 'failed' | 'stopped' | 'locked';
-type Theme = 'dark' | 'light';
 
 interface ProxyCheckerStatus {
   state: ProxyCheckerState;
@@ -146,29 +145,11 @@ function shortPath(value: string): string {
   return marker >= 0 ? normalized.slice(marker + 1) : value;
 }
 
-function MetricCard({
-  icon,
-  label,
-  value,
-  detail,
-  theme
-}: {
-  icon: string;
-  label: string;
-  value: string;
-  detail: string;
-  theme: Theme;
-}) {
+function MetricCard({ icon, label, value, detail }: { icon: string; label: string; value: string; detail: string }) {
   return (
-    <div
-      className={`rounded-2xl border p-4 ${
-        theme === 'dark' ? 'border-white/10 bg-white/[0.035]' : 'border-neutral-200 bg-white'
-      }`}>
+    <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
       <div className="flex items-start gap-3">
-        <span
-          className={`flex size-9 shrink-0 items-center justify-center rounded-xl ${
-            theme === 'dark' ? 'bg-neutral-800 text-neutral-400' : 'bg-neutral-100 text-neutral-500'
-          }`}>
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-neutral-800 text-neutral-400">
           <i aria-hidden="true" className={`fa-solid ${icon}`} />
         </span>
         <div className="min-w-0">
@@ -183,7 +164,7 @@ function MetricCard({
 
 export default function ProxyManager() {
   const { settings } = useSettings();
-  const { apiBase, apiKey, theme } = settings;
+  const { apiBase, apiKey } = settings;
 
   const [status, setStatus] = useState<ProxyCheckerStatus | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
@@ -201,10 +182,6 @@ export default function ProxyManager() {
 
   const isActive = status ? ACTIVE_STATES.includes(status.state) : false;
   const stateMeta = STATE_META[status?.state ?? 'idle'];
-  const panelClass =
-    theme === 'dark'
-      ? 'border-white/10 bg-[#272727] shadow-black/10'
-      : 'border-neutral-200 bg-white shadow-neutral-200/50';
 
   const loadStatus = useCallback(
     async (quiet = false) => {
@@ -329,7 +306,7 @@ export default function ProxyManager() {
   return (
     <section className="app-scrollbar min-h-0 flex-1 overflow-y-auto">
       <div className="mx-auto w-full max-w-7xl px-4 py-6 md:px-7 md:py-8">
-        <div className={`relative overflow-hidden rounded-3xl border p-5 shadow-xl md:p-7 ${panelClass}`}>
+        <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#272727] p-5 shadow-xl shadow-black/10 md:p-7">
           <div
             className={`pointer-events-none absolute -top-24 -right-16 size-64 rounded-full blur-3xl ${
               isActive ? 'bg-emerald-500/15' : 'bg-sky-500/10'
@@ -370,11 +347,7 @@ export default function ProxyManager() {
                 type="button"
                 disabled={!isActive || action !== null}
                 onClick={() => void runAction('stop')}
-                className={`inline-flex h-10 items-center gap-2 rounded-xl border px-4 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-red-500 disabled:cursor-not-allowed disabled:opacity-45 ${
-                  theme === 'dark'
-                    ? 'border-white/10 bg-white/5 text-neutral-200 hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-300'
-                    : 'border-neutral-200 bg-white text-neutral-700 hover:border-red-300 hover:bg-red-50 hover:text-red-600'
-                }`}>
+                className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 text-sm font-semibold text-neutral-200 transition hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-300 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:cursor-not-allowed disabled:opacity-45">
                 <i
                   aria-hidden="true"
                   className={`fa-solid ${action === 'stop' ? 'fa-spinner-third animate-spin' : 'fa-stop'}`}
@@ -387,11 +360,7 @@ export default function ProxyManager() {
                 onClick={() => void loadStatus()}
                 aria-label="Refresh proxy status"
                 title="Refresh proxy status"
-                className={`inline-flex size-10 items-center justify-center rounded-xl border transition focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 ${
-                  theme === 'dark'
-                    ? 'border-white/10 bg-white/5 text-neutral-400 hover:bg-white/10 hover:text-white'
-                    : 'border-neutral-200 bg-white text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900'
-                }`}>
+                className="inline-flex size-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-neutral-400 transition hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50">
                 <i aria-hidden="true" className={`fa-solid fa-arrows-rotate ${loading ? 'animate-spin' : ''}`} />
               </button>
             </div>
@@ -428,28 +397,24 @@ export default function ProxyManager() {
             label="Checker state"
             value={stateMeta.label}
             detail={stateMeta.description}
-            theme={theme}
           />
           <MetricCard
             icon="fa-microchip"
             label="Process"
             value={status?.pid ? `PID ${status.pid}` : 'No process'}
             detail={status?.pidAlive ? 'Process is responding' : 'No live process detected'}
-            theme={theme}
           />
           <MetricCard
             icon="fa-stopwatch"
             label="Run time"
             value={formatDuration(status?.startedAt ?? null, status?.finishedAt ?? null, currentTime)}
             detail={status?.startedAt ? `Started ${formatDate(status.startedAt)}` : 'No run recorded yet'}
-            theme={theme}
           />
           <MetricCard
             icon="fa-shield-check"
             label="Runtime lock"
             value={status?.lockExists ? 'Acquired' : 'Released'}
             detail={status?.lockExists ? 'Exclusive scan ownership' : 'Ready to acquire'}
-            theme={theme}
           />
         </div>
 
@@ -490,19 +455,15 @@ export default function ProxyManager() {
               setAutoRefresh={setAutoRefresh}
               runAction={runAction}
               loadStatus={loadStatus}
-              theme={theme}
             />
           ) : (
-            <ProxyList workingProxies={workingProxies} theme={theme} />
+            <ProxyList workingProxies={workingProxies} />
           )}
 
           <div className="space-y-5">
-            <div className={`rounded-2xl border p-5 shadow-lg ${panelClass}`}>
+            <div className="rounded-2xl border border-white/10 bg-[#272727] p-5 shadow-lg shadow-black/10">
               <div className="flex items-center gap-3">
-                <span
-                  className={`flex size-10 items-center justify-center rounded-xl ${
-                    theme === 'dark' ? 'bg-neutral-800 text-neutral-400' : 'bg-neutral-100 text-neutral-500'
-                  }`}>
+                <span className="flex size-10 items-center justify-center rounded-xl bg-neutral-800 text-neutral-400">
                   <i aria-hidden="true" className="fa-solid fa-timeline" />
                 </span>
                 <div>
@@ -523,9 +484,7 @@ export default function ProxyManager() {
                 ].map(([label, value]) => (
                   <div
                     key={label}
-                    className={`flex items-start justify-between gap-4 border-b pb-3 last:border-0 last:pb-0 ${
-                      theme === 'dark' ? 'border-white/5' : 'border-neutral-100'
-                    }`}>
+                    className="flex items-start justify-between gap-4 border-b border-white/5 pb-3 last:border-0 last:pb-0">
                     <dt className="text-neutral-500">{label}</dt>
                     <dd className="text-right font-medium">{value}</dd>
                   </div>
@@ -539,12 +498,9 @@ export default function ProxyManager() {
               ) : null}
             </div>
 
-            <div className={`rounded-2xl border p-5 shadow-lg ${panelClass}`}>
+            <div className="rounded-2xl border border-white/10 bg-[#272727] p-5 shadow-lg shadow-black/10">
               <div className="flex items-center gap-3">
-                <span
-                  className={`flex size-10 items-center justify-center rounded-xl ${
-                    theme === 'dark' ? 'bg-neutral-800 text-neutral-400' : 'bg-neutral-100 text-neutral-500'
-                  }`}>
+                <span className="flex size-10 items-center justify-center rounded-xl bg-neutral-800 text-neutral-400">
                   <i aria-hidden="true" className="fa-solid fa-folder-tree" />
                 </span>
                 <div>
@@ -559,9 +515,7 @@ export default function ProxyManager() {
                     <div
                       key={file.label}
                       title={file.value}
-                      className={`flex items-center gap-3 rounded-xl border p-3 ${
-                        theme === 'dark' ? 'border-white/5 bg-black/10' : 'border-neutral-100 bg-neutral-50'
-                      }`}>
+                      className="flex items-center gap-3 rounded-xl border border-white/5 bg-black/10 p-3">
                       <i aria-hidden="true" className={`fa-solid ${file.icon} w-4 text-neutral-500`} />
                       <div className="min-w-0">
                         <p className="text-xs font-medium">{file.label}</p>
@@ -577,12 +531,7 @@ export default function ProxyManager() {
               </div>
             </div>
 
-            <div
-              className={`rounded-2xl border p-4 text-xs leading-5 ${
-                theme === 'dark'
-                  ? 'border-sky-500/20 bg-sky-500/[0.07] text-sky-200/70'
-                  : 'border-sky-200 bg-sky-50 text-sky-700'
-              }`}>
+            <div className="rounded-2xl border border-sky-500/20 bg-sky-500/[0.07] p-4 text-xs leading-5 text-sky-200/70">
               <div className="flex gap-3">
                 <i aria-hidden="true" className="fa-solid fa-circle-info mt-0.5 text-sky-400" />
                 <p>

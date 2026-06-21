@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
 
-type Theme = 'dark' | 'light';
-
 import { useNavigate } from 'react-router';
-import { useSettings } from '../context/SettingsContext';
 
 const API_ENDPOINTS = [
   {
@@ -180,58 +177,34 @@ function MethodBadge({ method }: { method: string }) {
   );
 }
 
-function EndpointCard({ endpoint, theme }: { endpoint: (typeof API_ENDPOINTS)[0]; theme: Theme }) {
+function EndpointCard({ endpoint }: { endpoint: (typeof API_ENDPOINTS)[0] }) {
   return (
-    <div
-      className={`rounded-xl border p-4 transition hover:scale-[1.01] ${
-        theme === 'dark'
-          ? 'border-white/10 bg-neutral-800/40 hover:bg-neutral-800'
-          : 'border-neutral-200 bg-white hover:bg-neutral-50'
-      }`}>
+    <div className="rounded-xl border border-white/10 bg-neutral-800/40 p-4 transition hover:scale-[1.01] hover:bg-neutral-800">
       <div className="flex items-start gap-3">
         <MethodBadge method={endpoint.method} />
         <div className="min-w-0 flex-1">
-          <code className={`block text-sm font-mono ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>
-            {endpoint.path}
-          </code>
-          <p className={`mt-1 text-sm ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-600'}`}>
-            {endpoint.description}
-          </p>
+          <code className="block text-sm font-mono text-emerald-400">{endpoint.path}</code>
+          <p className="mt-1 text-sm text-neutral-400">{endpoint.description}</p>
         </div>
       </div>
     </div>
   );
 }
 
-function ProviderCard({ provider, theme }: { provider: (typeof PROVIDERS)[0]; theme: Theme }) {
+function ProviderCard({ provider }: { provider: (typeof PROVIDERS)[0] }) {
   return (
-    <div
-      className={`rounded-xl border p-5 ${
-        theme === 'dark' ? 'border-white/10 bg-neutral-800/40' : 'border-neutral-200 bg-white'
-      }`}>
-      <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-neutral-900'}`}>
-        {provider.name}
-      </h3>
-      <p className={`mt-1 text-sm ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-600'}`}>
-        {provider.description}
-      </p>
+    <div className="rounded-xl border border-white/10 bg-neutral-800/40 p-5">
+      <h3 className="text-lg font-semibold text-white">{provider.name}</h3>
+      <p className="mt-1 text-sm text-neutral-400">{provider.description}</p>
       <div className="mt-3">
-        <span className={`text-xs font-medium ${theme === 'dark' ? 'text-neutral-500' : 'text-neutral-500'}`}>
-          Default Model:
-        </span>
-        <code className={`ml-2 text-xs ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>
-          {provider.defaultModel}
-        </code>
+        <span className="text-xs font-medium text-neutral-500">Default Model:</span>
+        <code className="ml-2 text-xs text-emerald-400">{provider.defaultModel}</code>
       </div>
       <div className="mt-3">
-        <span className={`text-xs font-medium ${theme === 'dark' ? 'text-neutral-500' : 'text-neutral-500'}`}>
-          Features:
-        </span>
+        <span className="text-xs font-medium text-neutral-500">Features:</span>
         <ul className="mt-1 space-y-1">
           {provider.features.map((feature) => (
-            <li
-              key={feature}
-              className={`flex items-center gap-2 text-xs ${theme === 'dark' ? 'text-neutral-300' : 'text-neutral-600'}`}>
+            <li key={feature} className="flex items-center gap-2 text-xs text-neutral-300">
               <i className="fa-solid fa-check text-emerald-500 text-[10px]" />
               {feature}
             </li>
@@ -244,8 +217,6 @@ function ProviderCard({ provider, theme }: { provider: (typeof PROVIDERS)[0]; th
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const { settings } = useSettings();
-  const theme = settings.theme;
   const [activeSection, setActiveSection] = useState<string>('overview');
 
   const sections = [
@@ -266,12 +237,9 @@ export default function HomePage() {
   );
 
   return (
-    <div className={`${theme === 'dark' ? 'bg-[#212121] text-neutral-100' : 'bg-white text-neutral-900'}`}>
+    <div className="bg-[#212121] text-neutral-100">
       {/* Header */}
-      <header
-        className={`sticky top-0 z-50 border-b backdrop-blur ${
-          theme === 'dark' ? 'border-white/5 bg-[#212121]/90' : 'border-neutral-200 bg-white/90'
-        }`}>
+      <header className="sticky top-0 z-50 border-b border-white/5 bg-[#212121]/90 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
           <div className="flex items-center gap-3">
             <div className="flex size-9 items-center justify-center rounded-full bg-emerald-600 text-white">
@@ -279,9 +247,7 @@ export default function HomePage() {
             </div>
             <div>
               <h1 className="text-lg font-semibold">AI Toolkit Server</h1>
-              <p className={`text-xs ${theme === 'dark' ? 'text-neutral-500' : 'text-neutral-500'}`}>
-                OpenAI-Compatible API Server
-              </p>
+              <p className="text-xs text-neutral-500">OpenAI-Compatible API Server</p>
             </div>
           </div>
           <button
@@ -303,9 +269,7 @@ export default function HomePage() {
               className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition ${
                 activeSection === section.id
                   ? 'bg-emerald-600 text-white'
-                  : theme === 'dark'
-                    ? 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
-                    : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                  : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
               }`}>
               <i className={`fa-solid ${section.icon}`} />
               {section.label}
@@ -317,40 +281,25 @@ export default function HomePage() {
         {activeSection === 'overview' && (
           <div className="space-y-8">
             {/* Hero */}
-            <div
-              className="rounded-2xl border p-8 text-center ${
-              theme === 'dark'
-                ? 'border-white/10 bg-gradient-to-br from-neutral-800/50 to-neutral-900/50'
-                : 'border-neutral-200 bg-gradient-to-br from-neutral-50 to-white'
-            }">
+            <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-neutral-800/50 to-neutral-900/50 p-8 text-center">
               <div className="mx-auto mb-6 flex size-16 items-center justify-center rounded-2xl bg-emerald-600 text-2xl text-white shadow-lg shadow-emerald-950/20">
                 <i className="fa-solid fa-wand-magic-sparkles" />
               </div>
               <h2 className="text-3xl font-bold tracking-tight md:text-4xl">AI Toolkit Server</h2>
-              <p
-                className={`mx-auto mt-4 max-w-2xl text-lg ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-600'}`}>
+              <p className="mx-auto mt-4 max-w-2xl text-lg text-neutral-400">
                 A multi-provider OpenAI-compatible API server with automatic fallback, streaming support, and a built-in
                 chat interface.
               </p>
               <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
-                <div
-                  className={`flex items-center gap-2 rounded-lg px-4 py-2 ${
-                    theme === 'dark' ? 'bg-neutral-800' : 'bg-neutral-100'
-                  }`}>
+                <div className="flex items-center gap-2 rounded-lg bg-neutral-800 px-4 py-2">
                   <i className="fa-solid fa-plug text-emerald-500" />
                   <span className="text-sm font-medium">3 Providers</span>
                 </div>
-                <div
-                  className={`flex items-center gap-2 rounded-lg px-4 py-2 ${
-                    theme === 'dark' ? 'bg-neutral-800' : 'bg-neutral-100'
-                  }`}>
+                <div className="flex items-center gap-2 rounded-lg bg-neutral-800 px-4 py-2">
                   <i className="fa-solid fa-bolt text-amber-500" />
                   <span className="text-sm font-medium">Streaming SSE</span>
                 </div>
-                <div
-                  className={`flex items-center gap-2 rounded-lg px-4 py-2 ${
-                    theme === 'dark' ? 'bg-neutral-800' : 'bg-neutral-100'
-                  }`}>
+                <div className="flex items-center gap-2 rounded-lg bg-neutral-800 px-4 py-2">
                   <i className="fa-solid fa-shield text-blue-500" />
                   <span className="text-sm font-medium">HTTPS by Default</span>
                 </div>
@@ -391,18 +340,12 @@ export default function HomePage() {
                   description: 'Secure connections via mkcert certificates.'
                 }
               ].map((feature) => (
-                <div
-                  key={feature.title}
-                  className={`rounded-xl border p-5 ${
-                    theme === 'dark' ? 'border-white/10 bg-neutral-800/40' : 'border-neutral-200 bg-white'
-                  }`}>
+                <div key={feature.title} className="rounded-xl border border-white/10 bg-neutral-800/40 p-5">
                   <div className="mb-3 flex size-10 items-center justify-center rounded-lg bg-emerald-600/10 text-emerald-500">
                     <i className={`fa-solid ${feature.icon}`} />
                   </div>
                   <h3 className="font-semibold">{feature.title}</h3>
-                  <p className={`mt-1 text-sm ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-600'}`}>
-                    {feature.description}
-                  </p>
+                  <p className="mt-1 text-sm text-neutral-400">{feature.description}</p>
                 </div>
               ))}
             </div>
@@ -414,20 +357,15 @@ export default function HomePage() {
           <div className="space-y-6">
             <div>
               <h2 className="text-2xl font-bold">API Endpoints</h2>
-              <p className={`mt-2 ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-600'}`}>
-                Complete reference for all available API endpoints.
-              </p>
+              <p className="mt-2 text-neutral-400">Complete reference for all available API endpoints.</p>
             </div>
 
             {Object.entries(groupedEndpoints).map(([category, endpoints]) => (
               <div key={category}>
-                <h3
-                  className={`mb-3 text-lg font-semibold ${theme === 'dark' ? 'text-neutral-300' : 'text-neutral-700'}`}>
-                  {category}
-                </h3>
+                <h3 className="mb-3 text-lg font-semibold text-neutral-300">{category}</h3>
                 <div className="space-y-3">
                   {endpoints.map((endpoint) => (
-                    <EndpointCard key={`${endpoint.method}-${endpoint.path}`} endpoint={endpoint} theme={theme} />
+                    <EndpointCard key={`${endpoint.method}-${endpoint.path}`} endpoint={endpoint} />
                   ))}
                 </div>
               </div>
@@ -440,60 +378,41 @@ export default function HomePage() {
           <div className="space-y-6">
             <div>
               <h2 className="text-2xl font-bold">Quick Start</h2>
-              <p className={`mt-2 ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-600'}`}>
-                Get started with the API in minutes.
-              </p>
+              <p className="mt-2 text-neutral-400">Get started with the API in minutes.</p>
             </div>
 
             {/* OpenAI SDK */}
-            <div
-              className={`rounded-xl border p-6 ${
-                theme === 'dark' ? 'border-white/10 bg-neutral-800/40' : 'border-neutral-200 bg-white'
-              }`}>
+            <div className="rounded-xl border border-white/10 bg-neutral-800/40 p-6">
               <h3 className="flex items-center gap-2 text-lg font-semibold">
                 <i className="fa-brands fa-js text-amber-500" />
                 Using OpenAI SDK
               </h3>
-              <p className={`mt-2 text-sm ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-600'}`}>
+              <p className="mt-2 text-sm text-neutral-400">
                 Install the OpenAI SDK and connect to this server as a drop-in replacement.
               </p>
               <div className="mt-4 overflow-x-auto">
-                <pre
-                  className={`rounded-lg p-4 text-sm ${
-                    theme === 'dark' ? 'bg-neutral-900 text-neutral-100' : 'bg-neutral-100 text-neutral-900'
-                  }`}>
+                <pre className="rounded-lg bg-neutral-900 p-4 text-sm text-neutral-100">
                   <code>{QUICK_START_CODE}</code>
                 </pre>
               </div>
             </div>
 
             {/* cURL Examples */}
-            <div
-              className={`rounded-xl border p-6 ${
-                theme === 'dark' ? 'border-white/10 bg-neutral-800/40' : 'border-neutral-200 bg-white'
-              }`}>
+            <div className="rounded-xl border border-white/10 bg-neutral-800/40 p-6">
               <h3 className="flex items-center gap-2 text-lg font-semibold">
                 <i className="fa-solid fa-terminal text-emerald-500" />
                 Using cURL
               </h3>
-              <p className={`mt-2 text-sm ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-600'}`}>
-                Test the API directly from the command line.
-              </p>
+              <p className="mt-2 text-sm text-neutral-400">Test the API directly from the command line.</p>
               <div className="mt-4 overflow-x-auto">
-                <pre
-                  className={`rounded-lg p-4 text-sm ${
-                    theme === 'dark' ? 'bg-neutral-900 text-neutral-100' : 'bg-neutral-100 text-neutral-900'
-                  }`}>
+                <pre className="rounded-lg bg-neutral-900 p-4 text-sm text-neutral-100">
                   <code>{CURL_EXAMPLES}</code>
                 </pre>
               </div>
             </div>
 
             {/* Key Features */}
-            <div
-              className={`rounded-xl border p-6 ${
-                theme === 'dark' ? 'border-white/10 bg-neutral-800/40' : 'border-neutral-200 bg-white'
-              }`}>
+            <div className="rounded-xl border border-white/10 bg-neutral-800/40 p-6">
               <h3 className="flex items-center gap-2 text-lg font-semibold">
                 <i className="fa-solid fa-lightbulb text-amber-500" />
                 Key Features
@@ -509,9 +428,7 @@ export default function HomePage() {
                   'Auto-incrementing port (starts at 5758)',
                   '50 MB JSON body limit'
                 ].map((feature) => (
-                  <li
-                    key={feature}
-                    className={`flex items-start gap-2 ${theme === 'dark' ? 'text-neutral-300' : 'text-neutral-600'}`}>
+                  <li key={feature} className="flex items-start gap-2 text-neutral-300">
                     <i className="fa-solid fa-check mt-1 text-emerald-500" />
                     <span className="text-sm">{feature}</span>
                   </li>
@@ -526,24 +443,21 @@ export default function HomePage() {
           <div className="space-y-6">
             <div>
               <h2 className="text-2xl font-bold">Providers</h2>
-              <p className={`mt-2 ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-600'}`}>
+              <p className="mt-2 text-neutral-400">
                 The server supports multiple AI providers with automatic fallback.
               </p>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {PROVIDERS.map((provider) => (
-                <ProviderCard key={provider.id} provider={provider} theme={theme} />
+                <ProviderCard key={provider.id} provider={provider} />
               ))}
             </div>
 
             {/* Fallback Chain */}
-            <div
-              className={`rounded-xl border p-6 ${
-                theme === 'dark' ? 'border-white/10 bg-neutral-800/40' : 'border-neutral-200 bg-white'
-              }`}>
+            <div className="rounded-xl border border-white/10 bg-neutral-800/40 p-6">
               <h3 className="text-lg font-semibold">Fallback Chain</h3>
-              <p className={`mt-2 text-sm ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-600'}`}>
+              <p className="mt-2 text-sm text-neutral-400">
                 The server automatically falls back to the next provider if the current one fails.
               </p>
               <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -557,7 +471,7 @@ export default function HomePage() {
                   ChatGPT
                 </span>
               </div>
-              <p className={`mt-4 text-sm ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-600'}`}>
+              <p className="mt-4 text-sm text-neutral-400">
                 Override with the{' '}
                 <code className="rounded bg-neutral-800 px-1.5 py-0.5 text-xs">X-Request-Provider</code> header.
               </p>
@@ -570,29 +484,24 @@ export default function HomePage() {
           <div className="space-y-6">
             <div>
               <h2 className="text-2xl font-bold">Configuration</h2>
-              <p className={`mt-2 ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-600'}`}>
-                Environment variables and configuration options.
-              </p>
+              <p className="mt-2 text-neutral-400">Environment variables and configuration options.</p>
             </div>
 
             {/* Environment Variables */}
-            <div
-              className={`rounded-xl border p-6 ${
-                theme === 'dark' ? 'border-white/10 bg-neutral-800/40' : 'border-neutral-200 bg-white'
-              }`}>
+            <div className="rounded-xl border border-white/10 bg-neutral-800/40 p-6">
               <h3 className="text-lg font-semibold">Environment Variables</h3>
               <div className="mt-4 overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className={`border-b ${theme === 'dark' ? 'border-white/10' : 'border-neutral-200'}`}>
+                    <tr className="border-b border-white/10">
                       <th className="pb-3 text-left font-medium">Variable</th>
                       <th className="pb-3 text-left font-medium">Values</th>
                       <th className="pb-3 text-left font-medium">Default</th>
                       <th className="pb-3 text-left font-medium">Description</th>
                     </tr>
                   </thead>
-                  <tbody className={theme === 'dark' ? 'text-neutral-300' : 'text-neutral-600'}>
-                    <tr className={`border-b ${theme === 'dark' ? 'border-white/5' : 'border-neutral-100'}`}>
+                  <tbody className="text-neutral-300">
+                    <tr className="border-b border-white/5">
                       <td className="py-3">
                         <code className="text-emerald-400">PROVIDER</code>
                       </td>
@@ -600,7 +509,7 @@ export default function HomePage() {
                       <td className="py-3">puter</td>
                       <td className="py-3">Which AI provider to use</td>
                     </tr>
-                    <tr className={`border-b ${theme === 'dark' ? 'border-white/5' : 'border-neutral-100'}`}>
+                    <tr className="border-b border-white/5">
                       <td className="py-3">
                         <code className="text-emerald-400">OPENAI_SERVER_HTTPS</code>
                       </td>
@@ -608,7 +517,7 @@ export default function HomePage() {
                       <td className="py-3">true</td>
                       <td className="py-3">Enable shared HTTPS for Vite and Express</td>
                     </tr>
-                    <tr className={`border-b ${theme === 'dark' ? 'border-white/5' : 'border-neutral-100'}`}>
+                    <tr className="border-b border-white/5">
                       <td className="py-3">
                         <code className="text-emerald-400">OPENAI_SERVER_HTTPS_KEY_FILE</code>
                       </td>
@@ -630,42 +539,27 @@ export default function HomePage() {
             </div>
 
             {/* Frontend Configuration */}
-            <div
-              className={`rounded-xl border p-6 ${
-                theme === 'dark' ? 'border-white/10 bg-neutral-800/40' : 'border-neutral-200 bg-white'
-              }`}>
+            <div className="rounded-xl border border-white/10 bg-neutral-800/40 p-6">
               <h3 className="text-lg font-semibold">Frontend Configuration</h3>
-              <p className={`mt-2 text-sm ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-600'}`}>
-                The frontend selects its API backend in this order:
-              </p>
+              <p className="mt-2 text-sm text-neutral-400">The frontend selects its API backend in this order:</p>
               <ol className="mt-4 list-decimal space-y-2 pl-5">
-                <li className={`text-sm ${theme === 'dark' ? 'text-neutral-300' : 'text-neutral-600'}`}>
-                  API base URL saved in the chat settings.
-                </li>
-                <li className={`text-sm ${theme === 'dark' ? 'text-neutral-300' : 'text-neutral-600'}`}>
+                <li className="text-sm text-neutral-300">API base URL saved in the chat settings.</li>
+                <li className="text-sm text-neutral-300">
                   <code className="text-emerald-400">VITE_BACKEND_HOSTNAME_DEV</code> while running the Vite development
                   server.
                 </li>
-                <li className={`text-sm ${theme === 'dark' ? 'text-neutral-300' : 'text-neutral-600'}`}>
+                <li className="text-sm text-neutral-300">
                   <code className="text-emerald-400">VITE_BACKEND_HOSTNAME_PROD</code> in a production build.
                 </li>
-                <li className={`text-sm ${theme === 'dark' ? 'text-neutral-300' : 'text-neutral-600'}`}>
-                  The current browser origin.
-                </li>
+                <li className="text-sm text-neutral-300">The current browser origin.</li>
               </ol>
             </div>
 
             {/* Example Configuration */}
-            <div
-              className={`rounded-xl border p-6 ${
-                theme === 'dark' ? 'border-white/10 bg-neutral-800/40' : 'border-neutral-200 bg-white'
-              }`}>
+            <div className="rounded-xl border border-white/10 bg-neutral-800/40 p-6">
               <h3 className="text-lg font-semibold">Example .env Configuration</h3>
               <div className="mt-4 overflow-x-auto">
-                <pre
-                  className={`rounded-lg p-4 text-sm ${
-                    theme === 'dark' ? 'bg-neutral-900 text-neutral-100' : 'bg-neutral-100 text-neutral-900'
-                  }`}>
+                <pre className="rounded-lg bg-neutral-900 p-4 text-sm text-neutral-100">
                   <code>{`VITE_HOSTNAME=dev.webmanajemen.com
 VITE_PORT=5173
 VITE_BACKEND_HOSTNAME_DEV=127.0.0.1:5758
@@ -681,19 +575,15 @@ OPENAI_SERVER_HTTPS_CERT_FILE=.cert/cert.pem`}</code>
       </div>
 
       {/* Footer */}
-      <footer className={`mt-16 border-t py-8 ${theme === 'dark' ? 'border-white/5' : 'border-neutral-200'}`}>
+      <footer className="mt-16 border-t border-white/5 py-8">
         <div className="mx-auto max-w-6xl px-4 text-center">
-          <p className={`text-sm ${theme === 'dark' ? 'text-neutral-500' : 'text-neutral-500'}`}>
-            AI Toolkit Server — OpenAI-Compatible API Server
-          </p>
+          <p className="text-sm text-neutral-500">AI Toolkit Server — OpenAI-Compatible API Server</p>
           <div className="mt-4 flex justify-center gap-4">
             <a
               href="https://github.com/dimaslanjaka/ai-toolkit"
               target="_blank"
               rel="noopener noreferrer"
-              className={`text-sm transition hover:text-emerald-500 ${
-                theme === 'dark' ? 'text-neutral-400' : 'text-neutral-600'
-              }`}>
+              className="text-sm text-neutral-400 transition hover:text-emerald-500">
               <i className="fa-brands fa-github mr-1" />
               GitHub
             </a>
@@ -701,9 +591,7 @@ OPENAI_SERVER_HTTPS_CERT_FILE=.cert/cert.pem`}</code>
               href="https://platform.openai.com/docs/api-reference"
               target="_blank"
               rel="noopener noreferrer"
-              className={`text-sm transition hover:text-emerald-500 ${
-                theme === 'dark' ? 'text-neutral-400' : 'text-neutral-600'
-              }`}>
+              className="text-sm text-neutral-400 transition hover:text-emerald-500">
               <i className="fa-solid fa-book mr-1" />
               OpenAI Docs
             </a>

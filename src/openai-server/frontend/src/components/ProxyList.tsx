@@ -1,5 +1,3 @@
-type Theme = 'dark' | 'light';
-
 interface WorkingProxy {
   id?: number;
   proxy: string;
@@ -10,22 +8,13 @@ interface WorkingProxy {
 
 interface ProxyListProps {
   workingProxies: WorkingProxy[];
-  theme: Theme;
 }
 
-export default function ProxyList({ workingProxies, theme }: ProxyListProps) {
-  const panelClass =
-    theme === 'dark'
-      ? 'border-white/10 bg-[#272727] shadow-black/10'
-      : 'border-neutral-200 bg-white shadow-neutral-200/50';
-
+export default function ProxyList({ workingProxies }: ProxyListProps) {
   return (
-    <div className={`h-full overflow-auto rounded-2xl border p-5 shadow-lg ${panelClass}`}>
+    <div className="h-full overflow-auto rounded-2xl border border-white/10 bg-[#272727] p-5 shadow-lg shadow-black/10">
       <div className="flex items-center gap-3">
-        <span
-          className={`flex size-10 items-center justify-center rounded-xl ${
-            theme === 'dark' ? 'bg-neutral-800 text-neutral-400' : 'bg-neutral-100 text-neutral-500'
-          }`}>
+        <span className="flex size-10 items-center justify-center rounded-xl bg-neutral-800 text-neutral-400">
           <i aria-hidden="true" className="fa-solid fa-network-wired" />
         </span>
         <div>
@@ -40,19 +29,14 @@ export default function ProxyList({ workingProxies, theme }: ProxyListProps) {
             <div
               key={`${proxy.proxy}-${idx}`}
               title={`Last checked: ${proxy.last_check || 'Unknown'}`}
-              className={`flex flex-col gap-2 rounded-xl border p-3 ${
-                theme === 'dark' ? 'border-white/5 bg-black/10' : 'border-neutral-100 bg-neutral-50'
-              }`}>
+              className="flex flex-col gap-2 rounded-xl border border-white/5 bg-black/10 p-3">
               <div className="flex items-center gap-2">
                 <span
                   className={`size-2 rounded-full ${proxy.status === 'active' ? 'bg-emerald-400' : 'bg-neutral-500'}`}
                 />
                 <p className="min-w-0 truncate font-mono text-xs font-medium">{proxy.proxy}</p>
                 {proxy.type && (
-                  <span
-                    className={`ml-auto rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${
-                      theme === 'dark' ? 'bg-neutral-800 text-neutral-400' : 'bg-neutral-100 text-neutral-500'
-                    }`}>
+                  <span className="ml-auto rounded-md bg-neutral-800 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-400">
                     {proxy.type}
                   </span>
                 )}

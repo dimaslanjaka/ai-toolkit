@@ -38,7 +38,7 @@ function formatDate(timestamp?: number): string {
 
 export default function ModelManager() {
   const { settings } = useSettings();
-  const { apiBase, apiKey, theme } = settings;
+  const { apiBase, apiKey } = settings;
 
   const [models, setModels] = useState<Model[]>([]);
   const [filteredModels, setFilteredModels] = useState<Model[]>([]);
@@ -61,11 +61,6 @@ export default function ModelManager() {
     parent: '',
     enabled: true
   });
-
-  const isDark = theme === 'dark';
-  const panelClass = isDark
-    ? 'border-white/10 bg-[#272727] shadow-black/10'
-    : 'border-neutral-200 bg-white shadow-neutral-200/50';
 
   const loadModels = useCallback(async () => {
     setLoading(true);
@@ -273,14 +268,11 @@ export default function ModelManager() {
   return (
     <section className="app-scrollbar min-h-0 flex-1 overflow-y-auto">
       <div className="mx-auto w-full max-w-7xl px-4 py-6 md:px-7 md:py-8">
-        <div className={`rounded-3xl border p-5 shadow-xl md:p-7 ${panelClass}`}>
+        <div className="rounded-3xl border border-white/10 bg-[#272727] p-5 shadow-xl shadow-black/10 md:p-7">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <div className="flex items-center gap-3">
-                <span
-                  className={`flex size-10 items-center justify-center rounded-xl ${
-                    isDark ? 'bg-neutral-800 text-neutral-400' : 'bg-neutral-100 text-neutral-500'
-                  }`}>
+                <span className="flex size-10 items-center justify-center rounded-xl bg-neutral-800 text-neutral-400">
                   <i aria-hidden="true" className="fa-solid fa-cubes" />
                 </span>
                 <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Model Manager</h1>
@@ -306,20 +298,14 @@ export default function ModelManager() {
                 placeholder="Search by model ID..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className={`w-full rounded-lg border px-3 py-2.5 text-sm focus:border-emerald-500 focus:ring-emerald-500 ${
-                  isDark
-                    ? 'border-white/10 bg-white/5 text-white placeholder-neutral-500'
-                    : 'border-neutral-200 bg-white text-neutral-900 placeholder-neutral-400'
-                }`}
+                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder-neutral-500 focus:border-emerald-500 focus:ring-emerald-500"
               />
             </div>
 
             <select
               value={providerFilter}
               onChange={(e) => setProviderFilter(e.target.value)}
-              className={`rounded-lg border px-3 py-2.5 text-sm focus:border-emerald-500 focus:ring-emerald-500 ${
-                isDark ? 'border-white/10 bg-white/5 text-white' : 'border-neutral-200 bg-white text-neutral-900'
-              }`}>
+              className="rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white focus:border-emerald-500 focus:ring-emerald-500">
               <option value="all">All Providers</option>
               <option value="opencode">OpenCode</option>
               <option value="puter">Puter</option>
@@ -363,10 +349,9 @@ export default function ModelManager() {
                 <p className="mt-4 text-sm text-neutral-500">No models found</p>
               </div>
             ) : (
-              <div
-                className={`app-scrollbar overflow-x-auto rounded-xl border ${isDark ? 'border-white/10' : 'border-neutral-200'}`}>
+              <div className="app-scrollbar overflow-x-auto rounded-xl border border-white/10">
                 <table className="w-full text-left text-sm">
-                  <thead className={isDark ? 'bg-white/[0.02]' : 'bg-neutral-50'}>
+                  <thead className="bg-white/[0.02]">
                     <tr>
                       <th className="px-4 py-3 text-xs font-medium tracking-wide text-neutral-500 uppercase">ID</th>
                       <th className="px-4 py-3 text-xs font-medium tracking-wide text-neutral-500 uppercase">
@@ -386,11 +371,9 @@ export default function ModelManager() {
                       </th>
                     </tr>
                   </thead>
-                  <tbody className={`divide-y ${isDark ? 'divide-white/5' : 'divide-neutral-100'}`}>
+                  <tbody className="divide-y divide-white/5">
                     {filteredModels.map((model) => (
-                      <tr
-                        key={`${model.id}-${model.provider}`}
-                        className={isDark ? 'hover:bg-white/[0.02]' : 'hover:bg-neutral-50/50'}>
+                      <tr key={`${model.id}-${model.provider}`} className="hover:bg-white/[0.02]">
                         <td className="px-4 py-3">
                           <span className="font-semibold" title={model.id}>
                             {model.id.length > 40 ? `${model.id.slice(0, 40)}…` : model.id}
@@ -429,11 +412,7 @@ export default function ModelManager() {
                             <button
                               type="button"
                               onClick={() => openEditModal(model)}
-                              className={`rounded-lg px-2 py-1 transition ${
-                                isDark
-                                  ? 'text-neutral-400 hover:bg-white/10 hover:text-white'
-                                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
-                              }`}
+                              className="rounded-lg px-2 py-1 text-neutral-400 transition hover:bg-white/10 hover:text-white"
                               aria-label={`Edit ${model.id}`}>
                               <i aria-hidden="true" className="fa-solid fa-pen" />
                             </button>
@@ -460,16 +439,14 @@ export default function ModelManager() {
       {(modalMode === 'add' || modalMode === 'edit') && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4">
           <div
-            className={`w-full max-w-2xl rounded-2xl border p-6 shadow-2xl ${panelClass}`}
+            className="w-full max-w-2xl rounded-2xl border border-white/10 bg-[#272727] p-6 shadow-2xl shadow-black/10"
             onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">{modalMode === 'add' ? 'Add Model' : 'Edit Model'}</h2>
               <button
                 type="button"
                 onClick={closeModal}
-                className={`rounded-lg p-2 transition ${
-                  isDark ? 'text-neutral-400 hover:bg-white/10' : 'text-neutral-600 hover:bg-neutral-100'
-                }`}>
+                className="rounded-lg p-2 text-neutral-400 transition hover:bg-white/10">
                 <i aria-hidden="true" className="fa-solid fa-xmark" />
               </button>
             </div>
@@ -481,12 +458,7 @@ export default function ModelManager() {
                     Model ID <span className="text-red-500">*</span>
                   </label>
                   {modalMode === 'edit' ? (
-                    <div
-                      className={`mt-1 rounded-lg border px-3 py-2.5 text-sm ${
-                        isDark
-                          ? 'border-white/10 bg-white/5 text-neutral-400'
-                          : 'border-neutral-200 bg-neutral-50 text-neutral-600'
-                      }`}>
+                    <div className="mt-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-neutral-400">
                       {formData.id}
                     </div>
                   ) : (
@@ -495,11 +467,7 @@ export default function ModelManager() {
                       required
                       value={formData.id}
                       onChange={(e) => setFormData({ ...formData, id: e.target.value })}
-                      className={`mt-1 w-full rounded-lg border px-3 py-2.5 text-sm focus:border-emerald-500 focus:ring-emerald-500 ${
-                        isDark
-                          ? 'border-white/10 bg-white/5 text-white'
-                          : 'border-neutral-200 bg-white text-neutral-900'
-                      }`}
+                      className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white focus:border-emerald-500 focus:ring-emerald-500"
                     />
                   )}
                 </div>
@@ -509,12 +477,7 @@ export default function ModelManager() {
                     Provider <span className="text-red-500">*</span>
                   </label>
                   {modalMode === 'edit' ? (
-                    <div
-                      className={`mt-1 rounded-lg border px-3 py-2.5 text-sm ${
-                        isDark
-                          ? 'border-white/10 bg-white/5 text-neutral-400'
-                          : 'border-neutral-200 bg-neutral-50 text-neutral-600'
-                      }`}>
+                    <div className="mt-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-neutral-400">
                       {formData.provider}
                     </div>
                   ) : (
@@ -522,11 +485,7 @@ export default function ModelManager() {
                       required
                       value={formData.provider}
                       onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
-                      className={`mt-1 w-full rounded-lg border px-3 py-2.5 text-sm focus:border-emerald-500 focus:ring-emerald-500 ${
-                        isDark
-                          ? 'border-white/10 bg-white/5 text-white'
-                          : 'border-neutral-200 bg-white text-neutral-900'
-                      }`}>
+                      className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white focus:border-emerald-500 focus:ring-emerald-500">
                       <option value="opencode">OpenCode</option>
                       <option value="puter">Puter</option>
                       <option value="chatgpt">ChatGPT</option>
@@ -542,9 +501,7 @@ export default function ModelManager() {
                     type="text"
                     value={formData.object}
                     onChange={(e) => setFormData({ ...formData, object: e.target.value })}
-                    className={`mt-1 w-full rounded-lg border px-3 py-2.5 text-sm focus:border-emerald-500 focus:ring-emerald-500 ${
-                      isDark ? 'border-white/10 bg-white/5 text-white' : 'border-neutral-200 bg-white text-neutral-900'
-                    }`}
+                    className={`mt-1 w-full rounded-lg border px-3 py-2.5 text-sm focus:border-emerald-500 focus:ring-emerald-500 ${'border-white/10 bg-white/5 text-white'}`}
                   />
                 </div>
 
@@ -554,9 +511,7 @@ export default function ModelManager() {
                     type="text"
                     value={formData.owned_by}
                     onChange={(e) => setFormData({ ...formData, owned_by: e.target.value })}
-                    className={`mt-1 w-full rounded-lg border px-3 py-2.5 text-sm focus:border-emerald-500 focus:ring-emerald-500 ${
-                      isDark ? 'border-white/10 bg-white/5 text-white' : 'border-neutral-200 bg-white text-neutral-900'
-                    }`}
+                    className={`mt-1 w-full rounded-lg border px-3 py-2.5 text-sm focus:border-emerald-500 focus:ring-emerald-500 ${'border-white/10 bg-white/5 text-white'}`}
                   />
                 </div>
               </div>
@@ -567,9 +522,7 @@ export default function ModelManager() {
                   rows={3}
                   value={formData.permission}
                   onChange={(e) => setFormData({ ...formData, permission: e.target.value })}
-                  className={`mt-1 w-full rounded-lg border px-3 py-2.5 text-sm focus:border-emerald-500 focus:ring-emerald-500 ${
-                    isDark ? 'border-white/10 bg-white/5 text-white' : 'border-neutral-200 bg-white text-neutral-900'
-                  }`}
+                  className={`mt-1 w-full rounded-lg border px-3 py-2.5 text-sm focus:border-emerald-500 focus:ring-emerald-500 ${'border-white/10 bg-white/5 text-white'}`}
                 />
               </div>
 
@@ -580,9 +533,7 @@ export default function ModelManager() {
                     type="text"
                     value={formData.root}
                     onChange={(e) => setFormData({ ...formData, root: e.target.value })}
-                    className={`mt-1 w-full rounded-lg border px-3 py-2.5 text-sm focus:border-emerald-500 focus:ring-emerald-500 ${
-                      isDark ? 'border-white/10 bg-white/5 text-white' : 'border-neutral-200 bg-white text-neutral-900'
-                    }`}
+                    className={`mt-1 w-full rounded-lg border px-3 py-2.5 text-sm focus:border-emerald-500 focus:ring-emerald-500 ${'border-white/10 bg-white/5 text-white'}`}
                   />
                 </div>
 
@@ -592,9 +543,7 @@ export default function ModelManager() {
                     type="text"
                     value={formData.parent}
                     onChange={(e) => setFormData({ ...formData, parent: e.target.value })}
-                    className={`mt-1 w-full rounded-lg border px-3 py-2.5 text-sm focus:border-emerald-500 focus:ring-emerald-500 ${
-                      isDark ? 'border-white/10 bg-white/5 text-white' : 'border-neutral-200 bg-white text-neutral-900'
-                    }`}
+                    className={`mt-1 w-full rounded-lg border px-3 py-2.5 text-sm focus:border-emerald-500 focus:ring-emerald-500 ${'border-white/10 bg-white/5 text-white'}`}
                   />
                 </div>
               </div>
@@ -616,11 +565,7 @@ export default function ModelManager() {
                 <button
                   type="button"
                   onClick={closeModal}
-                  className={`rounded-xl border px-4 py-2.5 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-neutral-500 ${
-                    isDark
-                      ? 'border-white/10 bg-white/5 text-neutral-200 hover:bg-white/10'
-                      : 'border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50'
-                  }`}>
+                  className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-neutral-200 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-neutral-500">
                   Cancel
                 </button>
                 <button
@@ -638,7 +583,7 @@ export default function ModelManager() {
       {modalMode === 'delete' && editingModel && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4">
           <div
-            className={`w-full max-w-md rounded-2xl border p-6 shadow-2xl ${panelClass}`}
+            className="w-full max-w-md rounded-2xl border border-white/10 bg-[#272727] p-6 shadow-2xl shadow-black/10"
             onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-3">
               <span className="flex size-10 items-center justify-center rounded-full bg-red-500/10 text-red-500">
@@ -656,11 +601,7 @@ export default function ModelManager() {
               <button
                 type="button"
                 onClick={closeModal}
-                className={`rounded-xl border px-4 py-2.5 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-neutral-500 ${
-                  isDark
-                    ? 'border-white/10 bg-white/5 text-neutral-200 hover:bg-white/10'
-                    : 'border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50'
-                }`}>
+                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-neutral-200 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-neutral-500">
                 Cancel
               </button>
               <button

@@ -1,8 +1,7 @@
-import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
+import { createContext, useContext, useState, useMemo, ReactNode } from 'react';
 import { sanitizeStoredApiBase } from '../utils/url';
 
 type Provider = 'auto' | 'opencode' | 'puter' | 'chatgpt';
-type Theme = 'dark' | 'light';
 
 interface ChatSettings {
   apiBase: string;
@@ -10,7 +9,6 @@ interface ChatSettings {
   provider: Provider;
   model: string;
   systemPrompt: string;
-  theme: Theme;
 }
 
 interface SettingsContextValue {
@@ -26,8 +24,7 @@ const DEFAULT_SETTINGS: ChatSettings = {
   apiKey: '',
   provider: 'auto',
   model: DEFAULT_MODEL,
-  systemPrompt: '',
-  theme: 'dark'
+  systemPrompt: ''
 };
 
 function getInitialSettings(): ChatSettings {
@@ -52,10 +49,6 @@ const SettingsContext = createContext<SettingsContextValue | null>(null);
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<ChatSettings>(getInitialSettings);
 
-  useEffect(() => {
-    document.documentElement.classList.toggle('light', settings.theme === 'light');
-  }, [settings.theme]);
-
   const value = useMemo(() => ({ settings, setSettings }), [settings]);
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
@@ -69,5 +62,5 @@ export function useSettings() {
   return context;
 }
 
-export type { ChatSettings, Theme, Provider };
+export type { ChatSettings, Provider };
 export { DEFAULT_SETTINGS, STORAGE_KEY };

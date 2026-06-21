@@ -2,7 +2,6 @@ import { useRef, useEffect, useCallback, useMemo } from 'react';
 import { convertAnsiToHtml } from '../utils/ansi-to-html';
 
 type ProxyCheckerState = 'idle' | 'starting' | 'running' | 'finished' | 'failed' | 'stopped' | 'locked';
-type Theme = 'dark' | 'light';
 
 interface ProxyCheckerStatus {
   state: ProxyCheckerState;
@@ -36,7 +35,6 @@ interface ProxyControlProps {
   setAutoRefresh: (ar: boolean) => void;
   runAction: (action: 'start' | 'stop') => Promise<void>;
   loadStatus: () => Promise<void>;
-  theme: Theme;
 }
 
 export default function ProxyControl({
@@ -55,19 +53,13 @@ export default function ProxyControl({
   setError: _setError,
   setAutoRefresh,
   runAction: _runAction,
-  loadStatus: _loadStatus,
-  theme
+  loadStatus: _loadStatus
 }: ProxyControlProps) {
   const logContainerRef = useRef<HTMLDivElement | null>(null);
   const preRef = useRef<HTMLPreElement | null>(null);
   const initialLoadRef = useRef(true);
   const prevHtmlRef = useRef('');
   const logEndRef = useRef<HTMLDivElement | null>(null);
-
-  const panelClass =
-    theme === 'dark'
-      ? 'border-white/10 bg-[#272727] shadow-black/10'
-      : 'border-neutral-200 bg-white shadow-neutral-200/50';
 
   const normalizedQuery = query.trim().toLowerCase();
 
@@ -113,11 +105,8 @@ export default function ProxyControl({
   }, [notice, setNotice]);
 
   return (
-    <div className={`flex flex-col overflow-hidden rounded-2xl border shadow-lg ${panelClass}`}>
-      <div
-        className={`flex flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-center ${
-          theme === 'dark' ? 'border-white/10' : 'border-neutral-200'
-        }`}>
+    <div className="flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#272727] shadow-lg shadow-black/10">
+      <div className="flex flex-col gap-3 border-b border-white/10 px-4 py-3 sm:flex-row sm:items-center">
         <div className="flex items-center gap-2">
           <span className="flex gap-1.5" aria-hidden="true">
             <span className="size-2.5 rounded-full bg-red-400/80" />
@@ -125,10 +114,7 @@ export default function ProxyControl({
             <span className="size-2.5 rounded-full bg-emerald-400/80" />
           </span>
           <span className="ml-1 text-sm font-semibold">Live output</span>
-          <span
-            className={`rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${
-              theme === 'dark' ? 'bg-neutral-800 text-neutral-500' : 'bg-neutral-100 text-neutral-500'
-            }`}>
+          <span className="rounded-md bg-neutral-800 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-500">
             {logs.length} lines
           </span>
         </div>
@@ -144,11 +130,7 @@ export default function ProxyControl({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Filter output"
-              className={`h-9 w-full rounded-lg border py-1.5 pr-8 pl-8 text-xs outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 ${
-                theme === 'dark'
-                  ? 'border-white/10 bg-black/20 text-neutral-200 placeholder:text-neutral-600'
-                  : 'border-neutral-200 bg-neutral-50 text-neutral-900 placeholder:text-neutral-400'
-              }`}
+              className="h-9 w-full rounded-lg border border-white/10 bg-black/20 py-1.5 pr-8 pl-8 text-xs text-neutral-200 outline-none transition placeholder:text-neutral-600 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
             />
             {query ? (
               <button
@@ -165,11 +147,7 @@ export default function ProxyControl({
             onClick={() => void navigator.clipboard.writeText(filteredLogs.join('\n'))}
             aria-label="Copy visible logs"
             title="Copy visible logs"
-            className={`inline-flex size-9 shrink-0 items-center justify-center rounded-lg border transition ${
-              theme === 'dark'
-                ? 'border-white/10 text-neutral-400 hover:bg-white/5 hover:text-white'
-                : 'border-neutral-200 text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900'
-            }`}>
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-white/10 text-neutral-400 transition hover:bg-white/5 hover:text-white">
             <i aria-hidden="true" className="fa-solid fa-copy text-xs" />
           </button>
         </div>

@@ -487,7 +487,7 @@ export default function Chat() {
                     setComposer(suggestion.prompt);
                     requestAnimationFrame(() => textareaRef.current?.focus());
                   }}
-                  className={`rounded-xl border p-4 text-left transition focus:outline-none focus:ring-2 focus:ring-emerald-500 ${settings.theme === 'dark' ? 'border-white/10 bg-neutral-800/40 hover:bg-neutral-800' : 'border-neutral-200 bg-white hover:bg-neutral-50'}`}>
+                  className={`rounded-xl border p-4 text-left transition focus:outline-none focus:ring-2 focus:ring-emerald-500 border-white/10 bg-neutral-800/40 hover:bg-neutral-800`}>
                   <span className="block text-sm font-semibold">{suggestion.title}</span>
                   <span className="mt-1 block text-xs leading-5 text-neutral-500">{suggestion.prompt}</span>
                 </button>
@@ -507,7 +507,7 @@ export default function Chat() {
                 ) : null}
 
                 <div
-                  className={`min-w-0 ${message.role === 'user' ? `max-w-[85%] rounded-3xl px-5 py-3 ${settings.theme === 'dark' ? 'bg-neutral-700' : 'bg-neutral-100'}` : 'w-full pt-1'}`}>
+                  className={`min-w-0 ${message.role === 'user' ? `max-w-[85%] rounded-3xl px-5 py-3 bg-neutral-700` : 'w-full pt-1'}`}>
                   {message.role === 'assistant' ? (
                     <div
                       className={`markdown-body ${message.status === 'streaming' ? 'typing-cursor' : ''} ${message.status === 'error' ? 'text-red-300' : ''}`}>
@@ -546,10 +546,9 @@ export default function Chat() {
       </section>
 
       <div
-        className={`fixed inset-x-0 bottom-14 lg:bottom-0 lg:left-72 z-40 bg-gradient-to-t ${settings.theme === 'dark' ? 'from-[#212121] via-[#212121] to-transparent' : 'from-white via-white to-transparent'} pt-16`}>
+        className={`fixed inset-x-0 bottom-14 lg:bottom-0 lg:left-72 z-40 bg-gradient-to-t from-[#212121] via-[#212121] to-transparent pt-16`}>
         <div className="mx-auto w-full max-w-3xl px-3 pb-3 md:px-5 md:pb-5">
-          <div
-            className={`rounded-[1.7rem] border p-2 shadow-xl ${settings.theme === 'dark' ? 'border-white/10 bg-[#303030] shadow-black/20' : 'border-neutral-200 bg-white shadow-neutral-300/30'}`}>
+          <div className={`rounded-[1.7rem] border p-2 shadow-xl border-white/10 bg-[#303030] shadow-black/20`}>
             <textarea
               ref={textareaRef}
               value={composer}
@@ -558,7 +557,7 @@ export default function Chat() {
               placeholder="Message Toolkit Chat"
               onChange={(event) => setComposer(event.target.value)}
               onKeyDown={handleComposerKeyDown}
-              className={`app-scrollbar max-h-48 min-h-11 w-full resize-none overflow-y-auto border-0 bg-transparent px-3 py-2.5 text-[15px] leading-6 outline-none placeholder:text-neutral-500 focus:ring-0 ${settings.theme === 'dark' ? 'text-neutral-100' : 'text-neutral-900'}`}
+              className={`app-scrollbar max-h-48 min-h-11 w-full resize-none overflow-y-auto border-0 bg-transparent px-3 py-2.5 text-[15px] leading-6 outline-none placeholder:text-neutral-500 focus:ring-0 text-neutral-100`}
             />
             <div className="flex items-center gap-2 px-1 pb-1">
               <label className="relative">
@@ -568,7 +567,7 @@ export default function Chat() {
                   onChange={(event) =>
                     setSettings((current) => ({ ...current, provider: event.target.value as Provider }))
                   }
-                  className={`max-w-[6rem] appearance-none truncate rounded-lg border-0 bg-transparent py-1 pr-5 pl-1.5 text-xs focus:ring-2 focus:ring-emerald-500 md:max-w-[8rem] ${settings.theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}`}>
+                  className={`max-w-[6rem] appearance-none truncate rounded-lg border-0 bg-transparent py-1 pr-5 pl-1.5 text-xs focus:ring-2 focus:ring-emerald-500 md:max-w-[8rem] text-neutral-400`}>
                   {PROVIDER_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
@@ -586,7 +585,7 @@ export default function Chat() {
                   <select
                     value={settings.model}
                     onChange={(event) => setSettings((current) => ({ ...current, model: event.target.value }))}
-                    className={`max-w-[6rem] appearance-none truncate rounded-lg border-0 bg-transparent py-1 pr-5 pl-1.5 text-xs focus:ring-2 focus:ring-emerald-500 md:max-w-[8rem] ${settings.theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}`}>
+                    className={`max-w-[6rem] appearance-none truncate rounded-lg border-0 bg-transparent py-1 pr-5 pl-1.5 text-xs focus:ring-2 focus:ring-emerald-500 md:max-w-[8rem] text-neutral-400`}>
                     {models.map((model) => (
                       <option key={model.id} value={model.id}>
                         {model.id}
