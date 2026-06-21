@@ -73,6 +73,7 @@ async function selectProxyUrl(): Promise<string | undefined> {
 
   const proxyClient = await getProxyClient();
   const item = await proxyClient.getProxyForHost('opencode.ai', { type: 'http' });
+  serverLogger.log(`Proxy search result for opencode.ai: ${JSON.stringify(item)}`);
   return item ? getProxyUrl(item) : undefined;
 }
 
@@ -95,6 +96,7 @@ async function getOpenCode(): Promise<OpenAI> {
     // getSQLite provides the centralized SQLite connection
     const proxyClient = await getProxyClient();
     await proxyClient.initialize();
+    serverLogger.log('Proxy client initialized.');
 
     opencodeClient = await opencodeProvider({
       model: 'deepseek-v4-flash-free',
@@ -194,7 +196,7 @@ async function createProxyDispatcher(): Promise<{ dispatcher?: ProxyAgent; proxy
 }
 
 export async function handleChatCompletion(req: Request): Promise<ProviderResult> {
-  const { model, messages, stream, temperature, max_tokens, stream_options } = req.body as any;
+  const { model, messages, stream, temperature, max_tokens, stream_options, tools, tool_choice } = req.body as any;
   const resolvedModel = await resolveModel(model);
   const includeUsage = stream_options?.include_usage === true;
 
@@ -208,12 +210,20 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
   );
 
   const client = await getOpenCode();
-  const baseBody = {
+  const baseBody: Record<string, any> = {
     model: resolvedModel,
     messages: messages as OpenAI.ChatCompletionMessageParam[],
     temperature,
     max_tokens
   };
+
+  // Forward tools/tool_choice to the upstream API for agentic tool calling
+  if (tools && tools.length > 0) {
+    baseBody.tools = tools;
+    if (tool_choice) {
+      baseBody.tool_choice = tool_choice;
+    }
+  }
 
   const { dispatcher, proxyUrl } = await createProxyDispatcher();
 
@@ -235,24 +245,40 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
             {
               ...baseBody,
               stream: true as const
-            },
+            } as OpenAI.ChatCompletionCreateParamsStreaming,
             { fetchOptions: { dispatcher } }
           );
           for await (const chunk of streamResponse) {
-            const delta = chunk.choices?.[0]?.delta?.content || '';
-            if (delta) {
-              fullResponse += delta;
+            const choice = chunk.choices?.[0];
+            const delta = choice?.delta;
+            const content = delta?.content || '';
+            const toolCalls = delta?.tool_calls;
+            const finishReason = choice?.finish_reason;
+
+            // Collect text for final log
+            if (content) {
+              fullResponse += content;
+            }
+
+            // Build the chunk to forward, preserving ALL upstream fields
+            const forwardDelta: any = {};
+            if (delta?.role) forwardDelta.role = delta.role;
+            if (content) forwardDelta.content = content;
+            if (toolCalls) forwardDelta.tool_calls = toolCalls;
+
+            // Write every chunk that has content, tool_calls, or a finish_reason
+            if (content || toolCalls || finishReason) {
               res.write(
                 `data: ${JSON.stringify({
-                  id: completionId,
+                  id: chunk.id || completionId,
                   object: 'chat.completion.chunk',
                   created,
-                  model: streamModel,
+                  model: chunk.model || streamModel,
                   choices: [
                     {
-                      index: 0,
-                      delta: { content: delta },
-                      finish_reason: null
+                      index: choice?.index ?? 0,
+                      delta: forwardDelta,
+                      finish_reason: finishReason ?? null
                     }
                   ]
                 })}\n\n`
@@ -260,21 +286,6 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
             }
           }
           await cacheWorkingProxy(proxyUrl);
-          res.write(
-            `data: ${JSON.stringify({
-              id: completionId,
-              object: 'chat.completion.chunk',
-              created,
-              model: streamModel,
-              choices: [
-                {
-                  index: 0,
-                  delta: {},
-                  finish_reason: 'stop'
-                }
-              ]
-            })}\n\n`
-          );
 
           // Include usage information if requested
           if (includeUsage) {
@@ -320,21 +331,41 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
       {
         ...baseBody,
         stream: false as const
-      },
+      } as OpenAI.ChatCompletionCreateParamsNonStreaming,
       { fetchOptions: { dispatcher } }
     );
     await cacheWorkingProxy(proxyUrl);
-    const content = completion.choices?.[0]?.message?.content || '';
+
+    // Preserve the full upstream response including tool_calls and finish_reason
+    const upstreamChoice = completion.choices?.[0];
+    const upstreamMessage = upstreamChoice?.message || { role: 'assistant' as const, content: '' };
+    const upstreamToolCalls = upstreamMessage?.tool_calls;
+
+    const content = upstreamMessage?.content || '';
     appendMessageToFile(logFile, 'OPENCODE RESPONSE', content);
+
+    const responseChoice: any = {
+      index: 0,
+      message: {
+        role: upstreamMessage?.role || 'assistant',
+        content: content || null
+      },
+      finish_reason: upstreamChoice?.finish_reason || 'stop'
+    };
+
+    // Forward tool_calls to the client so agentic tools work
+    if (upstreamToolCalls && upstreamToolCalls.length > 0) {
+      responseChoice.message.tool_calls = upstreamToolCalls;
+    }
 
     return {
       type: 'json',
       data: {
-        id: `chatcmpl-${Date.now()}`,
+        id: completion.id || `chatcmpl-${Date.now()}`,
         object: 'chat.completion',
         created: Math.floor(Date.now() / 1000),
-        model: model ?? 'opencode-default',
-        choices: [{ index: 0, message: { role: 'assistant', content }, finish_reason: 'stop' }],
+        model: model ?? completion.model ?? 'opencode-default',
+        choices: [responseChoice],
         usage: completion.usage || {}
       }
     };
