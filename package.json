@@ -35,7 +35,8 @@
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "bin": {
-    "opc-check-proxy": "dist/proxy/opencode-checker.runner.mjs"
+    "check-proxy": "./dist/proxy/checker.runner.cjs",
+    "opc-check-proxy": "./dist/proxy/opencode-checker.runner.cjs"
   },
   "exports": {
     ".": {

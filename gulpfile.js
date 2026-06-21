@@ -53,7 +53,7 @@ export function copySql() {
 export function buildRollup() {
   return runCommand('npx', ['rollup', '-c'], {
     // include custom runners (separated by comma)
-    env: { ROLLUP_ENTRIES: 'src/proxy/opencode-checker.runner.ts' }
+    env: { ROLLUP_ENTRIES: ['src/proxy/opencode-checker.runner.ts', 'src/proxy/checker.runner.ts'].join(',') }
   });
 }
 
