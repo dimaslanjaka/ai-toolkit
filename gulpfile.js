@@ -68,9 +68,7 @@ export function buildWeb() {
 }
 
 // OpenAI-compatible server build
-export function buildServer() {
-  return series(parallel(buildTs, copySql), buildRollup)();
-}
+export const buildServer = series(parallel(buildTs, copySql), buildRollup);
 
 // Clean build artifacts
 export function clean() {
