@@ -194,8 +194,9 @@ async function createProxyDispatcher(): Promise<{ dispatcher?: ProxyAgent; proxy
 }
 
 export async function handleChatCompletion(req: Request): Promise<ProviderResult> {
-  const { model, messages, stream, temperature, max_tokens } = req.body as any;
+  const { model, messages, stream, temperature, max_tokens, stream_options } = req.body as any;
   const resolvedModel = await resolveModel(model);
+  const includeUsage = stream_options?.include_usage === true;
 
   const promptPreview = (messages || [])
     .map((m: any) => `${m.role}: ${(m.content || '').toString().substring(0, 80)}`)
@@ -224,6 +225,10 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
         res.setHeader('Cache-Control', 'no-cache');
         res.flushHeaders();
 
+        const completionId = `chatcmpl-${Date.now()}`;
+        const created = Math.floor(Date.now() / 1000);
+        const streamModel = resolvedModel || 'opencode-default';
+
         let fullResponse = '';
         try {
           const streamResponse = await client.chat.completions.create(
@@ -237,11 +242,62 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
             const delta = chunk.choices?.[0]?.delta?.content || '';
             if (delta) {
               fullResponse += delta;
-              res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: delta } }] })}\n\n`);
+              res.write(
+                `data: ${JSON.stringify({
+                  id: completionId,
+                  object: 'chat.completion.chunk',
+                  created,
+                  model: streamModel,
+                  choices: [
+                    {
+                      index: 0,
+                      delta: { content: delta },
+                      finish_reason: null
+                    }
+                  ]
+                })}\n\n`
+              );
             }
           }
           await cacheWorkingProxy(proxyUrl);
-          res.write(`data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] })}\n\n`);
+          res.write(
+            `data: ${JSON.stringify({
+              id: completionId,
+              object: 'chat.completion.chunk',
+              created,
+              model: streamModel,
+              choices: [
+                {
+                  index: 0,
+                  delta: {},
+                  finish_reason: 'stop'
+                }
+              ]
+            })}\n\n`
+          );
+
+          // Include usage information if requested
+          if (includeUsage) {
+            const promptTokens =
+              messages?.reduce((sum: number, m: any) => sum + Math.ceil((m.content?.toString().length || 0) / 4), 0) ||
+              0;
+            const completionTokens = Math.ceil(fullResponse.length / 4);
+            res.write(
+              `data: ${JSON.stringify({
+                id: completionId,
+                object: 'chat.completion.chunk',
+                created,
+                model: streamModel,
+                choices: [],
+                usage: {
+                  prompt_tokens: promptTokens,
+                  completion_tokens: completionTokens,
+                  total_tokens: promptTokens + completionTokens
+                }
+              })}\n\n`
+            );
+          }
+
           res.write('data: [DONE]\n\n');
           appendMessageToFile(logFile, 'OPENCODE STREAMING RESPONSE', fullResponse);
         } catch (streamErr: any) {

@@ -53,7 +53,8 @@ export async function handleModels(_req: Request): Promise<ProviderResult> {
  * Handle chat completion for Puter provider.
  */
 export async function handleChatCompletion(req: Request): Promise<ProviderResult> {
-  const { model, messages, stream, temperature, max_tokens } = req.body as any;
+  const { model, messages, stream, temperature, max_tokens, stream_options } = req.body as any;
+  const includeUsage = stream_options?.include_usage === true;
 
   // Simple prompt construction: concatenate messages with role prefixes
   const prompt = (messages || []).map((m: any) => `${m.role?.toUpperCase() || 'USER'}: ${m.content}`).join('\n');
@@ -87,15 +88,71 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
         res.setHeader('Cache-Control', 'no-cache');
         res.flushHeaders();
 
+        const completionId = `chatcmpl-${Date.now()}`;
+        const created = Math.floor(Date.now() / 1000);
+        const streamModel = resolvedModel || 'gpt-5-nano';
+
         let fullResponse = '';
         try {
           for await (const chunk of response) {
             if (chunk.text) {
               fullResponse += chunk.text;
-              res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: chunk.text } }] })}\n\n`);
+              res.write(
+                `data: ${JSON.stringify({
+                  id: completionId,
+                  object: 'chat.completion.chunk',
+                  created,
+                  model: streamModel,
+                  choices: [
+                    {
+                      index: 0,
+                      delta: { content: chunk.text },
+                      finish_reason: null
+                    }
+                  ]
+                })}\n\n`
+              );
             }
           }
           appendMessageToFile(logFile, 'PUTER STREAMING RESPONSE', fullResponse);
+          res.write(
+            `data: ${JSON.stringify({
+              id: completionId,
+              object: 'chat.completion.chunk',
+              created,
+              model: streamModel,
+              choices: [
+                {
+                  index: 0,
+                  delta: {},
+                  finish_reason: 'stop'
+                }
+              ]
+            })}\n\n`
+          );
+
+          // Include usage information if requested
+          if (includeUsage) {
+            const promptTokens =
+              messages?.reduce((sum: number, m: any) => sum + Math.ceil((m.content?.toString().length || 0) / 4), 0) ||
+              0;
+            const completionTokens = Math.ceil(fullResponse.length / 4);
+            res.write(
+              `data: ${JSON.stringify({
+                id: completionId,
+                object: 'chat.completion.chunk',
+                created,
+                model: streamModel,
+                choices: [],
+                usage: {
+                  prompt_tokens: promptTokens,
+                  completion_tokens: completionTokens,
+                  total_tokens: promptTokens + completionTokens
+                }
+              })}\n\n`
+            );
+          }
+
           res.write('data: [DONE]\n\n');
         } catch (streamErr) {
           serverLogger.logSync(`Puter streaming error: ${streamErr}`);

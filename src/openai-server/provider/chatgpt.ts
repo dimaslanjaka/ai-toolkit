@@ -44,7 +44,8 @@ export async function handleModels(_req: Request): Promise<ProviderResult> {
  * Handle chat completion for ChatGPT provider
  */
 export async function handleChatCompletion(req: Request): Promise<ProviderResult> {
-  const { model, messages, stream } = req.body as any;
+  const { model, messages, stream, stream_options } = req.body as any;
+  const includeUsage = stream_options?.include_usage === true;
 
   // Extract the last user message
   const userMessages = (messages || []).filter((m: any) => m.role === 'user');
@@ -102,6 +103,30 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
             choices: [{ index: 0, delta: {}, finish_reason: 'stop' }]
           };
           res.write(`data: ${JSON.stringify(finalChunk)}\n\n`);
+
+          // Include usage information if requested
+          if (includeUsage) {
+            const promptTokens =
+              messages?.reduce((sum: number, m: any) => sum + Math.ceil((m.content?.toString().length || 0) / 4), 0) ||
+              0;
+            // Note: We don't have the full response length here since it's streamed via callback
+            // For now, return 0 completion tokens as we can't accurately count them
+            res.write(
+              `data: ${JSON.stringify({
+                id: `chatcmpl-${Date.now()}`,
+                object: 'chat.completion.chunk',
+                created: Math.floor(Date.now() / 1000),
+                model: model || 'gpt-4o',
+                choices: [],
+                usage: {
+                  prompt_tokens: promptTokens,
+                  completion_tokens: 0,
+                  total_tokens: promptTokens
+                }
+              })}\n\n`
+            );
+          }
+
           res.write('data: [DONE]\n\n');
         } catch (streamErr) {
           serverLogger.logSync(`ChatGPT streaming error: ${streamErr}`);

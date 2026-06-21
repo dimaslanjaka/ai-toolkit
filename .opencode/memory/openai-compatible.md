@@ -40,6 +40,11 @@ read_only: false
   - `/v1/completions` converts the request into a code-autocomplete chat request when no native handler exists.
   - `/v1/embeddings` returns deterministic local hash vectors (384 dimensions by default, maximum 3072); they are not semantic embeddings.
   - `responses-adapter.ts` converts Responses API instructions/input to chat messages and converts chat output/deltas back.
+- Model seeding (SQLiteModel-seed.sql):
+  - `src/database/SQLiteModel-seed.sql` seeds 70 models across 3 providers (opencode, puter, chatgpt).
+  - **Bug fix (2026-06-20)**: `ProxyDB.initializeSchema()` splits SQL by `;`, then filters with `!s.startsWith('--')`. The seed file has `--` section comments between INSERTs, so every fragment started with `--` and was silently dropped. Fixed by stripping comment lines within each fragment before the filter.
+  - Seed SQL uses `INSERT OR IGNORE INTO` for idempotent re-seeding on server restart.
+  - Test: `test/database/SQLiteModel-seed.test.ts`.
 - OpenCode provider:
   - Uses the OpenAI SDK at `https://opencode.ai/zen/v1`; auth comes from `buildOpenAIClient()`/`binary-collections`.
   - The default model is `deepseek-v4-flash-free`; model listing falls back to a static free-model list if the remote list fails.
@@ -64,6 +69,11 @@ read_only: false
   - Session setup reuses a page already on `chat.openai.com` or `chatgpt.com`; otherwise it navigates there, waits for DOM stability, and requires an existing login.
   - Each request sends only the last user message, so earlier chat messages and system context are not forwarded.
   - Supports full-response and callback streaming; model listing exposes static `gpt-4o` and `gpt-4` entries.
+- VS Code GitHub Copilot compatibility (2026-06-21):
+  - Fixed streaming response format to include required OpenAI fields: `id`, `object`, `created`, `model`, `choices[0].index`, `choices[0].delta`, `choices[0].finish_reason`.
+  - Added support for `stream_options: { include_usage: true }` parameter sent by Copilot.
+  - Usage information now included in streaming responses when requested via `stream_options`.
+  - All three providers (OpenCode, Puter, ChatGPT) updated for full compatibility.
 - Proxy checker:
   - Runner order: local TypeScript, local `.mjs`/`.cjs`, installed `.mjs`/`.cjs`, installed TypeScript. TypeScript uses `ts-node/esm`; built JS runs directly.
   - Detached startup uses a token-owned atomic lock; the checker adopts it, writes its PID, and releases it on completion or signals.
