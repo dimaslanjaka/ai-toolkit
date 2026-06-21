@@ -70,11 +70,11 @@ read_only: false
   - Each request sends only the last user message, so earlier chat messages and system context are not forwarded.
   - Supports full-response and callback streaming; model listing exposes static `gpt-4o` and `gpt-4` entries.
 - VS Code GitHub Copilot compatibility (2026-06-21):
-  - Fixed streaming response format to include required OpenAI fields: `id`, `object`, `created`, `model`, `choices[0].index`, `choices[0].delta`, `choices[0].finish_reason`.
-  - Added support for `stream_options: { include_usage: true }` parameter sent by Copilot.
-  - Usage information now included in streaming responses when requested via `stream_options`.
-  - All three providers (OpenCode, Puter, ChatGPT) updated for full compatibility.
-  - **Tool support:** VS Code Copilot does not support OpenAI-compatible tool calling. Copilot's tools are client-side only and cannot be executed by backend servers. Tool execution implementation was reverted.
+   - Fixed streaming response format to include required OpenAI fields: `id`, `object`, `created`, `model`, `choices[0].index`, `choices[0].delta`, `choices[0].finish_reason`.
+   - Added support for `stream_options: { include_usage: true }` parameter sent by Copilot.
+   - Usage information now included in streaming responses when requested via `stream_options`.
+   - All three providers (OpenCode, Puter, ChatGPT) updated for full compatibility.
+   - **Tool calling support (2026-06-21, fixed):** OpenCode provider now passes through `tool_calls` from upstream API responses. Non-streaming path preserves full upstream message including `tool_calls`, `role`, and `finish_reason`. Streaming path forwards `delta.tool_calls` chunks alongside `delta.content` and tracks correct `finish_reason` from upstream. This enables agentic tool execution in OpenCode CLI and other clients that support OpenAI-compatible tool calling.
 - Proxy checker:
   - Runner order: local TypeScript, local `.mjs`/`.cjs`, installed `.mjs`/`.cjs`, installed TypeScript. TypeScript uses `ts-node/esm`; built JS runs directly.
   - Detached startup uses a token-owned atomic lock; the checker adopts it, writes its PID, and releases it on completion or signals.

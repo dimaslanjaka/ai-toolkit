@@ -11,14 +11,42 @@ mcpServers:
   #   args:
   #     - "-y"
   #     - "@modelcontextprotocol/server-sqlite"
-  #     - "tmp/database/opencode-checker.db"
+  #     - "tmp/database/ai-toolkit.sqlite"
 
   # https://alphaonedev.github.io/ai-memory-mcp/#install
   # https://github.com/alphaonedev/ai-memory-mcp/tree/main
   - name: AI Memory
     type: stdio
-    command: 'ai-memory'
-    args: ['--db', '.continue/ai-memory.db', 'mcp', '--tier', 'smart']
+    command: "ai-memory"
+    args: ["--db", "~/.local/share/ai-memory/memories.db", "mcp", "--tier", "smart"]
+    connectionTimeout: 120000
+
+  # - name: Filesystem
+  #   type: stdio
+  #   command: "npx"
+  #   args: ["-y", "@modelcontextprotocol/server-filesystem", "${workspaceFolder}"]
+  #   connectionTimeout: 120000
+
+  - name: Filesystem MCP server
+    type: stdio
+    command: npx
+    args:
+      - -y
+      - fast-filesystem-mcp
+    env:
+      CREATE_BACKUP_FILES: "true"
+    connectionTimeout: 120000
+
+  - name: Web Search
+    type: stdio
+    command: npx
+    args: ["-y", "@zhafron/mcp-web-search"]
+    connectionTimeout: 120000
+
+  # - name: Playwright
+  #   command: npx
+  #   args: ["-y", "@playwright/mcp@latest"]
+  #   connectionTimeout: 120000
 
 # Define which models can be used
 # https://docs.continue.dev/customization/models

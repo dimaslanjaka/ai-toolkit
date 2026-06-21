@@ -17,7 +17,12 @@
           "name": "OpenCode + Proxy",
           "headers": {
             "X-Request-Provider": "opencode"
-          }
+          },
+          "tool_call": true,
+          "reasoning": true,
+          "interleaved": true,
+          "temperature": true,
+          "experimental": true
         }
       }
     }
@@ -41,7 +46,6 @@
     "opencode-agent-memory@https://github.com/dimaslanjaka/opencode-file-memory/raw/refs/heads/main/release/opencode-agent-memory.tgz",
     "@tarquinen/opencode-smart-title@latest",
     "@tarquinen/opencode-dcp@latest",
-    "opencode-request-logger@https://github.com/Opencode-DCP/opencode-request-logger.git",
     "superpowers@git+https://github.com/obra/superpowers.git",
     "@zenobius/opencode-skillful"
   ],
@@ -65,7 +69,11 @@
       "enabled": true,
       "timeout": 300000,
       "type": "local",
-      "command": ["npx", "-y", "@playwright/mcp@latest"]
+      "command": [
+        "npx",
+        "-y",
+        "@playwright/mcp@latest"
+      ]
     },
     "MCP SQLite Server": {
       "enabled": false,
@@ -81,7 +89,14 @@
     "ai-memory": {
       "type": "local",
       "timeout": 300000,
-      "command": ["ai-memory", "--db", "C:/Users/Dell/.local/share/ai-memory/memories.db", "mcp", "--tier", "smart"],
+      "command": [
+        "ai-memory",
+        "--db",
+        "C:/Users/Dell/.local/share/ai-memory/memories.db",
+        "mcp",
+        "--tier",
+        "smart"
+      ],
       "enabled": true
     }
   }

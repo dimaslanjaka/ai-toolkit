@@ -1,5 +1,6 @@
 # AGENTS QUICK REFERENCE
 
+- Directory structure: see [`directory-structure.md`](directory-structure.md) for the full annotated project layout.
 - Monorepo: `packages/*` workspaces, source in `src/` only.
 - Module system: this project mixes ESM and CommonJS; preserve the module style used by the surrounding package and file.
 - Build: `yarn build` (multi-step: `tsc -p tsconfig.build.json` → `rollup -c` → `build-cli.mjs` → `tsc -p tsconfig.dts.json` → `vite build`). Intermediate TS compiles to `tmp/dist/` before Rollup bundles to `dist/`.
@@ -26,8 +27,15 @@
   - Testing:
     - Testing openai server:
       > require multi terminal, or you can ask to user when server built and ready
-      - 1st terminal: `gulp buildServer`
-      - 2nd terminal: `curl -k -s -N https://localhost:5758/v1/chat/completions -H "Content-Type: application/json" -d "{\"model\":\"deepseek-v4-flash-free\",\"messages\":[{\"role\":\"user\",\"content\":\"search for buildOpenAIClient.ts\"}],\"stream\":true}" --max-time 60`
+      - 1st terminal: `gulp buildServer && node dist/openai-server/start.cjs`
+      - 2nd terminal:
+      ```bash
+      curl -k -s -N https://localhost:5758/v1/chat/completions -H "Content-Type: application/json" -d "{\"model\":\"deepseek-v4-flash-free\",\"messages\":[{\"role\":\"user\",\"content\":\"search for buildOpenAIClient.ts\"}],\"stream\":true}" --max-time 60 | head -n 5
+      # on windows cmd
+      curl -k -s -N https://localhost:5758/v1/chat/completions -H "Content-Type: application/json" -d "{\"model\":\"deepseek-v4-flash-free\",\"messages\":[{\"role\":\"user\",\"content\":\"describe gulpfile.js\"}],\"stream\":true}" | more +0 | findstr /n "^" | findstr "^[1-5]:"
+      # on powershell
+      curl.exe -k -s -N https://localhost:5758/v1/chat/completions -H "Content-Type: application/json" -d '{"model":"deepseek-v4-flash-free","messages":[{"role":"user","content":"describe gulpfile.js"}],"stream":true}' | Select-Object -First 5
+      ```
     - To check if nodemon of `bin/openai-server.cmd` running using `wmic process where "name='node.exe'" get processid,commandline 2>nul | findstr /i "openai"`
 - Memory rule: after any file edit, create or update a Letta-compatible memory block at `.opencode/memory/<sanitized-filepath>.md` ([block format](https://github.com/joshuadavidthomas/opencode-agent-memory#block-format)).
   - Sanitize the edited file path by replacing `/` and `\` with `_`.
