@@ -7,6 +7,8 @@ import { SQLiteProxy } from '../database/SQLiteProxy.js';
 import { getSQLite, getSharedModels } from '../database/shared.js';
 import * as provider from './provider/index.js';
 import { ProxyCheckerManager } from './proxy/proxy-checker-manager.js';
+import { toolRegistry, registerTool, type ToolDefinition } from './tools/tool-registry.js';
+import './tools/index.js'; // Auto-register built-in tools
 
 import { appendMessageToFile, logMessageToFile, serverLogger } from './utils.js';
 
@@ -413,6 +415,147 @@ app.delete('/admin/models', async (req, res) => {
     await modelsApi.delete({ id: id as string, provider: provider as string });
 
     res.json({ ok: true, message: 'Model deleted' });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      message: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+// ── Tool Registry Management ───────────────────────────────────────────────
+
+/**
+ * GET /admin/tools — list all registered tools
+ */
+app.get('/admin/tools', (_req, res) => {
+  try {
+    const tools = toolRegistry.list();
+    res.json({
+      ok: true,
+      count: tools.length,
+      tools: tools.map((t) => ({
+        name: t.name,
+        description: t.description,
+        parameters: t.parameters
+      }))
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      message: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+/**
+ * POST /admin/tools — register a custom tool
+ * Body: { name, description, parameters, handler }
+ * Note: handler should be a string that will be eval'd (use with caution in production)
+ */
+app.post('/admin/tools', (req, res) => {
+  try {
+    const { name, description, parameters, handler } = req.body;
+
+    if (!name || !description || !parameters || !handler) {
+      res.status(400).json({
+        ok: false,
+        message: 'name, description, parameters, and handler are required'
+      });
+      return;
+    }
+
+    // Create a handler function from string (for dynamic tool registration)
+    // SECURITY NOTE: In production, consider using a sandbox or validation
+    let handlerFn: (args: Record<string, any>) => Promise<any>;
+    try {
+      handlerFn = eval(handler);
+      if (typeof handlerFn !== 'function') {
+        throw new Error('Handler must be a function');
+      }
+    } catch (err) {
+      res.status(400).json({
+        ok: false,
+        message: `Invalid handler: ${err instanceof Error ? err.message : 'Could not parse handler function'}`
+      });
+      return;
+    }
+
+    const tool: ToolDefinition = {
+      name,
+      description,
+      parameters,
+      handler: handlerFn
+    };
+
+    registerTool(tool);
+
+    res.json({
+      ok: true,
+      message: `Tool "${name}" registered successfully`,
+      tool: {
+        name,
+        description,
+        parameters
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      message: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+/**
+ * DELETE /admin/tools — unregister a tool
+ * Query: ?name=...
+ */
+app.delete('/admin/tools', (req, res) => {
+  try {
+    const { name } = req.query;
+
+    if (!name) {
+      res.status(400).json({ ok: false, message: 'name query parameter is required' });
+      return;
+    }
+
+    const removed = toolRegistry.unregister(name as string);
+
+    if (removed) {
+      res.json({ ok: true, message: `Tool "${name}" unregistered` });
+    } else {
+      res.status(404).json({ ok: false, message: `Tool "${name}" not found` });
+    }
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      message: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+/**
+ * POST /admin/tools/execute — manually execute a tool
+ * Body: { name, arguments }
+ */
+app.post('/admin/tools/execute', async (req, res) => {
+  try {
+    const { name, arguments: args } = req.body;
+
+    if (!name) {
+      res.status(400).json({ ok: false, message: 'name is required' });
+      return;
+    }
+
+    const tool = toolRegistry.get(name);
+    if (!tool) {
+      res.status(404).json({ ok: false, message: `Tool "${name}" not found` });
+      return;
+    }
+
+    const result = await tool.handler(args || {});
+    res.json({ ok: true, name, result });
   } catch (error) {
     res.status(500).json({
       ok: false,

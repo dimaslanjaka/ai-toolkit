@@ -53,7 +53,14 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
     throw new Error('No user message provided');
   }
 
-  const lastUserMessage = userMessages[userMessages.length - 1].content;
+  const rawContent = userMessages[userMessages.length - 1].content;
+  // Normalize content: extract text from multi-part content arrays (e.g. [{type:"text", text:"..."}, ...])
+  const lastUserMessage = Array.isArray(rawContent)
+    ? rawContent
+        .map((part: any) => (part.type === 'text' ? part.text : ''))
+        .filter(Boolean)
+        .join('\n')
+    : rawContent;
 
   serverLogger.log(
     `ChatGPT request - Model: ${model}, Stream: ${stream}, Message: ${lastUserMessage.substring(0, 50)}...`
@@ -179,7 +186,13 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
   if (userMessages.length === 0) {
     throw new Error('No user message provided');
   }
-  const lastUserMessage = userMessages[userMessages.length - 1].content;
+  const rawRespContent = userMessages[userMessages.length - 1].content;
+  const lastUserMessage = Array.isArray(rawRespContent)
+    ? rawRespContent
+        .map((p: any) => (p.type === 'text' ? p.text : ''))
+        .filter(Boolean)
+        .join('\n')
+    : rawRespContent;
 
   serverLogger.log(
     `ChatGPT Responses request - Model: ${requestData.model}, Stream: ${requestData.stream}, Message: ${lastUserMessage.substring(0, 50)}...`

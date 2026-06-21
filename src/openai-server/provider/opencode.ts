@@ -1,9 +1,9 @@
-import fs from 'fs-extra';
-import path from 'upath';
-import { ProxyAgent } from 'undici';
-import { OpenAI } from 'openai';
 import type { Request } from 'express';
+import fs from 'fs-extra';
+import { OpenAI } from 'openai';
 import { isEmpty, writefile } from 'sbg-utility';
+import { ProxyAgent } from 'undici';
+import path from 'upath';
 import SQLiteProxy from '../../database/SQLiteProxy.js';
 import { getSQLite, getSharedModels } from '../../database/shared.js';
 import { opencodeProvider } from '../../provider/opencode/get.js';
@@ -14,8 +14,11 @@ import {
   convertStreamingChunkToResponses,
   type ResponsesRequest
 } from '../responses-adapter.js';
+import '../tools/index.js'; // Auto-register built-in tools
+import { toolRegistry } from '../tools/tool-registry.js';
 import { appendMessageToFile, logMessageToFile, serverLogger } from '../utils.js';
 import type { ProviderResult } from './index.js';
+import { isConnectionError, repairMessageSequence } from './message-repair.js';
 
 // Lazy-load the OpenCode provider to avoid SDK init at import time
 let opencodeClient: OpenAI | null = null;
@@ -148,24 +151,6 @@ async function resolveModel(model: string | undefined) {
   return model;
 }
 
-function isConnectionError(error: any): boolean {
-  const message = error?.message?.toLowerCase() || '';
-  const code = error?.code || '';
-
-  // Check for connection-related error indicators
-  return (
-    message.includes('connection') ||
-    message.includes('econnrefused') ||
-    message.includes('etimedout') ||
-    message.includes('enotfound') ||
-    message.includes('network') ||
-    code === 'ECONNREFUSED' ||
-    code === 'ETIMEDOUT' ||
-    code === 'ENOTFOUND' ||
-    code === 'ENETUNREACH'
-  );
-}
-
 async function markProxyDeadSafely(proxyUrl: string): Promise<void> {
   try {
     // Extract proxy address from URL (remove protocol and auth)
@@ -200,26 +185,44 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
   const resolvedModel = await resolveModel(model);
   const includeUsage = stream_options?.include_usage === true;
 
-  const promptPreview = (messages || [])
-    .map((m: any) => `${m.role}: ${(m.content || '').toString().substring(0, 80)}`)
-    .join(' | ');
-  serverLogger.log(`OpenCode Chat - Model: ${resolvedModel}, Stream: ${!!stream}, Messages: ${promptPreview}`);
+  serverLogger.log(`OpenCode Chat - Model: ${resolvedModel}, Stream: ${!!stream}, Messages Length: ${messages.length}`);
+
+  // Repair message sequence: fill missing tool responses before sending upstream.
+  // DeepSeek rejects sequences where an assistant message with tool_calls
+  // is not immediately followed by matching tool-role responses.
+  const repairedMessages = await repairMessageSequence(
+    messages as { role: string; content?: any; tool_calls?: any[]; tool_call_id?: string; name?: string }[],
+    serverLogger
+  );
+
   const logFile = logMessageToFile(
     'OPENCODE REQUEST',
-    JSON.stringify({ model: resolvedModel, messages, stream, temperature, max_tokens }, null, 2)
+    JSON.stringify({ model: resolvedModel, messages: repairedMessages, stream, temperature, max_tokens }, null, 2)
   );
 
   const client = await getOpenCode();
   const baseBody: Record<string, any> = {
     model: resolvedModel,
-    messages: messages as OpenAI.ChatCompletionMessageParam[],
+    messages: repairedMessages,
     temperature,
     max_tokens
   };
 
-  // Forward tools/tool_choice to the upstream API for agentic tool calling
-  if (tools && tools.length > 0) {
-    baseBody.tools = tools;
+  // Merge client-provided tools with registry tools
+  const registryTools = toolRegistry.getOpenAIToolsFormat();
+  const allTools = [...(tools || []), ...registryTools];
+
+  // Deduplicate by tool name, client-provided tools take precedence
+  const seenToolNames = new Set<string>();
+  const deduplicatedTools = allTools.filter((tool) => {
+    const name = tool?.function?.name;
+    if (!name || seenToolNames.has(name)) return false;
+    seenToolNames.add(name);
+    return true;
+  });
+
+  if (deduplicatedTools.length > 0) {
+    baseBody.tools = deduplicatedTools;
     if (tool_choice) {
       baseBody.tool_choice = tool_choice;
     }
@@ -240,6 +243,7 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
         const streamModel = resolvedModel || 'opencode-default';
 
         let fullResponse = '';
+        let collectedToolCalls: any[] = [];
         try {
           const streamResponse = await client.chat.completions.create(
             {
@@ -258,6 +262,25 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
             // Collect text for final log
             if (content) {
               fullResponse += content;
+            }
+
+            // Collect tool calls for local execution
+            if (toolCalls && toolCalls.length > 0) {
+              for (const tc of toolCalls) {
+                // Handle incremental tool call deltas
+                if (tc.index !== undefined) {
+                  while (collectedToolCalls.length <= tc.index) {
+                    collectedToolCalls.push({ id: '', type: 'function', function: { name: '', arguments: '' } });
+                  }
+                  const existing = collectedToolCalls[tc.index];
+                  if (tc.id) existing.id = tc.id;
+                  if (tc.function?.name) existing.function.name += tc.function.name;
+                  if (tc.function?.arguments) existing.function.arguments += tc.function.arguments;
+                } else {
+                  // Complete tool call
+                  collectedToolCalls.push(tc);
+                }
+              }
             }
 
             // Build the chunk to forward, preserving ALL upstream fields
@@ -286,6 +309,97 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
             }
           }
           await cacheWorkingProxy(proxyUrl);
+
+          // Check if there are local tools to execute after streaming completes
+          if (collectedToolCalls.length > 0) {
+            const localToolCalls = collectedToolCalls.filter(
+              (tc) => tc.function?.name && toolRegistry.has(tc.function.name)
+            );
+
+            if (localToolCalls.length > 0) {
+              serverLogger.log(
+                `Streaming: Executing ${localToolCalls.length} local tool(s): ${localToolCalls.map((tc) => tc.function?.name).join(', ')}`
+              );
+
+              // Execute local tools
+              const toolResults = await toolRegistry.executeMultiple(localToolCalls);
+
+              // Log tool results
+              appendMessageToFile(logFile, 'OPENCODE STREAMING TOOL RESULTS', JSON.stringify(toolResults, null, 2));
+
+              // For streaming, we need to continue the conversation
+              // Add assistant message with tool_calls and tool results to messages
+              const messagesWithToolCalls = [
+                ...repairedMessages,
+                {
+                  role: 'assistant',
+                  content: fullResponse || null,
+                  tool_calls: localToolCalls
+                },
+                ...toolResults
+              ];
+
+              // Make a follow-up streaming call with tool results
+              const followUpBody = {
+                ...baseBody,
+                messages: messagesWithToolCalls,
+                tools: deduplicatedTools.length > 0 ? deduplicatedTools : undefined
+              };
+
+              try {
+                const followUpStream = await client.chat.completions.create(
+                  {
+                    ...followUpBody,
+                    stream: true as const
+                  } as OpenAI.ChatCompletionCreateParamsStreaming,
+                  { fetchOptions: { dispatcher } }
+                );
+
+                let followUpResponse = '';
+                for await (const chunk of followUpStream) {
+                  const choice = chunk.choices?.[0];
+                  const delta = choice?.delta;
+                  const content = delta?.content || '';
+                  const toolCalls = delta?.tool_calls;
+                  const finishReason = choice?.finish_reason;
+
+                  if (content) {
+                    followUpResponse += content;
+                  }
+
+                  const forwardDelta: any = {};
+                  if (delta?.role) forwardDelta.role = delta.role;
+                  if (content) forwardDelta.content = content;
+                  if (toolCalls) forwardDelta.tool_calls = toolCalls;
+
+                  if (content || toolCalls || finishReason) {
+                    res.write(
+                      `data: ${JSON.stringify({
+                        id: chunk.id || completionId,
+                        object: 'chat.completion.chunk',
+                        created,
+                        model: chunk.model || streamModel,
+                        choices: [
+                          {
+                            index: choice?.index ?? 0,
+                            delta: forwardDelta,
+                            finish_reason: finishReason ?? null
+                          }
+                        ]
+                      })}\n\n`
+                    );
+                  }
+                }
+
+                appendMessageToFile(logFile, 'OPENCODE STREAMING TOOL FOLLOW-UP RESPONSE', followUpResponse);
+              } catch (followUpErr: any) {
+                serverLogger.logSync(`OpenCode streaming follow-up error: ${followUpErr}`);
+                res.write(
+                  `data: ${JSON.stringify({ error: { message: followUpErr.message || 'Follow-up stream error' } })}\n\n`
+                );
+              }
+            }
+          }
 
           // Include usage information if requested
           if (includeUsage) {
@@ -339,11 +453,86 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
     // Preserve the full upstream response including tool_calls and finish_reason
     const upstreamChoice = completion.choices?.[0];
     const upstreamMessage = upstreamChoice?.message || { role: 'assistant' as const, content: '' };
-    const upstreamToolCalls = upstreamMessage?.tool_calls;
+    const upstreamToolCalls = (upstreamMessage as any)?.tool_calls;
 
     const content = upstreamMessage?.content || '';
     appendMessageToFile(logFile, 'OPENCODE RESPONSE', content);
 
+    // Check if the upstream response contains tool calls that should be executed locally
+    if (upstreamToolCalls && upstreamToolCalls.length > 0) {
+      // Find which tools can be executed locally from the registry
+      const localToolCalls = upstreamToolCalls.filter((tc: any) => toolRegistry.has(tc.function?.name));
+
+      if (localToolCalls.length > 0) {
+        serverLogger.log(
+          `Executing ${localToolCalls.length} local tool(s): ${localToolCalls.map((tc: any) => tc.function?.name).join(', ')}`
+        );
+
+        // Execute local tools
+        const toolResults = await toolRegistry.executeMultiple(localToolCalls);
+
+        // Add assistant message with tool_calls to conversation
+        const messagesWithToolCalls = [
+          ...repairedMessages,
+          {
+            role: 'assistant',
+            content: content || null,
+            tool_calls: localToolCalls
+          },
+          ...toolResults
+        ];
+
+        // Make another API call with tool results
+        const followUpBody = {
+          ...baseBody,
+          messages: messagesWithToolCalls,
+          tools: deduplicatedTools.length > 0 ? deduplicatedTools : undefined
+        };
+
+        const followUpCompletion = await client.chat.completions.create(
+          {
+            ...followUpBody,
+            stream: false as const
+          } as OpenAI.ChatCompletionCreateParamsNonStreaming,
+          { fetchOptions: { dispatcher } }
+        );
+
+        const followUpChoice = followUpCompletion.choices?.[0];
+        const followUpMessage = followUpChoice?.message || { role: 'assistant' as const, content: '' };
+        const followUpContent = followUpMessage?.content || '';
+        const followUpToolCalls = (followUpMessage as any)?.tool_calls;
+
+        appendMessageToFile(logFile, 'OPENCODE TOOL FOLLOW-UP RESPONSE', followUpContent);
+
+        const responseChoice: any = {
+          index: 0,
+          message: {
+            role: followUpMessage?.role || 'assistant',
+            content: followUpContent || null
+          },
+          finish_reason: followUpChoice?.finish_reason || 'stop'
+        };
+
+        // Forward any additional tool_calls from the follow-up response
+        if (followUpToolCalls && followUpToolCalls.length > 0) {
+          responseChoice.message.tool_calls = followUpToolCalls;
+        }
+
+        return {
+          type: 'json',
+          data: {
+            id: followUpCompletion.id || `chatcmpl-${Date.now()}`,
+            object: 'chat.completion',
+            created: Math.floor(Date.now() / 1000),
+            model: model ?? followUpCompletion.model ?? 'opencode-default',
+            choices: [responseChoice],
+            usage: followUpCompletion.usage || {}
+          }
+        };
+      }
+    }
+
+    // No local tool execution needed, return the original response
     const responseChoice: any = {
       index: 0,
       message: {
