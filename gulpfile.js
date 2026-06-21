@@ -52,6 +52,7 @@ export function copySql() {
 // Rollup build
 export function buildRollup() {
   return runCommand('npx', ['rollup', '-c'], {
+    // include custom runners (separated by comma)
     env: { ROLLUP_ENTRIES: 'src/proxy/opencode-checker.runner.ts' }
   });
 }
@@ -66,12 +67,17 @@ export function buildWeb() {
   return runCommand('npx', ['vite', 'build', '--config', 'vite.config.mjs']);
 }
 
+// OpenAI-compatible server build
+export function buildServer() {
+  return series(parallel(buildTs, copySql), buildRollup);
+}
+
 // Clean build artifacts
 export function clean() {
   return runCommand('npx', ['rimraf', 'tmp/dist', 'dist']);
 }
 
 // Main build sequence
-export const build = series(clean, parallel(buildTs, copySql), buildRollup, buildDeclarations, buildWeb);
+export const build = series(clean, buildServer, buildDeclarations, buildWeb);
 
 export default build;

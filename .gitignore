@@ -131,3 +131,4 @@ coverage.*
 binary-collection*
 **/*superpowers/**
 .slim/
+.playwright-mcp/

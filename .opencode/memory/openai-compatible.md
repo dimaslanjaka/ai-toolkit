@@ -74,9 +74,15 @@ read_only: false
   - Added support for `stream_options: { include_usage: true }` parameter sent by Copilot.
   - Usage information now included in streaming responses when requested via `stream_options`.
   - All three providers (OpenCode, Puter, ChatGPT) updated for full compatibility.
+  - **Tool support:** VS Code Copilot does not support OpenAI-compatible tool calling. Copilot's tools are client-side only and cannot be executed by backend servers. Tool execution implementation was reverted.
 - Proxy checker:
   - Runner order: local TypeScript, local `.mjs`/`.cjs`, installed `.mjs`/`.cjs`, installed TypeScript. TypeScript uses `ts-node/esm`; built JS runs directly.
   - Detached startup uses a token-owned atomic lock; the checker adopts it, writes its PID, and releases it on completion or signals.
   - API startup uses `ProxyCheckerManager`, which owns the child and lock lifecycle.
   - Runtime files: `tmp/logs/proxy-checker.{lock,pid,log}`.
   - It tests remote working proxies over HTTP/SOCKS against `https://opencode.ai/zen/v1/responses` and stores the first success for `opencode.ai` in the centralized SQLite database.
+- Testing:
+  - Testing openai server:
+    - 1st terminal: `gulp buildServer`
+    - 2nd terminal: `curl -k -s -N https://localhost:5758/v1/chat/completions -H "Content-Type: application/json" -d "{\"model\":\"deepseek-v4-flash-free\",\"messages\":[{\"role\":\"user\",\"content\":\"search for buildOpenAIClient.ts\"}],\"stream\":true}" --max-time 60`
+  - To check if nodemon of `bin/openai-server.cmd` running using `wmic process where "name='node.exe'" get processid,commandline 2>nul | findstr /i "openai"`
