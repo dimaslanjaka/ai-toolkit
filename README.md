@@ -9,6 +9,7 @@ Collection of AI-powered tools, agents, automations, and developer utilities.
 - Web-based chat interface with conversation persistence
 - Proxy checker for HTTP/SOCKS proxy validation
 - SQLite database for model and proxy management
+- RTK Token Saver: Optional tool output compression (20-40% token savings)
 
 ### Configuration
 OpenAI-compatible server config at the project root

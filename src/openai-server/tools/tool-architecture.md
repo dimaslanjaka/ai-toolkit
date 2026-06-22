@@ -119,6 +119,7 @@ export async function handleChatCompletion(body, res) {
 ```js id="5p7f8b"
 import { toolRegistry } from "./tool-registry.js";
 import { routeAgent } from "./router.js";
+import { getRtkTokenSaver } from "../rtk-saver.js";
 
 export async function executeToolBatch(toolCalls) {
   const results = [];
@@ -154,7 +155,19 @@ export async function executeToolSafe(toolCall) {
 
   while (attempts <= maxRetries) {
     try {
-      const data = await tool(args, { agent });
+      let data = await tool(args, { agent });
+
+      // RTK compression for token savings (optional, when RTK_ENABLED=true)
+      const rtkSaver = getRtkTokenSaver();
+      if (rtkSaver.isAvailable()) {
+        const original = JSON.stringify(data);
+        const compressed = rtkSaver.compressToolOutput(original, name);
+        if (compressed !== original) {
+          const tokensSaved = rtkSaver.estimateTokens(original) - rtkSaver.estimateTokens(compressed);
+          console.log(`[RTK] ${name}: saved ~${tokensSaved} tokens`);
+          data = compressed;
+        }
+      }
 
       return {
         tool_call_id: id,

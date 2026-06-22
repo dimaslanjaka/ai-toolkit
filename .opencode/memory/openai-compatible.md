@@ -81,6 +81,14 @@ read_only: false
   - API startup uses `ProxyCheckerManager`, which owns the child and lock lifecycle.
   - Runtime files: `tmp/logs/proxy-checker.{lock,pid,log}`.
   - It tests remote working proxies over HTTP/SOCKS against `https://opencode.ai/zen/v1/responses` and stores the first success for `opencode.ai` in the centralized SQLite database.
+- RTK Token Saver integration (2026-06-22):
+  - Compresses tool output from LLM tool calls to save 20-40% tokens.
+  - RTK (Rust Token Killer) binary: `node_modules/.bin/rtk.exe` (Windows) or `rtk` (Unix).
+  - Enable via `RTK_ENABLED=true` environment variable (default: false).
+  - Implemented in `src/openai-server/rtk-saver.ts` as `RtkTokenSaver` class.
+  - Integrated into `src/openai-server/tools/tool-registry.ts` `execute()` method.
+  - Graceful fallback: if RTK unavailable or fails, returns original output unchanged.
+  - Compression only applied to outputs >100 chars; uses `rtk filter <command_hint>` via stdin/stdout.
 - Testing:
   - Testing openai server:
     - 1st terminal: `gulp buildServer`

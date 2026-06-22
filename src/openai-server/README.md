@@ -10,6 +10,7 @@ This module provides an OpenAI-compatible API server that uses Puppeteer to inte
 - ✅ Persistent browser session (reuses login between requests)
 - ✅ Automatic session management
 - ✅ Works with any OpenAI SDK or client
+- ✅ RTK Token Saver for tool output compression (20-40% token savings, optional)
 
 ## Architecture
 
@@ -184,6 +185,7 @@ node dist/openai-server/chatgpt-demo.mjs
 | `OPENAI_SERVER_HTTPS` | `true` or `false` | `true` | Enable shared HTTPS for Vite and Express |
 | `OPENAI_SERVER_HTTPS_KEY_FILE` | File path | `.cert/dev.pem` | mkcert private-key path |
 | `OPENAI_SERVER_HTTPS_CERT_FILE` | File path | `.cert/cert.pem` | mkcert certificate path |
+| `RTK_ENABLED` | `true` or `false` | `false` | Enable RTK token compression for tool output |
 
 ### Switching Providers
 
@@ -249,13 +251,58 @@ PROVIDER=chatgpt node dist/openai-server/start.mjs
 - Server automatically finds next available port
 - Check logs: `tmp/logs/openai-compatible/server.log`
 
+## Token Optimization: RTK Token Saver
+
+When enabled, RTK (Rust Token Killer) compresses tool output to reduce token usage by 20-40%, lowering API costs and improving response latency.
+
+### Setup
+
+1. **Install RTK binary:**
+   ```bash
+   node scripts/rtk-installer.js
+   ```
+   This downloads the RTK binary to `node_modules/.bin/rtk` (or `rtk.exe` on Windows).
+
+2. **Enable in environment:**
+   ```dotenv
+   RTK_ENABLED=true
+   ```
+
+### How It Works
+
+When a tool executes and returns output, RTK compresses it intelligently:
+- Only compresses outputs >100 characters (skips tiny results)
+- Uses context hints (tool name) for better compression
+- Falls back gracefully if RTK unavailable or compression fails
+- Never breaks the request—original output used if compression fails
+
+Example in logs:
+```
+[RTK] git_diff: saved ~250 tokens (1200 → 950)
+[RTK] grep_search: saved ~80 tokens (480 → 400)
+```
+
+### Requirements
+
+- Node.js with `node_modules/.bin/` in PATH (automatic after install)
+- RTK binary: https://github.com/rtk-ai/rtk
+- Timeout: 5 seconds per compression (configurable in code)
+
+### Disable
+
+Set `RTK_ENABLED=false` or omit the variable to skip compression.
+
 ## Files
 
 - `src/openai-server/provider/chatgpt.ts` — ChatGPT provider implementation
 - `src/openai-server/provider/puter.ts` — Puter provider (default)
+- `src/openai-server/provider/opencode.ts` — OpenCode provider
 - `src/openai-server/server.ts` — Express server with provider routing
 - `src/openai-server/start.ts` — Server entry point
+- `src/openai-server/rtk-saver.ts` — RTK token compression integration
+- `src/openai-server/tools/tool-registry.ts` — Tool execution and RTK compression
 - `src/puppeteer/chatgpt/` — ChatGPT automation logic
+- `scripts/rtk-installer.js` — RTK binary installer
 - `tmp/logs/openai-compatible/server.log` — Server logs
 - `tmp/database/openai-server.json` — Server state (port, PID, URL)
 

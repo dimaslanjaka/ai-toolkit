@@ -3,6 +3,8 @@
  * Provides dynamic tool registration and dispatch mechanism
  */
 
+import { getRtkTokenSaver } from '../rtk-saver.js';
+
 export interface ToolDefinition {
   name: string;
   description: string;
@@ -88,10 +90,23 @@ class ToolRegistry {
       const result = await tool.handler(args);
       const content = typeof result === 'string' ? result : JSON.stringify(result);
 
+      // RTK compression for token savings
+      const rtkSaver = getRtkTokenSaver();
+      const originalContent = content;
+      const compressedContent = rtkSaver.compressToolOutput(content, toolCall.function.name);
+
+      // Log compression stats if content was reduced
+      if (originalContent !== compressedContent) {
+        const saved = rtkSaver.estimateTokens(originalContent) - rtkSaver.estimateTokens(compressedContent);
+        console.log(
+          `[RTK] ${toolCall.function.name}: saved ~${saved} tokens (${rtkSaver.estimateTokens(originalContent)} → ${rtkSaver.estimateTokens(compressedContent)})`
+        );
+      }
+
       return {
         tool_call_id: toolCall.id,
         role: 'tool',
-        content,
+        content: compressedContent,
         name: toolCall.function.name
       };
     } catch (error) {
