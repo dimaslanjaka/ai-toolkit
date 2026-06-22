@@ -53,7 +53,14 @@ async function checkSingle(item: Proxy) {
   const valid = hasValidCredentials(item);
 
   if (!valid) {
-    await productionMySQL.update('proxies', { username: '', password: '' }, { proxy: item.proxy });
+    try {
+      await productionMySQL.update('proxies', { username: '', password: '' }, { proxy: item.proxy });
+    } catch (error) {
+      console.warn(
+        'Failed to update proxy credentials in production DB:',
+        error instanceof Error ? error.message : String(error)
+      );
+    }
   }
 
   let result: CheckProxyResult | undefined = undefined;
