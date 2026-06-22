@@ -13,6 +13,7 @@ export interface MySQLConfig {
 }
 
 export class MySQLHelper extends BaseSQL {
+  public readonly type = 'mysql' as const;
   private pool?: Pool;
   private config: MySQLConfig;
   public ready = false;

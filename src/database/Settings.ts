@@ -54,10 +54,7 @@ export class Settings extends BaseSQL {
    */
   async setSetting(key: string, value: string): Promise<void> {
     if (this.sqlHelper.type === 'sqlite') {
-      await this.sqlHelper.execute(
-        `INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
-        [key, value]
-      );
+      await this.sqlHelper.execute(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`, [key, value]);
     } else {
       await this.sqlHelper.execute(
         `INSERT INTO \`settings\` (\`key\`, \`value\`) VALUES (?, ?) ON DUPLICATE KEY UPDATE \`value\` = VALUES(\`value\`)`,

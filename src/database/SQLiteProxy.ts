@@ -82,6 +82,8 @@ export class SQLiteProxy extends ProxyDB {
         return rows[0] || null;
       },
       insert: (data: ProxyHostEntry) => this.insert('proxy_hosts', data),
+      update: (data: Partial<ProxyHostEntry>, where: Partial<ProxyHostEntry>) =>
+        this.update('proxy_hosts', data, where),
       upsert: async (data: ProxyHostEntry) => {
         const { proxy_id, host_id, ...rest } = data;
         return this.update('proxy_hosts', rest, { proxy_id, host_id });
@@ -143,6 +145,33 @@ export class SQLiteProxy extends ProxyDB {
       status: 'active',
       last_check: new Date().toISOString()
     });
+  }
+
+  /**
+   * Mark a proxy as dead for a specific host
+   * @param proxy - Proxy address to mark as dead
+   * @param host - Target host/domain
+   */
+  async markProxyDeadForHost(proxy: string, host: string): Promise<void> {
+    const proxyTable = await this.proxy_entries();
+    const proxyEntry = await proxyTable.findOne({ proxy });
+
+    if (!proxyEntry?.id) {
+      // Proxy not found, nothing to do
+      return;
+    }
+
+    const hostsTable = await this.hosts();
+    const hostEntry = await hostsTable.findOne({ host });
+
+    if (!hostEntry?.id) {
+      // Host not found, nothing to do
+      return;
+    }
+
+    // Mark the proxy as dead for this host
+    const proxyHostsTable = await this.proxy_hosts();
+    await proxyHostsTable.update({ status: 'dead' }, { proxy_id: proxyEntry.id, host_id: hostEntry.id });
   }
 
   /**

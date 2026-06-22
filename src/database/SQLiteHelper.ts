@@ -12,6 +12,7 @@ export interface SQLiteConfig {
 }
 
 export class SQLiteHelper extends BaseSQL {
+  public readonly type = 'sqlite' as const;
   private db?: Database.Database;
   private config: SQLiteConfig;
   public ready = false;
