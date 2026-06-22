@@ -13,7 +13,7 @@ import {
 } from '../responses-adapter.js';
 import '../tools/index.js'; // Auto-register built-in tools
 import { toolRegistry } from '../tools/tool-registry.js';
-import { appendMessageToFile, logMessageToFile, serverLogger } from '../utils.js';
+import { serverLogger } from '../utils.js';
 import type { ProviderResult } from './index.js';
 import { isConnectionError, repairMessageSequence } from './message-repair.js';
 import {
@@ -132,10 +132,10 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
     serverLogger
   );
 
-  const logFile = logMessageToFile(
-    'OPENCODE REQUEST',
-    JSON.stringify({ model: resolvedModel, messages: repairedMessages, stream, temperature, max_tokens }, null, 2)
-  );
+  // const logFile = logMessageToFile(
+  //   'OPENCODE REQUEST',
+  //   JSON.stringify({ model: resolvedModel, messages: repairedMessages, stream, temperature, max_tokens }, null, 2)
+  // );
 
   const client = await getOpenCode();
   const baseBody: Record<string, any> = {
@@ -270,7 +270,7 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
               const toolResults = await toolRegistry.executeMultiple(localToolCalls);
 
               // Log tool results
-              appendMessageToFile(logFile, 'OPENCODE STREAMING TOOL RESULTS', JSON.stringify(toolResults, null, 2));
+              // appendMessageToFile(logFile, 'OPENCODE STREAMING TOOL RESULTS', JSON.stringify(toolResults, null, 2));
 
               // For streaming, we need to continue the conversation
               // Add assistant message with tool_calls and tool results to messages.
@@ -303,7 +303,7 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
                   { fetchOptions: { dispatcher } }
                 );
 
-                let followUpResponse = '';
+                // let followUpResponse = '';
                 for await (const chunk of followUpStream) {
                   const choice = chunk.choices?.[0];
                   const delta = choice?.delta;
@@ -311,9 +311,9 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
                   const toolCalls = delta?.tool_calls;
                   const finishReason = choice?.finish_reason;
 
-                  if (content) {
-                    followUpResponse += content;
-                  }
+                  // if (content) {
+                  //   followUpResponse += content;
+                  // }
 
                   const forwardDelta: any = {};
                   if (delta?.role) forwardDelta.role = delta.role;
@@ -339,7 +339,7 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
                   }
                 }
 
-                appendMessageToFile(logFile, 'OPENCODE STREAMING TOOL FOLLOW-UP RESPONSE', followUpResponse);
+                // appendMessageToFile(logFile, 'OPENCODE STREAMING TOOL FOLLOW-UP RESPONSE', followUpResponse);
               } catch (followUpErr: any) {
                 serverLogger.logSync(`OpenCode streaming follow-up error: ${followUpErr}`);
                 res.write(
@@ -372,7 +372,7 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
           }
 
           res.write('data: [DONE]\n\n');
-          appendMessageToFile(logFile, 'OPENCODE STREAMING RESPONSE', fullResponse);
+          // appendMessageToFile(logFile, 'OPENCODE STREAMING RESPONSE', fullResponse);
         } catch (streamErr: any) {
           serverLogger.logSync(`OpenCode streaming error: ${streamErr}`);
           // Mark proxy as dead on connection error
@@ -404,7 +404,7 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
     const upstreamToolCalls = (upstreamMessage as any)?.tool_calls;
 
     const content = upstreamMessage?.content || '';
-    appendMessageToFile(logFile, 'OPENCODE RESPONSE', content);
+    // appendMessageToFile(logFile, 'OPENCODE RESPONSE', content);
 
     // Check if the upstream response contains tool calls that should be executed locally
     if (upstreamToolCalls && upstreamToolCalls.length > 0) {
@@ -454,7 +454,7 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
         const followUpContent = followUpMessage?.content || '';
         const followUpToolCalls = (followUpMessage as any)?.tool_calls;
 
-        appendMessageToFile(logFile, 'OPENCODE TOOL FOLLOW-UP RESPONSE', followUpContent);
+        // appendMessageToFile(logFile, 'OPENCODE TOOL FOLLOW-UP RESPONSE', followUpContent);
 
         const responseChoice: any = {
           index: 0,
@@ -530,7 +530,7 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
     .map((m: any) => `${m.role}: ${(m.content || '').toString().substring(0, 80)}`)
     .join(' | ');
   serverLogger.log(`OpenCode Responses - Model: ${resolvedModel}, Stream: ${!!stream}, Messages: ${promptPreview}`);
-  const responsesLogFile = logMessageToFile('OPENCODE RESPONSES REQUEST', JSON.stringify(requestData, null, 2));
+  // const responsesLogFile = logMessageToFile('OPENCODE RESPONSES REQUEST', JSON.stringify(requestData, null, 2));
 
   const client = await getOpenCode();
   const baseBody = {
@@ -557,7 +557,7 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
           })}\n\n`
         );
 
-        let fullResponse = '';
+        // let fullResponse = '';
         try {
           const streamResponse = await client.chat.completions.create(
             {
@@ -569,7 +569,7 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
           for await (const chunk of streamResponse) {
             const delta = chunk.choices?.[0]?.delta?.content || '';
             if (delta) {
-              fullResponse += delta;
+              // fullResponse += delta;
               const deltaPayload = convertStreamingChunkToResponses({
                 id: responseId,
                 choices: [{ delta: { content: delta } }]
@@ -582,7 +582,7 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
             `data: ${JSON.stringify({ type: 'response.done', response: { id: responseId, status: 'completed' } })}\n\n`
           );
           res.write('data: [DONE]\n\n');
-          appendMessageToFile(responsesLogFile, 'OPENCODE RESPONSES STREAMING RESPONSE', fullResponse);
+          // appendMessageToFile(responsesLogFile, 'OPENCODE RESPONSES STREAMING RESPONSE', fullResponse);
         } catch (streamErr: any) {
           serverLogger.logSync(`OpenCode Responses streaming error: ${streamErr}`);
           // Mark proxy as dead on connection error
@@ -608,7 +608,7 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
     );
     await cacheWorkingProxy('opencode.ai', proxyUrl);
     const content = completion.choices?.[0]?.message?.content || '';
-    appendMessageToFile(responsesLogFile, 'OPENCODE RESPONSES RESPONSE', content);
+    // appendMessageToFile(responsesLogFile, 'OPENCODE RESPONSES RESPONSE', content);
 
     const chatCompletionsFormat = {
       model: requestData.model,

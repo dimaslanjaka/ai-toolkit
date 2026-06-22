@@ -31,8 +31,8 @@ function getHttpsOptions() {
   };
 }
 
-// Clear messages log folder on server startup
-const logDir = 'tmp/logs/openai-compatible/messages';
+// Clear messages log folder on server startup (relative to process.cwd())
+const logDir = path.resolve(process.cwd(), 'tmp/logs/openai-compatible/messages');
 fs.rmSync(logDir, { recursive: true, force: true });
 fs.mkdirSync(logDir, { recursive: true });
 
