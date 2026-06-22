@@ -5,6 +5,7 @@ import path from 'upath';
 import { fileURLToPath } from 'url';
 import { MySQLConfig, MySQLHelper } from './MySQLHelper.js';
 import { SQLiteConfig, SQLiteHelper } from './SQLiteHelper.js';
+import BaseSQL from './BaseSQL.js';
 
 export type DatabaseType = 'mysql' | 'mariadb' | 'sqlite';
 
@@ -24,18 +25,6 @@ export interface ProxyDBConfig {
   // SQLite settings
   sqlite_filename?: string;
   sqlite_verbose?: boolean;
-}
-
-/**
- * Common interface for database helpers
- */
-interface IDBHelper {
-  ready: boolean;
-  initialize(): Promise<void>;
-  query<T = any>(sql: string, params?: any[]): Promise<T[]>;
-  execute(sql: string, params?: any[]): Promise<{ affectedRows: number; insertId?: number }>;
-  transaction<T>(fn: (conn: any) => Promise<T>): Promise<T>;
-  close(): Promise<void>;
 }
 
 /**
@@ -102,7 +91,7 @@ export interface UserFields {
 }
 
 export class ProxyDB {
-  private helper: IDBHelper;
+  public helper: BaseSQL;
   private _config: ProxyDBConfig;
   public ready = false;
   temporarily = false;
@@ -115,7 +104,7 @@ export class ProxyDB {
         filename: config.sqlite_filename || 'database.sqlite',
         verbose: config.sqlite_verbose
       };
-      this.helper = new SQLiteHelper(sqliteConfig) as unknown as IDBHelper;
+      this.helper = new SQLiteHelper(sqliteConfig);
     } else {
       // Map Python-style config to MySQLHelper format
       const mysqlConfig: MySQLConfig = {
@@ -127,7 +116,7 @@ export class ProxyDB {
         connectionLimit: config.connectionLimit,
         connectTimeout: config.connectTimeout
       };
-      this.helper = new MySQLHelper(mysqlConfig) as unknown as IDBHelper;
+      this.helper = new MySQLHelper(mysqlConfig);
     }
   }
 
