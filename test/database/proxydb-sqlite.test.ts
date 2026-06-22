@@ -1,3 +1,4 @@
+import { jest, describe, beforeAll, afterAll, test, expect } from '@jest/globals';
 import { ProxyDB } from '../../src/database/ProxyDB.js';
 
 describe('ProxyDB SQLite', () => {

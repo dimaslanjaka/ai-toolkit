@@ -1,3 +1,4 @@
+import { jest, describe, beforeAll, afterAll, test, expect } from '@jest/globals';
 import fs from 'fs';
 import path from 'path';
 import { SQLiteProxy } from '../../src/database/SQLiteProxy.js';
