@@ -6,6 +6,7 @@ Below is a **complete production-grade OpenAI-compatible tool execution layer** 
 * Retry isolation per tool call
 * Safe JSON parsing + validation
 * No dynamic tool names (critical fix for your previous issue)
+* **RTK Token Saver** - Compresses tool output to save 20-40% tokens (optional, `RTK_ENABLED=true`)
 
 ---
 
@@ -27,6 +28,8 @@ Tool Executor (safe isolation)
 Agent Router (optional multi-agent)
   ↓
 Tool Results injected back to LLM
+  ↓
+RTK Token Saver (optional, RTK_ENABLED=true)
   ↓
 Final streaming response
 ```
@@ -114,85 +117,70 @@ export async function handleChatCompletion(body, res) {
 
 ---
 
-# 4. Tool Executor with Retry Isolation (IMPORTANT)
+# 4. Tool Registry Implementation (Actual)
 
-```js id="5p7f8b"
-import { toolRegistry } from "./tool-registry.js";
-import { routeAgent } from "./router.js";
-import { getRtkTokenSaver } from "../rtk-saver.js";
+The real implementation is in `src/openai-server/tools/tool-registry.ts`. Key methods:
 
-export async function executeToolBatch(toolCalls) {
-  const results = [];
+```typescript
+class ToolRegistry {
+  private tools = new Map<string, ToolDefinition>();
 
-  for (const call of toolCalls) {
-    const result = await executeToolSafe(call);
-    results.push(result);
+  register(tool: ToolDefinition): void { ... }
+  unregister(name: string): boolean { ... }
+  get(name: string): ToolDefinition | undefined { ... }
+  has(name: string): boolean { ... }
+  list(): ToolDefinition[] { ... }
+
+  getOpenAIToolsFormat(): any[] {
+    return this.list().map((tool) => ({
+      type: 'function',
+      function: { name: tool.name, description: tool.description, parameters: tool.parameters }
+    }));
   }
 
-  return results;
-}
+  async execute(toolCall: ToolCall): Promise<ToolResult> {
+    const tool = this.tools.get(toolCall.function.name);
 
-export async function executeToolSafe(toolCall) {
-  const { name, arguments: raw, id } = toolCall.function;
+    if (!tool) {
+      return { tool_call_id: toolCall.id, role: 'tool', content: JSON.stringify({ error: `Tool "${toolCall.function.name}" not found` }), name: toolCall.function.name };
+    }
 
-  let args;
-  try {
-    args = JSON.parse(raw);
-  } catch {
-    return errorResult(id, name, "Invalid JSON arguments");
-  }
-
-  const tool = toolRegistry[name];
-  if (!tool) {
-    return errorResult(id, name, "Unknown tool");
-  }
-
-  // Multi-agent routing (optional)
-  const agent = routeAgent(name, args);
-
-  let attempts = 0;
-  const maxRetries = 2;
-
-  while (attempts <= maxRetries) {
     try {
-      let data = await tool(args, { agent });
+      let args: Record<string, any> = {};
+      if (toolCall.function.arguments) args = JSON.parse(toolCall.function.arguments);
 
-      // RTK compression for token savings (optional, when RTK_ENABLED=true)
+      const result = await tool.handler(args);
+      const content = typeof result === 'string' ? result : JSON.stringify(result);
+
+      // RTK compression for token savings (when RTK_ENABLED=true)
       const rtkSaver = getRtkTokenSaver();
-      if (rtkSaver.isAvailable()) {
-        const original = JSON.stringify(data);
-        const compressed = rtkSaver.compressToolOutput(original, name);
-        if (compressed !== original) {
-          const tokensSaved = rtkSaver.estimateTokens(original) - rtkSaver.estimateTokens(compressed);
-          console.log(`[RTK] ${name}: saved ~${tokensSaved} tokens`);
-          data = compressed;
-        }
+      const originalContent = content;
+      const compressedContent = rtkSaver.compressToolOutput(content, toolCall.function.name);
+
+      if (originalContent !== compressedContent) {
+        const saved = rtkSaver.estimateTokens(originalContent) - rtkSaver.estimateTokens(compressedContent);
+        console.log(`[RTK] ${toolCall.function.name}: saved ~${saved} tokens (${rtkSaver.estimateTokens(originalContent)} → ${rtkSaver.estimateTokens(compressedContent)})`);
       }
 
       return {
-        tool_call_id: id,
-        tool: name,
-        success: true,
-        data
+        tool_call_id: toolCall.id,
+        role: 'tool',
+        content: compressedContent,
+        name: toolCall.function.name
       };
-    } catch (err) {
-      attempts++;
-
-      if (attempts > maxRetries) {
-        return errorResult(id, name, err.message);
-      }
+    } catch (error) {
+      return { tool_call_id: toolCall.id, role: 'tool', content: JSON.stringify({ error: error instanceof Error ? error.message : 'Tool execution failed' }), name: toolCall.function.name };
     }
+  }
+
+  async executeMultiple(toolCalls: ToolCall[]): Promise<ToolResult[]> {
+    return Promise.all(toolCalls.map((call) => this.execute(call)));
   }
 }
 
-function errorResult(id, tool, message) {
-  return {
-    tool_call_id: id,
-    tool,
-    success: false,
-    error: message
-  };
-}
+export const toolRegistry = new ToolRegistry();
+export function registerTool(tool: ToolDefinition): void { toolRegistry.register(tool); }
+export function getToolRegistry(): ToolRegistry { return toolRegistry; }
 ```
 
 ---
@@ -252,7 +240,57 @@ export function routeAgent(toolName, args) {
 
 ---
 
-# 7. LLM Streaming Wrapper (OpenAI-compatible)
+# 7. RTK Token Saver Integration (Token Compression)
+
+RTK (Rust Token Killer) compresses LLM tool output to save **20-40% tokens** on tool results.
+
+## How It Works
+
+```text
+Tool Call → Tool Executor → Tool Result → [RTK compresses here] → LLM
+                                    ↑
+                            Only tool results, NOT incoming prompts
+```
+
+## Configuration
+
+Add to `.env`:
+```bash
+RTK_ENABLED=true  # Default: false
+```
+
+## Implementation
+
+| Component | File | Description |
+|-----------|------|-------------|
+| RTK Saver | `src/openai-server/rtk-saver.ts` | `RtkTokenSaver` class - finds binary, runs `rtk filter <hint>` via stdin/stdout |
+| Integration | `src/openai-server/tools/tool-registry.ts` | `execute()` method - applies compression after tool handler, before returning result |
+
+## Behavior
+
+- **Only compresses tool output** - Incoming user messages, system prompts, assistant responses are NOT touched
+- **Threshold**: Only processes outputs >100 chars (smaller outputs don't benefit)
+- **Graceful fallback**: If RTK fails or unavailable, returns original output unchanged
+- **Size check**: Only uses compressed version if ≤110% of original (avoids edge cases)
+- **Command hint**: Passes tool name as hint to `rtk filter` for better compression
+
+## Logging
+
+When compression occurs:
+```
+[RTK] read: saved ~45 tokens (180 → 135)
+```
+
+## RTK Binary
+
+Windows: `node_modules/.bin/rtk.exe`
+Unix: `node_modules/.bin/rtk` (or PATH)
+
+Install: `cargo install --git https://github.com/rtk-ai/rtk` or download pre-built binary.
+
+---
+
+# 8. LLM Streaming Wrapper (OpenAI-compatible)
 
 ```js id="p1x8dd"
 import OpenAI from "openai";
