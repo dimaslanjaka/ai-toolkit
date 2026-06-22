@@ -7,6 +7,7 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'fs-extra';
 import path from 'upath';
+import { getSettings } from '../database/shared.js';
 
 // RTK binary location candidates
 const RTK_CANDIDATES = [
@@ -18,9 +19,28 @@ export class RtkTokenSaver {
   private rtkPath: string | null = null;
   private checked = false;
   private enabled: boolean;
+  private dbInitialized = false;
 
   constructor() {
+    // Fallback: check env var
     this.enabled = process.env.RTK_ENABLED === 'true';
+  }
+
+  private async loadFromDatabase(): Promise<void> {
+    if (this.dbInitialized) return;
+    this.dbInitialized = true;
+
+    try {
+      const settings = await getSettings();
+      if (settings) {
+        const value = await settings.getSetting('RTK_ENABLED');
+        if (value !== null && value !== undefined) {
+          this.enabled = value === 'true';
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load RTK_ENABLED from database, using env var:', error);
+    }
   }
 
   private findRtk(): string | null {
@@ -36,7 +56,8 @@ export class RtkTokenSaver {
     return null;
   }
 
-  isAvailable(): boolean {
+  async isAvailable(): Promise<boolean> {
+    await this.loadFromDatabase();
     if (!this.enabled) return false;
     return this.findRtk() !== null;
   }
@@ -47,8 +68,8 @@ export class RtkTokenSaver {
    * @param commandHint - Optional hint about what command produced this output (e.g., "git diff", "grep")
    * @returns Compressed output or original if RTK unavailable/fails
    */
-  compressToolOutput(output: string, commandHint?: string): string {
-    if (!this.enabled || !this.isAvailable()) return output;
+  async compressToolOutput(output: string, commandHint?: string): Promise<string> {
+    if (!(await this.isAvailable())) return output;
     if (!output || output.length < 100) return output; // Don't compress tiny outputs
 
     try {

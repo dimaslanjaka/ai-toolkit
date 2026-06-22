@@ -93,7 +93,7 @@ class ToolRegistry {
       // RTK compression for token savings
       const rtkSaver = getRtkTokenSaver();
       const originalContent = content;
-      const compressedContent = rtkSaver.compressToolOutput(content, toolCall.function.name);
+      const compressedContent = await rtkSaver.compressToolOutput(content, toolCall.function.name);
 
       // Log compression stats if content was reduced
       if (originalContent !== compressedContent) {

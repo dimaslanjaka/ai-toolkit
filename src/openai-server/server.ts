@@ -4,7 +4,7 @@ import fs from 'fs-extra';
 import crypto from 'node:crypto';
 import path from 'upath';
 import { SQLiteProxy } from '../database/SQLiteProxy.js';
-import { getSQLite, getSharedModels } from '../database/shared.js';
+import { getSQLite, getSettings, getSharedModels } from '../database/shared.js';
 import * as provider from './provider/index.js';
 import { ProxyCheckerManager } from '../proxy/proxy-checker-manager.js';
 import { toolRegistry, registerTool, type ToolDefinition } from './tools/tool-registry.js';
@@ -560,6 +560,70 @@ app.post('/admin/tools/execute', async (req, res) => {
     res.status(500).json({
       ok: false,
       message: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+// ── Settings API ───────────────────────────────────────────────────────────
+
+/**
+ * GET /api/settings/:key — retrieve a setting by key
+ * For missing boolean flags (RTK_ENABLED), returns default false instead of 404
+ */
+app.get('/api/settings/:key', async (req: Request, res: Response) => {
+  try {
+    const settings = await getSettings();
+    if (!settings) {
+      return res.status(503).json({ error: 'Settings service unavailable' });
+    }
+    const key = req.params.key as string;
+    const raw = await settings.getSetting(key);
+    if (raw === null || raw === undefined) {
+      if (key === 'RTK_ENABLED') {
+        return res.json({ key, value: false }); // default false for boolean flags
+      }
+      return res.status(404).json({ error: `Setting not found: ${key}` });
+    }
+    // Convert stored string to proper type for known flags
+    const value = key === 'RTK_ENABLED' ? raw === 'true' : raw;
+    res.json({ key, value });
+  } catch (error) {
+    serverLogger.logSync(`Settings GET error: ${error}`);
+    // Ensure we always return JSON, not HTML
+    res.status(500).json({
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+/**
+ * POST /api/settings/:key — write a setting
+ * Body: { value }
+ */
+app.post('/api/settings/:key', async (req: Request, res: Response) => {
+  try {
+    const key = req.params.key;
+    const { value } = req.body;
+    if (!key || typeof key !== 'string' || value === undefined) {
+      return res.status(400).json({ error: 'key and value must be provided' });
+    }
+    const settings = await getSettings();
+    if (!settings) {
+      return res.status(503).json({ error: 'Settings service unavailable' });
+    }
+    // Handle type conversions for known keys
+    const storeValue = key === 'RTK_ENABLED' && typeof value === 'boolean' ? (value ? 'true' : 'false') : String(value);
+    await settings.setSetting(key, storeValue);
+
+    // Return value in appropriate type
+    const retValue = key === 'RTK_ENABLED' && typeof value === 'boolean' ? value : storeValue;
+    res.json({ success: true, key, value: retValue });
+  } catch (error) {
+    serverLogger.logSync(`Settings POST error: ${error}`);
+    res.status(500).json({
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : String(error)
     });
   }
 });
