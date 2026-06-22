@@ -6,7 +6,7 @@ import path from 'upath';
 import { SQLiteProxy } from '../database/SQLiteProxy.js';
 import { getSQLite, getSharedModels } from '../database/shared.js';
 import * as provider from './provider/index.js';
-import { ProxyCheckerManager } from './proxy/proxy-checker-manager.js';
+import { ProxyCheckerManager } from '../proxy/proxy-checker-manager.js';
 import { toolRegistry, registerTool, type ToolDefinition } from './tools/tool-registry.js';
 import './tools/index.js'; // Auto-register built-in tools
 
