@@ -2,7 +2,7 @@ import SQLHelper from './SQLHelper.js';
 import BaseSQL from './BaseSQL.js';
 
 /**
- * Unified Settings class supporting both SQLite and MySQL
+ * Unified Settings class supporting both SQLite and MySQLite and MySQL
  * Delegates to SQLHelper for actual database operations
  */
 export class Settings extends BaseSQL {
@@ -17,11 +17,8 @@ export class Settings extends BaseSQL {
    * Initialize the settings database and create table if needed
    */
   async initialize(): Promise<void> {
-    if (!this.sqlHelper.ready) {
-      await this.sqlHelper.initialize();
-    }
-
-    // Create settings table if it doesn't exist
+    // Table creation is handled here, so we don't need to call super.initialize() or check helper.ready.
+    // Create settings table if it doesn't exist.
     if (this.sqlHelper.type === 'sqlite') {
       await this.sqlHelper.execute(`
         CREATE TABLE IF NOT EXISTS settings (
@@ -42,61 +39,77 @@ export class Settings extends BaseSQL {
   }
 
   /**
-   * Whether the database connection is ready for use
+   * Get a setting from the database.
    */
-  get ready(): boolean {
-    return this.sqlHelper.ready;
+  async getSetting(key: string): Promise<string | null> {
+    const result = await this.sqlHelper.query<{ key: string; value: string }>(
+      `SELECT value FROM settings WHERE key = ?`,
+      [key]
+    );
+    return result.length > 0 ? result[0].value : null;
   }
 
   /**
-   * Execute a SELECT query and return all results
+   * Set a setting in the database.
    */
+  async setSetting(key: string, value: string): Promise<void> {
+    if (this.sqlHelper.type === 'sqlite') {
+      await this.sqlHelper.execute(
+        `INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+        [key, value]
+      );
+    } else {
+      await this.sqlHelper.execute(
+        `INSERT INTO \`settings\` (\`key\`, \`value\`) VALUES (?, ?) ON DUPLICATE KEY UPDATE \`value\` = VALUES(\`value\`)`,
+        [key, value]
+      );
+    }
+  }
+
+  /**
+   * Delete a setting from the database.
+   */
+  async deleteSetting(key: string): Promise<void> {
+    await this.sqlHelper.execute('DELETE FROM settings WHERE key = ?', [key]);
+  }
+
+  /**
+   * Get all settings from the database.
+   */
+  async getAllSettings(): Promise<{ key: string; value: string }[]> {
+    return this.sqlHelper.query('SELECT key, value FROM settings');
+  }
+
+  // Implement remaining abstract methods from BaseSQL by delegating to sqlHelper
   async query<T = any>(sql: string, params: any[] = []): Promise<T[]> {
     return this.sqlHelper.query<T>(sql, params);
   }
 
-  /**
-   * Execute an INSERT, UPDATE, or DELETE statement
-   */
   async execute(sql: string, params: any[] = []): Promise<{ affectedRows: number; insertId?: number }> {
     return this.sqlHelper.execute(sql, params);
   }
 
-  /**
-   * Execute a transaction with the provided callback function
-   */
   async transaction<T>(fn: (conn: any) => Promise<T>): Promise<T> {
-    return this.sqlHelper.transaction<T>(fn);
+    return this.sqlHelper.transaction(fn);
   }
 
-  /**
-   * Get a setting value by key
-   */
-  async getSetting(key: string): Promise<string | undefined> {
-    return this.sqlHelper.getSetting(key);
-  }
-
-  /**
-   * Set a setting value by key (insert or update)
-   */
-  async setSetting(key: string, value: string): Promise<void> {
-    return this.sqlHelper.setSetting(key, value);
-  }
-
-  /**
-   * Settings is a consumer of the shared helper, not the owner.
-   * The shared SQLHelper owner manages connection lifecycle.
-   */
   async close(): Promise<void> {
-    // no-op — caller owns the SQLHelper connection
+    // Settings class does not own the SQLHelper, so it should not close it.
+    // Closing is handled by closeAllDatabases().
+    return Promise.resolve();
+  }
+
+  // The 'ready' getter is inherited from BaseSQL and reflects the sqlHelper's readiness.
+  get ready(): boolean {
+    return this.sqlHelper.ready;
   }
 }
 
+/**
+ * Factory function to create a Settings instance
+ */
 export function createSettings(helper: SQLHelper): Settings {
   return new Settings(helper);
 }
 
-export default {
-  createSettings,
-  Settings
-};
+export default Settings;

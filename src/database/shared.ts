@@ -1,10 +1,9 @@
 import path from 'upath';
 import { isDevelopmentMode } from '../utils/env.js';
 import { ProxyDB } from './ProxyDB.js';
-import SQLiteModel from './SQLiteModel.js';
 import { createSettings, Settings } from './Settings.js';
 import SQLHelper from './SQLHelper.js';
-import type { MySQLConfig } from './SQLHelper.js';
+import SQLiteModel from './SQLiteModel.js';
 
 // Singleton instances for connection reuse
 let productionMySQLInstance: ProxyDB | null = null;
@@ -97,48 +96,74 @@ export async function getSharedModels(): Promise<SQLiteModel> {
   return new SQLiteModel(db);
 }
 
-// Singleton instance for settings
-let settingsInstance: Settings | null = null;
-
 /**
- * Get or initialize the settings instance.
- * Uses environment variables to determine database type:
- *   DATABASE_TYPE - 'sqlite' (default) or 'mysql'
- *   SQLITE_DBNAME - SQLite database filename (default: 'settings.db')
+ * Create a SQLHelper instance for settings based on database type.
+ *
+ * For SQLite: reuses the centralized instance via getSQLite()
+ * For MySQL: creates a new instance with config from env vars
+ *
+ * Environment variables:
+ *   SQLITE_DBNAME - SQLite database filename (used by getSQLite())
  *   MYSQL_HOST, MYSQL_USER, MYSQL_PASS, MYSQL_DBNAME, MYSQL_PORT - MySQL connection params
  *
- * @returns The settings instance, or null if initialization failed
+ * @param envDbType - Database type ('sqlite' or 'mysql')
+ * @param mode - Database mode ('production' or 'development')
+ * @returns A SQLHelper instance, or null if creation failed
+ * @throws May throw error during SQLite centralized instance initialization
+ * @internal
  */
-export async function getSettings(): Promise<Settings | null> {
-  if (settingsInstance) return settingsInstance;
-
-  const envDbType = process.env.DATABASE_TYPE || 'sqlite';
+export async function getSQLHelper(
+  envDbType: 'sqlite' | 'mysql' = 'sqlite',
+  mode: 'production' | 'development' = 'development'
+): Promise<SQLHelper | null> {
   const dbType = envDbType as 'sqlite' | 'mysql';
-  let helper: SQLHelper;
 
   try {
     if (dbType === 'sqlite') {
       // Reuse the centralized SQLite instance
       const proxyDb = await getSQLite();
-      helper = proxyDb.helper as SQLHelper;
+      return proxyDb.helper as SQLHelper;
     } else if (dbType === 'mysql') {
-      // Create a separate SQLHelper for MySQL settings
-      const config: MySQLConfig = {
-        host: process.env.MYSQL_HOST || '127.0.0.1',
-        user: process.env.MYSQL_USER || 'root',
-        password: process.env.MYSQL_PASS || '',
-        database: process.env.MYSQL_DBNAME || 'app',
-        port: process.env.MYSQL_PORT ? parseInt(process.env.MYSQL_PORT, 10) : 3306
-      };
-      helper = new SQLHelper('mysql', config);
+      if (mode === 'development') {
+        return getLocalMySQL().helper as SQLHelper;
+      } else {
+        return getProductionMySQL().helper as SQLHelper;
+      }
     } else {
       console.warn(`Unknown DATABASE_TYPE: ${dbType}`);
       return null;
     }
+  } catch (error) {
+    console.error('Failed to create settings helper:', error);
+    return null;
+  }
+}
 
-    settingsInstance = createSettings(helper);
-    await settingsInstance.initialize();
-    return settingsInstance;
+/**
+ * Get or initialize the settings singleton instance.
+ *
+ * Returns a cached Settings instance on subsequent calls. The first call
+ * initializes the instance using a SQLHelper created via getSQLHelper(),
+ * which determines database backend from the envDbType parameter.
+ *
+ * Environment variables:
+ *   SQLITE_DBNAME - SQLite database filename (default: 'settings.db')
+ *   MYSQL_HOST, MYSQL_USER, MYSQL_PASS, MYSQL_DBNAME, MYSQL_PORT - MySQL connection params
+ *
+ * @param envDbType - Database type ('sqlite' or 'mysql'). Defaults to 'sqlite' if not provided
+ * @returns The settings singleton instance, or null if initialization failed
+ * @throws May throw if SQLHelper creation or Settings initialization fails (logged to console)
+ * @see getSQLHelper
+ * @see closeAllDatabases to properly clean up on shutdown
+ */
+export async function getSettings(envDbType: 'sqlite' | 'mysql' = 'sqlite'): Promise<Settings | null> {
+  const helper = await getSQLHelper(envDbType);
+  if (!helper) return null;
+
+  try {
+    const settings = createSettings(helper);
+    await settings.initialize();
+    return settings;
   } catch (error) {
     console.error('Failed to initialize settings:', error);
     return null;
@@ -165,11 +190,6 @@ export async function closeAllDatabases(): Promise<void> {
   if (centralizedSQLiteInstance) {
     closePromises.push(centralizedSQLiteInstance.close());
     centralizedSQLiteInstance = null;
-  }
-
-  if (settingsInstance) {
-    closePromises.push(settingsInstance.close());
-    settingsInstance = null;
   }
 
   await Promise.all(closePromises);
