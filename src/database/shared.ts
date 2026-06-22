@@ -2,6 +2,9 @@ import path from 'upath';
 import { isDevelopmentMode } from '../utils/env.js';
 import { ProxyDB } from './ProxyDB.js';
 import SQLiteModel from './SQLiteModel.js';
+import { createSettings, Settings } from './Settings.js';
+import SQLHelper from './SQLHelper.js';
+import type { MySQLConfig } from './SQLHelper.js';
 
 // Singleton instances for connection reuse
 let productionMySQLInstance: ProxyDB | null = null;
@@ -94,6 +97,54 @@ export async function getSharedModels(): Promise<SQLiteModel> {
   return new SQLiteModel(db);
 }
 
+// Singleton instance for settings
+let settingsInstance: Settings | null = null;
+
+/**
+ * Get or initialize the settings instance.
+ * Uses environment variables to determine database type:
+ *   DATABASE_TYPE - 'sqlite' (default) or 'mysql'
+ *   SQLITE_DBNAME - SQLite database filename (default: 'settings.db')
+ *   MYSQL_HOST, MYSQL_USER, MYSQL_PASS, MYSQL_DBNAME, MYSQL_PORT - MySQL connection params
+ *
+ * @returns The settings instance, or null if initialization failed
+ */
+export async function getSettings(): Promise<Settings | null> {
+  if (settingsInstance) return settingsInstance;
+
+  const envDbType = process.env.DATABASE_TYPE || 'sqlite';
+  const dbType = envDbType as 'sqlite' | 'mysql';
+  let helper: SQLHelper;
+
+  try {
+    if (dbType === 'sqlite') {
+      // Reuse the centralized SQLite instance
+      const proxyDb = await getSQLite();
+      helper = proxyDb.helper as SQLHelper;
+    } else if (dbType === 'mysql') {
+      // Create a separate SQLHelper for MySQL settings
+      const config: MySQLConfig = {
+        host: process.env.MYSQL_HOST || '127.0.0.1',
+        user: process.env.MYSQL_USER || 'root',
+        password: process.env.MYSQL_PASS || '',
+        database: process.env.MYSQL_DBNAME || 'app',
+        port: process.env.MYSQL_PORT ? parseInt(process.env.MYSQL_PORT, 10) : 3306
+      };
+      helper = new SQLHelper('mysql', config);
+    } else {
+      console.warn(`Unknown DATABASE_TYPE: ${dbType}`);
+      return null;
+    }
+
+    settingsInstance = createSettings(helper);
+    await settingsInstance.initialize();
+    return settingsInstance;
+  } catch (error) {
+    console.error('Failed to initialize settings:', error);
+    return null;
+  }
+}
+
 /**
  * Close all database connections
  * Call this on application shutdown to properly clean up connection pools
@@ -116,6 +167,11 @@ export async function closeAllDatabases(): Promise<void> {
     centralizedSQLiteInstance = null;
   }
 
+  if (settingsInstance) {
+    closePromises.push(settingsInstance.close());
+    settingsInstance = null;
+  }
+
   await Promise.all(closePromises);
 }
 
@@ -124,5 +180,6 @@ export default {
   getLocalMySQL,
   getSharedModels,
   getSQLite,
+  getSettings,
   closeAllDatabases
 };

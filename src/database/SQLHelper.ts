@@ -33,6 +33,10 @@ export class SQLHelper {
   private dbType: 'sqlite' | 'mysql';
   public ready = false;
 
+  get type(): 'sqlite' | 'mysql' {
+    return this.dbType;
+  }
+
   constructor(dbType: 'sqlite' | 'mysql', config: SQLiteConfig | MySQLConfig) {
     this.dbType = dbType;
     if (dbType === 'sqlite') {
