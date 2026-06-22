@@ -35,12 +35,12 @@
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "bin": {
+    "ai-memory-mcp": "./dist/mcp-server/wrapper/ai-memory.cjs",
     "check-proxy": "./dist/proxy/checker.runner.cjs",
-    "opc-check-proxy": "./dist/proxy/opencode-checker.runner.cjs",
+    "filesystem-mcp": "./dist/mcp-server/wrapper/filesystem.cjs",
     "node-proxy-server": "./dist/proxy/server.runner.cjs",
     "octocode-mcp": "./dist/mcp-server/wrapper/octocode.cjs",
-    "filesystem-mcp": "./dist/mcp-server/wrapper/filesystem.cjs",
-    "ai-memory-mcp": "./dist/mcp-server/wrapper/ai-memory.cjs"
+    "opc-check-proxy": "./dist/proxy/opencode-checker.runner.cjs"
   },
   "exports": {
     ".": {
@@ -81,6 +81,7 @@
     "fuse.js": "^7.3.0",
     "glob": "^13.0.6",
     "groq-sdk": "^1.2.1",
+    "happy-dom": "^20.10.6",
     "http-proxy-agent": "^9.1.0",
     "https-proxy-agent": "^9.1.0",
     "jsonc-parser": "3.3.1",
