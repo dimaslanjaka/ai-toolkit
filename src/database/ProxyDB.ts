@@ -135,9 +135,16 @@ export class ProxyDB {
    * Initialize the database connection pool
    */
   async initialize(): Promise<void> {
-    await this.helper.initialize();
-    this.ready = this.helper.ready;
-    await this.initializeSchema();
+    try {
+      await this.helper.initialize();
+      this.ready = this.helper.ready;
+      if (this.ready) {
+        await this.initializeSchema();
+      }
+    } catch (error) {
+      this.ready = false;
+      throw error;
+    }
   }
 
   async initializeSchema(customSchema?: string) {
