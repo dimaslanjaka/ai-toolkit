@@ -37,16 +37,35 @@
       curl.exe -k -s -N https://localhost:5758/v1/chat/completions -H "Content-Type: application/json" -d '{"model":"deepseek-v4-flash-free","messages":[{"role":"user","content":"describe gulpfile.js"}],"stream":true}' | Select-Object -First 5
       ```
     - To check if nodemon of `bin/openai-server.cmd` running using `wmic process where "name='node.exe'" get processid,commandline 2>nul | findstr /i "openai"`
-- Memory rule: after any file edit, create or update a Letta-compatible memory block at `.opencode/memory/<sanitized-filepath>.md` ([block format](https://github.com/joshuadavidthomas/opencode-agent-memory#block-format)).
-  - Sanitize the edited file path by replacing `/` and `\` with `_`.
+- Memory system: this project uses two complementary memory systems:
+  - **Letta-compatible markdown files** (`.opencode/memory/*.md`) for version-controlled, human-readable documentation
+  - **ai-memory MCP** (SQLite-backed) for semantic recall and persistent agent knowledge
+
+  **Letta Markdown Files:**
+  - After any file edit, create or update a memory block at `.opencode/memory/<sanitized-filepath>.md` ([block format](https://github.com/joshuadavidthomas/opencode-agent-memory#block-format))
+  - Sanitize the edited file path by replacing `/` and `\` with `_`
   - Required YAML front-matter:
-    - `description`: accurate purpose of the block—the file or feature it tracks.
-    - `label`: unique identifier equal to the sanitized filepath.
-    - `limit`: character budget; default to `5000`.
-    - `read_only: false`: allow future updates.
-  - Content: plain prose or bullets covering what changed, why, and any migration notes.
-  - for mcp ai-memory, read documentation tool list ai-memory at https://github.com/alphaonedev/ai-memory-mcp/tree/main (https://raw.githubusercontent.com/alphaonedev/ai-memory-mcp/c60b8e4a00feac431a101feb14b85eb88338389e/src/mcp/registry.rs)
-- After changing the OpenAI-compatible server or another AI API integration, update `.opencode/memory/openai-compatible.md`; keep it concise and limited to factual architecture details.
+    - `description`: accurate purpose of the block—the file or feature it tracks
+    - `label`: unique identifier equal to the sanitized filepath
+    - `limit`: character budget; default to `5000`
+    - `read_only: false`: allow future updates
+  - Content: plain prose or bullets covering what changed, why, and any migration notes
+
+  **ai-memory MCP Integration:**
+  - Database: `.opencode/memory/memories.db` (per-project, auto-created)
+  - Tier: set via `AI_MEMORY_TIER` env var (default: `semantic`)
+  - Key tools: `memory_store`, `memory_recall`, `memory_search`, `memory_list`, `memory_get`
+  - Full tool reference: https://github.com/alphaonedev/ai-memory-mcp/tree/main
+  - Usage patterns:
+    - **RECALL FIRST**: At conversation start, call `memory_recall` with relevant context
+    - **STORE LEARNINGS**: When user corrects or teaches, call `memory_store` with tier:`long`, priority:`9`
+    - **NAMESPACES**: Organize by project/topic; always pass namespace when storing/recalling
+- Memory system integration guidance:
+  - When delegating to specialist agents (@oracle, @librarian, @explorer), remind them to:
+    - Recall relevant memories before starting work
+    - Store findings, decisions, and corrections for future sessions
+    - Use memory namespaces aligned with the project or topic domain
+  - After changing the OpenAI-compatible server or another AI API integration, update `.opencode/memory/openai-compatible.md`; keep it concise and limited to factual architecture details
 - Staged‑file commit: use `git diff --staged` then generate conventional commit `<type>(<scope>): <subject>`; run `git commit -F tmp/commit.txt`. **Never run `git add` or `git commit` without the user's explicit request.**
   - **Never use `git add .` or `git add -A` or `git add --all`** — stage files per-file or per-logical-group only (`git add <file1> <file2>`).
   - Commit message must follow conventional commit format: `<type>(<scope>): <subject>` (e.g. `feat(cli): add --dry-run flag`, `fix(imports): resolve circular dependency`).
