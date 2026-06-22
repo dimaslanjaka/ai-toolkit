@@ -37,9 +37,10 @@
   "bin": {
     "check-proxy": "./dist/proxy/checker.runner.cjs",
     "opc-check-proxy": "./dist/proxy/opencode-checker.runner.cjs",
+    "node-proxy-server": "./dist/proxy/server.runner.cjs",
     "octocode-mcp": "./dist/mcp-server/wrapper/octocode.cjs",
     "filesystem-mcp": "./dist/mcp-server/wrapper/filesystem.cjs",
-    "node-proxy-server": "./dist/proxy/server.runner.cjs"
+    "ai-memory-mcp": "./dist/mcp-server/wrapper/ai-memory.cjs"
   },
   "exports": {
     ".": {
