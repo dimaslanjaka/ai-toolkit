@@ -97,6 +97,11 @@ export default defineConfig(({ mode }) => {
           target: backendDev,
           changeOrigin: true,
           secure: false
+        },
+        '/api': {
+          target: backendDev,
+          changeOrigin: true,
+          secure: false
         }
       }
     },
