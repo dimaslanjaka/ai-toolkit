@@ -18,6 +18,7 @@
  */
 
 import axios from 'axios';
+import https from 'https';
 import { getServerState } from '../utils/utils-server-state.cjs';
 
 async function main() {
@@ -34,7 +35,8 @@ async function main() {
 
   const client = axios.create({
     baseURL,
-    headers: { 'Content-Type': 'application/json' }
+    headers: { 'Content-Type': 'application/json' },
+    httpsAgent: new https.Agent({ rejectUnauthorized: false })
   });
 
   // Test non-streaming request
