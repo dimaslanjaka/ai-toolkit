@@ -5,7 +5,7 @@
 
 import { loadDotenv } from 'binary-collections';
 import fs from 'fs-extra';
-import { getServerState } from './utils-server-state.cjs';
+import { getServerState } from '../utils/utils-server-state.cjs';
 import { fetch, Agent } from 'undici';
 import { findFreePort, startServer, stopServer } from './utils.js';
 import { app } from './server.js';

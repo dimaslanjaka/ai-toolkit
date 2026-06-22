@@ -18,7 +18,7 @@
  */
 
 import axios from 'axios';
-import { getServerState } from './utils-server-state.cjs';
+import { getServerState } from '../utils/utils-server-state.cjs';
 
 async function main() {
   // Get server state

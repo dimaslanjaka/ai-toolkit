@@ -2,7 +2,7 @@ import axios from 'axios';
 import https from 'https';
 import { Server } from 'net';
 import { app } from '../../../src/openai-server/server.js';
-import { getServerState } from '../../../src/openai-server/utils-server-state.cjs';
+import { getServerState } from '../../../src/utils/utils-server-state.cjs';
 import { findFreePort, startServer, stopServer } from '../../../src/openai-server/utils.js';
 import context from './long-context.json' with { type: 'json' };
 

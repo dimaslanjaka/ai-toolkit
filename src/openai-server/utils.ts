@@ -3,7 +3,7 @@ import moment from 'moment';
 import net from 'net';
 import path from 'upath';
 import { PersistentLogger } from '../utils/logs.cjs';
-import { saveServerState, ServerState } from './utils-server-state.cjs';
+import { saveServerState, ServerState } from '../utils/utils-server-state.cjs';
 
 const STATE_FILE = path.join(process.cwd(), 'tmp/database/openai-server.json');
 const LOG_FILE = path.join(process.cwd(), 'tmp/logs/openai-compatible/server.log');

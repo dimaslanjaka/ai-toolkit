@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getServerState } from './utils-server-state.cjs';
+import { getServerState } from '../utils/utils-server-state.cjs';
 import path from 'upath';
 import fs from 'fs-extra';
 
