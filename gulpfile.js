@@ -51,14 +51,18 @@ export function copySql() {
 
 // Rollup build
 export function buildRollup() {
+  const { ROLLUP_ENTRIES: existingEntries, ...parentEnv } = process.env;
+
   return runCommand('npx', ['rollup', '-c'], {
-    // include custom runners (separated by comma)
     env: {
+      ...parentEnv,
       ROLLUP_ENTRIES: [
         'src/proxy/opencode-checker.runner.ts',
         'src/proxy/checker.runner.ts',
         'src/mcp-server/wrapper/octocode.cjs',
-        'src/mcp-server/wrapper/filesystem.cjs'
+        'src/mcp-server/wrapper/filesystem.cjs',
+        'src/proxy/server.runner.ts',
+        ...(existingEntries || '').split(',')
       ].join(',')
     }
   });
