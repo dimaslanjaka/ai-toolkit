@@ -282,7 +282,7 @@ test('summarize: empty text returns empty string', () => {
 test('summarize: preserves order in scored strategy', () => {
   const text = 'First. Fix the API. Second. Debug the server. Third. Configure the database.';
   const result = summarize(text, { maxSentences: 3, strategy: 'scored' });
-  const sentences = splitSentences(result);
+  // const sentences = splitSentences(result);
   // Should preserve order: First sentence should come before last
   const firstIndex = result.indexOf('First');
   const lastIndex = result.indexOf('database');
