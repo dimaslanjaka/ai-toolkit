@@ -97,7 +97,7 @@ export async function repairMessageSequence(
   messages: { role: string; content?: any; tool_calls?: any[]; tool_call_id?: string; name?: string }[],
   logger?: Logger
 ): Promise<{ role: string; content?: any; tool_calls?: any[]; tool_call_id?: string; name?: string }[]> {
-  const log = logger?.log ?? noopLogger.log;
+  const log = logger ? (msg: string) => logger.log(msg) : noopLogger.log;
   const repaired: { role: string; content?: any; tool_calls?: any[]; tool_call_id?: string; name?: string }[] = [];
   let i = 0;
   const repairStats = { total: 0, localExecuted: 0, synthetic: 0 };

@@ -116,6 +116,15 @@ jobs:
           else
             echo "Skipping missing test file: test/openai-server/opencode/message-repair.test.ts"
           fi
+      - name: 🧪 Run tests in test/openai-server/opencode/reasoning-test.test.ts
+        id: run-test-openai-server-opencode-reasoning-test-test-ts
+        shell: bash
+        run: >-
+          if [ -f "test/openai-server/opencode/reasoning-test.test.ts" ]; then
+            node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --forceExit --testTimeout=120000 --detectOpenHandles --bail=1 --testPathPatterns="openai-server/opencode/reasoning-test.test.ts"
+          else
+            echo "Skipping missing test file: test/openai-server/opencode/reasoning-test.test.ts"
+          fi
       - name: 🧪 Run tests in test/openai-server/opencode/server.test.ts
         id: run-test-openai-server-opencode-server-test-ts
         shell: bash

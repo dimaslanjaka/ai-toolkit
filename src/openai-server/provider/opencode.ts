@@ -1,11 +1,8 @@
 import type { Request } from 'express';
 import fs from 'fs-extra';
 import { OpenAI } from 'openai';
-import { isEmpty, writefile } from 'sbg-utility';
 import { ProxyAgent } from 'undici';
-import path from 'upath';
-import SQLiteProxy from '../../database/SQLiteProxy.js';
-import { getSQLite, getSharedModels } from '../../database/shared.js';
+import { getSharedModels } from '../../database/shared.js';
 import { opencodeProvider } from '../../provider/opencode/get.js';
 
 import {
@@ -19,82 +16,22 @@ import { toolRegistry } from '../tools/tool-registry.js';
 import { appendMessageToFile, logMessageToFile, serverLogger } from '../utils.js';
 import type { ProviderResult } from './index.js';
 import { isConnectionError, repairMessageSequence } from './message-repair.js';
+import {
+  cacheWorkingProxy,
+  getLastWorkingProxyPath,
+  getProxyClient,
+  getProxyLabel,
+  selectProxyUrl
+} from './proxy-utility.js';
 
 // Lazy-load the OpenCode provider to avoid SDK init at import time
 let opencodeClient: OpenAI | null = null;
 let opencodeClientProxy: string | undefined;
-const LAST_OPENCODE_PROXY_PATH = path.join(process.cwd(), 'tmp', 'database', 'last-opencode-proxy.txt');
-
-async function getProxyClient() {
-  const sharedDb = await getSQLite();
-  return new SQLiteProxy(sharedDb);
-}
-
-function getProxyUrl(item: {
-  password?: string | null;
-  proxy: string;
-  type?: string | null;
-  username?: string | null;
-}): string {
-  let protocol = item.type?.split(/[,-]/)[0];
-  if (isEmpty(protocol)) protocol = 'http';
-  return `${protocol}://${item.username ? `${item.username}:${item.password}@` : ''}${item.proxy}`;
-}
-
-function getProxyLabel(proxyUrl: string): string {
-  try {
-    const parsed = new URL(proxyUrl);
-    return `${parsed.hostname}:${parsed.port}`;
-  } catch {
-    return proxyUrl;
-  }
-}
-
-async function readLastWorkingProxy(): Promise<string | undefined> {
-  try {
-    const proxyUrl = (await fs.readFile(LAST_OPENCODE_PROXY_PATH, 'utf8')).trim();
-    if (!proxyUrl) return undefined;
-
-    const parsed = new URL(proxyUrl);
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      return undefined;
-    }
-
-    serverLogger.log(`Reusing cached OpenCode proxy: ${getProxyLabel(proxyUrl)}`);
-    return proxyUrl;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-      serverLogger.logSync(`Unable to read cached OpenCode proxy: ${error}`);
-    }
-    return undefined;
-  }
-}
-
-async function selectProxyUrl(): Promise<string | undefined> {
-  const cachedProxy = await readLastWorkingProxy();
-  if (cachedProxy) return cachedProxy;
-
-  const proxyClient = await getProxyClient();
-  const item = await proxyClient.getProxyForHost('opencode.ai', { type: 'http' });
-  serverLogger.log(`Proxy search result for opencode.ai: ${JSON.stringify(item)}`);
-  return item ? getProxyUrl(item) : undefined;
-}
-
-async function cacheWorkingProxy(proxyUrl: string | undefined): Promise<void> {
-  if (!proxyUrl) return;
-
-  try {
-    writefile(LAST_OPENCODE_PROXY_PATH, `${proxyUrl}\n`);
-    serverLogger.log(`Cached working OpenCode proxy: ${getProxyLabel(proxyUrl)}`);
-  } catch (error) {
-    serverLogger.logSync(`Unable to cache working OpenCode proxy: ${error}`);
-  }
-}
 
 async function getOpenCode(): Promise<OpenAI> {
   if (!opencodeClient) {
     // Filter for HTTP proxies only since undici ProxyAgent doesn't support SOCKS5.
-    opencodeClientProxy = await selectProxyUrl();
+    opencodeClientProxy = await selectProxyUrl('opencode.ai');
 
     // getSQLite provides the centralized SQLite connection
     const proxyClient = await getProxyClient();
@@ -163,7 +100,7 @@ async function markProxyDeadSafely(proxyUrl: string): Promise<void> {
 
     // Clear the cached proxy file since it's no longer working
     try {
-      await fs.unlink(LAST_OPENCODE_PROXY_PATH);
+      await fs.unlink(getLastWorkingProxyPath('opencode.ai'));
     } catch {
       // File may not exist, which is fine
     }
@@ -173,7 +110,7 @@ async function markProxyDeadSafely(proxyUrl: string): Promise<void> {
 }
 
 async function createProxyDispatcher(): Promise<{ dispatcher?: ProxyAgent; proxyUrl?: string }> {
-  const proxyUrl = await selectProxyUrl();
+  const proxyUrl = await selectProxyUrl('opencode.ai');
   return {
     dispatcher: proxyUrl ? new ProxyAgent(proxyUrl) : undefined,
     proxyUrl
@@ -244,6 +181,7 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
 
         let fullResponse = '';
         let collectedToolCalls: any[] = [];
+        let streamReasoningContent = '';
         try {
           const streamResponse = await client.chat.completions.create(
             {
@@ -258,10 +196,17 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
             const content = delta?.content || '';
             const toolCalls = delta?.tool_calls;
             const finishReason = choice?.finish_reason;
+            const reasoningContent = (delta as any)?.reasoning_content || '';
 
             // Collect text for final log
             if (content) {
               fullResponse += content;
+            }
+
+            // Collect reasoning_content for follow-up calls (DeepSeek requires
+            // it to be passed back when thinking mode was used)
+            if (reasoningContent) {
+              streamReasoningContent += reasoningContent;
             }
 
             // Collect tool calls for local execution
@@ -308,7 +253,7 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
               );
             }
           }
-          await cacheWorkingProxy(proxyUrl);
+          await cacheWorkingProxy('opencode.ai', proxyUrl);
 
           // Check if there are local tools to execute after streaming completes
           if (collectedToolCalls.length > 0) {
@@ -328,16 +273,19 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
               appendMessageToFile(logFile, 'OPENCODE STREAMING TOOL RESULTS', JSON.stringify(toolResults, null, 2));
 
               // For streaming, we need to continue the conversation
-              // Add assistant message with tool_calls and tool results to messages
-              const messagesWithToolCalls = [
-                ...repairedMessages,
-                {
-                  role: 'assistant',
-                  content: fullResponse || null,
-                  tool_calls: localToolCalls
-                },
-                ...toolResults
-              ];
+              // Add assistant message with tool_calls and tool results to messages.
+              // Include reasoning_content if present — DeepSeek requires it to be
+              // passed back in follow-up calls when thinking mode was used.
+              const assistantMsg: any = {
+                role: 'assistant',
+                content: fullResponse || null,
+                tool_calls: localToolCalls
+              };
+              if (streamReasoningContent) {
+                assistantMsg.reasoning_content = streamReasoningContent;
+              }
+
+              const messagesWithToolCalls = [...repairedMessages, assistantMsg, ...toolResults];
 
               // Make a follow-up streaming call with tool results
               const followUpBody = {
@@ -448,7 +396,7 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
       } as OpenAI.ChatCompletionCreateParamsNonStreaming,
       { fetchOptions: { dispatcher } }
     );
-    await cacheWorkingProxy(proxyUrl);
+    await cacheWorkingProxy('opencode.ai', proxyUrl);
 
     // Preserve the full upstream response including tool_calls and finish_reason
     const upstreamChoice = completion.choices?.[0];
@@ -471,16 +419,20 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
         // Execute local tools
         const toolResults = await toolRegistry.executeMultiple(localToolCalls);
 
-        // Add assistant message with tool_calls to conversation
-        const messagesWithToolCalls = [
-          ...repairedMessages,
-          {
-            role: 'assistant',
-            content: content || null,
-            tool_calls: localToolCalls
-          },
-          ...toolResults
-        ];
+        // Add assistant message with tool_calls to conversation.
+        // Preserve reasoning_content from upstream if present — DeepSeek
+        // requires it to be passed back in follow-up calls.
+        const assistantMsg: any = {
+          role: 'assistant',
+          content: content || null,
+          tool_calls: localToolCalls
+        };
+        const upstreamReasoningContent = (upstreamMessage as any)?.reasoning_content;
+        if (upstreamReasoningContent) {
+          assistantMsg.reasoning_content = upstreamReasoningContent;
+        }
+
+        const messagesWithToolCalls = [...repairedMessages, assistantMsg, ...toolResults];
 
         // Make another API call with tool results
         const followUpBody = {
@@ -625,7 +577,7 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
               res.write(`data: ${JSON.stringify(deltaPayload)}\n\n`);
             }
           }
-          await cacheWorkingProxy(proxyUrl);
+          await cacheWorkingProxy('opencode.ai', proxyUrl);
           res.write(
             `data: ${JSON.stringify({ type: 'response.done', response: { id: responseId, status: 'completed' } })}\n\n`
           );
@@ -654,7 +606,7 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
       },
       { fetchOptions: { dispatcher } }
     );
-    await cacheWorkingProxy(proxyUrl);
+    await cacheWorkingProxy('opencode.ai', proxyUrl);
     const content = completion.choices?.[0]?.message?.content || '';
     appendMessageToFile(responsesLogFile, 'OPENCODE RESPONSES RESPONSE', content);
 
