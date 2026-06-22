@@ -85,7 +85,18 @@ EOF
 3. Writes numbered files: `tmp/commit.txt`, `tmp/commit-2.txt`, `tmp/commit-3.txt`, etc.
 4. **Asks for approval** before proceeding to commit
 
-### Step 5 — Commit (User-Approved or Explicit Request)
+### Step 5 — Validate Commit Message
+
+Before committing, validate the message against `commitlint.config.js`:
+
+```bash
+npx commitlint --edit tmp/commit.txt --verbose
+```
+
+If validation fails, fix the message to comply with commitlint rules and re-validate.
+Only proceed to commit once validation passes.
+
+### Step 6 — Commit (User-Approved or Explicit Request)
 
 If the user explicitly requests auto-commit or approves a proposed batch:
 
@@ -96,7 +107,7 @@ git commit -F tmp/commit.txt
 For multiple approved batches, commit each batch sequentially with its
 corresponding commit file.
 
-### Step 6 — Verify
+### Step 7 — Verify
 
 ```bash
 git log --oneline --max-count=5
@@ -113,6 +124,7 @@ Display the result and confirm the commit was created correctly.
 | 1 | **Delegate message generation** — Always use @Conventional Commit Creator for crafting commit messages from diffs. |
 | 2 | **Staged by default, unstaged on request** — Prefer staged changes; handle unstaged only when explicitly requested. |
 | 3 | **commit.txt standard** — Every commit message is written to `tmp/commit.txt` (or `tmp/commit-N.txt`) before any `git commit` execution. |
-| 4 | **Safe batching** — Never split commits without user approval. Propose groupings; do not auto-unstage. |
-| 5 | **Specific file support** — Respect user file selection when provided. |
-| 6 | **No destructive operations** — Never run `git reset` or modify working tree without explicit user consent. |
+| 4 | **Validate before commit** — Always run `npx commitlint --edit tmp/commit.txt --verbose` before `git commit`. |
+| 5 | **Safe batching** — Never split commits without user approval. Propose groupings; do not auto-unstage. |
+| 6 | **Specific file support** — Respect user file selection when provided. |
+| 7 | **No destructive operations** — Never run `git reset` or modify working tree without explicit user consent. |

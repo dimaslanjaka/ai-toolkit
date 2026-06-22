@@ -118,6 +118,17 @@ Use only this diff for analysis.
 
 Check for `commitlint.config.js` in the repository root. If present, parse its rules and apply them to all generated messages. If absent, use `@commitlint/config-conventional` defaults.
 
+### 5. Validate Generated Message
+
+After generating the commit message, write it to `tmp/commit.txt` and validate it with commitlint:
+
+```bash
+echo '<generated_message>' > tmp/commit.txt
+npx commitlint --edit tmp/commit.txt --verbose
+```
+
+If validation fails, fix the message to comply with `commitlint.config.js` rules and re-validate. Only return the message once it passes validation.
+
 ## Context Analysis
 
 Analyze each staged file and diff hunk.
