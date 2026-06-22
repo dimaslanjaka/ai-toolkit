@@ -8,6 +8,7 @@ set SCRIPT_DIR=%~dp0
 npx -y nodemon ^
   --watch src ^
   --watch "rollup.*" ^
+  --watch "*gulp*.*" ^
   --ext ts,js,mjs,cjs ^
   --ignore "**/tmp/**" ^
   --ignore "**/*.json" ^
