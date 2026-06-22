@@ -568,7 +568,6 @@ app.post('/admin/tools/execute', async (req, res) => {
 
 /**
  * GET /api/settings/:key — retrieve a setting by key
- * For missing boolean flags (RTK_ENABLED), returns default false instead of 404
  */
 app.get('/api/settings/:key', async (req: Request, res: Response) => {
   try {
@@ -577,15 +576,10 @@ app.get('/api/settings/:key', async (req: Request, res: Response) => {
       return res.status(503).json({ error: 'Settings service unavailable' });
     }
     const key = req.params.key as string;
-    const raw = await settings.getSetting(key);
-    if (raw === null || raw === undefined) {
-      if (key === 'RTK_ENABLED') {
-        return res.json({ key, value: false }); // default false for boolean flags
-      }
+    const value = await settings.getSetting(key);
+    if (value === null || value === undefined) {
       return res.status(404).json({ error: `Setting not found: ${key}` });
     }
-    // Convert stored string to proper type for known flags
-    const value = key === 'RTK_ENABLED' ? raw === 'true' : raw;
     res.json({ key, value });
   } catch (error) {
     serverLogger.logSync(`Settings GET error: ${error}`);
@@ -612,13 +606,11 @@ app.post('/api/settings/:key', async (req: Request, res: Response) => {
     if (!settings) {
       return res.status(503).json({ error: 'Settings service unavailable' });
     }
-    // Handle type conversions for known keys
-    const storeValue = key === 'RTK_ENABLED' && typeof value === 'boolean' ? (value ? 'true' : 'false') : String(value);
+    // Store value as string
+    const storeValue = String(value);
     await settings.setSetting(key, storeValue);
 
-    // Return value in appropriate type
-    const retValue = key === 'RTK_ENABLED' && typeof value === 'boolean' ? value : storeValue;
-    res.json({ success: true, key, value: retValue });
+    res.json({ success: true, key, value: storeValue });
   } catch (error) {
     serverLogger.logSync(`Settings POST error: ${error}`);
     res.status(500).json({

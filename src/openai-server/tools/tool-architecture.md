@@ -6,7 +6,7 @@ Below is a **complete production-grade OpenAI-compatible tool execution layer** 
 * Retry isolation per tool call
 * Safe JSON parsing + validation
 * No dynamic tool names (critical fix for your previous issue)
-* **RTK Token Saver** - Compresses tool output to save 20-40% tokens (optional, `RTK_ENABLED=true`)
+* **RTK Token Saver** - Compresses tool output to save 20-40% tokens (optional, configurable via Settings API)
 
 ---
 
@@ -26,11 +26,11 @@ Tool Call Buffer
 Tool Executor (safe isolation)
   ↓
 Agent Router (optional multi-agent)
-  ↓
+   ↓
 Tool Results injected back to LLM
-  ↓
-RTK Token Saver (optional, RTK_ENABLED=true)
-  ↓
+   ↓
+RTK Token Saver (optional, configurable via Settings API)
+   ↓
 Final streaming response
 ```
 
@@ -152,10 +152,10 @@ class ToolRegistry {
       const result = await tool.handler(args);
       const content = typeof result === 'string' ? result : JSON.stringify(result);
 
-      // RTK compression for token savings (when RTK_ENABLED=true)
-      const rtkSaver = getRtkTokenSaver();
-      const originalContent = content;
-      const compressedContent = rtkSaver.compressToolOutput(content, toolCall.function.name);
+       // RTK compression for token savings (when enabled via Settings API)
+       const rtkSaver = getRtkTokenSaver();
+       const originalContent = content;
+       const compressedContent = rtkSaver.compressToolOutput(content, toolCall.function.name);
 
       if (originalContent !== compressedContent) {
         const saved = rtkSaver.estimateTokens(originalContent) - rtkSaver.estimateTokens(compressedContent);
@@ -254,10 +254,8 @@ Tool Call → Tool Executor → Tool Result → [RTK compresses here] → LLM
 
 ## Configuration
 
-Add to `.env`:
-```bash
-RTK_ENABLED=true  # Default: false
-```
+RTK is enabled via the Settings API `/api/settings/RTK_ENABLED` endpoint (default: false).
+Enable it by setting the RTK_ENABLED value in the database through the Settings API.
 
 ## Implementation
 

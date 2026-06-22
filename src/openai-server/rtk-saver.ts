@@ -18,12 +18,11 @@ const RTK_CANDIDATES = [
 export class RtkTokenSaver {
   private rtkPath: string | null = null;
   private checked = false;
-  private enabled: boolean;
+  private enabled: boolean = false;
   private dbInitialized = false;
 
   constructor() {
-    // Fallback: check env var
-    this.enabled = process.env.RTK_ENABLED === 'true';
+    // RTK_ENABLED will be loaded from database on first use
   }
 
   private async loadFromDatabase(): Promise<void> {
@@ -36,10 +35,13 @@ export class RtkTokenSaver {
         const value = await settings.getSetting('RTK_ENABLED');
         if (value !== null && value !== undefined) {
           this.enabled = value === 'true';
+        } else {
+          this.enabled = false;
         }
       }
     } catch (error) {
-      console.warn('Failed to load RTK_ENABLED from database, using env var:', error);
+      console.warn('Failed to load RTK_ENABLED from database:', error);
+      this.enabled = false;
     }
   }
 

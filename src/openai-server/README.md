@@ -185,7 +185,6 @@ node dist/openai-server/chatgpt-demo.mjs
 | `OPENAI_SERVER_HTTPS` | `true` or `false` | `true` | Enable shared HTTPS for Vite and Express |
 | `OPENAI_SERVER_HTTPS_KEY_FILE` | File path | `.cert/dev.pem` | mkcert private-key path |
 | `OPENAI_SERVER_HTTPS_CERT_FILE` | File path | `.cert/cert.pem` | mkcert certificate path |
-| `RTK_ENABLED` | `true` or `false` | `false` | Enable RTK token compression for tool output |
 
 ### Switching Providers
 
@@ -263,10 +262,9 @@ When enabled, RTK (Rust Token Killer) compresses tool output to reduce token usa
    ```
    This downloads the RTK binary to `node_modules/.bin/rtk` (or `rtk.exe` on Windows).
 
-2. **Enable in environment:**
-   ```dotenv
-   RTK_ENABLED=true
-   ```
+2. **Enable via Settings API:**
+    Use the `/api/settings/RTK_ENABLED` endpoint to enable RTK in the database (default: false).
+    The setting persists across server restarts.
 
 ### How It Works
 
@@ -290,7 +288,7 @@ Example in logs:
 
 ### Disable
 
-Set `RTK_ENABLED=false` or omit the variable to skip compression.
+Disable RTK via the Settings API `/api/settings/RTK_ENABLED` endpoint by setting it to false.
 
 ## Files
 
