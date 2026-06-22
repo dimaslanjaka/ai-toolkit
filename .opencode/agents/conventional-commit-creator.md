@@ -231,6 +231,16 @@ Rules:
 * Do not add a body that only repeats the header.
 * Add footers only when needed.
 * Respect `body-leading-blank`, `footer-leading-blank`, and line-length rules from commitlint config.
+* **Convert PascalCase / camelCase identifiers into space-separated lowercase words in the description.**
+  * Example: `ProxyCheckerManager` → `proxy checker manager`
+  * Example: `AuthService` → `auth service`
+  * Example: `SQLiteMarker` → `sqlite marker`
+  * Do not paste raw class names or variable names directly into the commit header.
+* **Convert snake_case identifiers into space-separated lowercase words in the description, unless the name is a specific API endpoint, config key, database table, or CLI flag.**
+  * Example: `get_user_data` → `get user data`
+  * Example: `validate_token` → `validate token`
+  * Example: `process_queue` → `process queue`
+  * Keep as-is when referencing specific identifiers: `POST /api/v1/get_user_data`, `MAX_RETRY_COUNT`, `user_session_logs`, `--skip_validation`
 
 Footer examples:
 
