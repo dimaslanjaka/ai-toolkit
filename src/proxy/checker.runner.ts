@@ -2,7 +2,7 @@ import { loadDotenv } from 'binary-collections';
 import { Proxy } from '../database/ProxyDB.js';
 import { closeAllDatabases, getProductionMySQL } from '../database/shared.js';
 import { checkProxy, CheckProxyResult } from './checker.js';
-import { getWorkingProxies } from './proxies-data.js';
+import { getWorkingProxies, invalidateProxyEverywhere } from './proxies-data.js';
 import {
   adoptProxyCheckerLock,
   getProxyCheckerLockFromEnv,
@@ -59,7 +59,7 @@ async function checkHttps(proxies: Proxy[]) {
       break;
     } else {
       // all protocols dead
-      await table_proxies.update({ status: 'dead', type: '' }, { proxy: item.proxy });
+      await invalidateProxyEverywhere(item.proxy);
     }
   }
   return result;
