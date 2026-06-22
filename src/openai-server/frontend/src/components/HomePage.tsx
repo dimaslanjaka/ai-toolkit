@@ -472,9 +472,25 @@ export default function HomePage() {
                 </span>
               </div>
               <p className="mt-4 text-sm text-neutral-400">
-                Override with the{' '}
-                <code className="rounded bg-neutral-800 px-1.5 py-0.5 text-xs">X-Request-Provider</code> header.
+                Use the <code className="rounded bg-neutral-800 px-1.5 py-0.5 text-xs">X-Request-Provider</code> header
+                to request a specific provider. Valid values:{' '}
+                <code className="rounded bg-neutral-800 px-1.5 py-0.5 text-xs">opencode</code>,{' '}
+                <code className="rounded bg-neutral-800 px-1.5 py-0.5 text-xs">puter</code>,{' '}
+                <code className="rounded bg-neutral-800 px-1.5 py-0.5 text-xs">chatgpt</code>. If not provided, the
+                fallback chain is used.
               </p>
+              <div className="mt-3 rounded-lg bg-neutral-900 p-3 text-xs text-neutral-300">
+                <p className="font-mono">
+                  <span className="text-blue-400">curl</span> -X POST{' '}
+                  <span className="text-amber-300">https://localhost:5758/v1/chat/completions</span> \<br />
+                  {'  '}-H <span className="text-green-400">&quot;X-Request-Provider: opencode&quot;</span> \<br />
+                  {'  '}-H <span className="text-green-400">&quot;Content-Type: application/json&quot;</span> \<br />
+                  {'  '}-d{' '}
+                  <span className="text-green-400">
+                    &apos;{'{'}&hellip;{'}'}&apos;
+                  </span>
+                </p>
+              </div>
             </div>
           </div>
         )}
@@ -511,11 +527,43 @@ export default function HomePage() {
                     </tr>
                     <tr className="border-b border-white/5">
                       <td className="py-3">
+                        <code className="text-emerald-400">VITE_HOSTNAME</code>
+                      </td>
+                      <td className="py-3">Hostname</td>
+                      <td className="py-3">dev.example.com</td>
+                      <td className="py-3">Frontend hostname</td>
+                    </tr>
+                    <tr className="border-b border-white/5">
+                      <td className="py-3">
+                        <code className="text-emerald-400">VITE_PORT</code>
+                      </td>
+                      <td className="py-3">Port</td>
+                      <td className="py-3">5173</td>
+                      <td className="py-3">Frontend port</td>
+                    </tr>
+                    <tr className="border-b border-white/5">
+                      <td className="py-3">
+                        <code className="text-emerald-400">VITE_BACKEND_HOSTNAME_DEV</code>
+                      </td>
+                      <td className="py-3">Hostname:Port</td>
+                      <td className="py-3">127.0.0.1:5758</td>
+                      <td className="py-3">Backend hostname (dev mode)</td>
+                    </tr>
+                    <tr className="border-b border-white/5">
+                      <td className="py-3">
+                        <code className="text-emerald-400">VITE_BACKEND_HOSTNAME_PROD</code>
+                      </td>
+                      <td className="py-3">Hostname:Port</td>
+                      <td className="py-3">api.example.com</td>
+                      <td className="py-3">Backend hostname (prod mode)</td>
+                    </tr>
+                    <tr className="border-b border-white/5">
+                      <td className="py-3">
                         <code className="text-emerald-400">OPENAI_SERVER_HTTPS</code>
                       </td>
                       <td className="py-3">true, false</td>
                       <td className="py-3">true</td>
-                      <td className="py-3">Enable shared HTTPS for Vite and Express</td>
+                      <td className="py-3">Enable HTTPS for Vite and Express</td>
                     </tr>
                     <tr className="border-b border-white/5">
                       <td className="py-3">

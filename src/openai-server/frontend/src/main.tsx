@@ -7,6 +7,7 @@ import HomePage from './components/HomePage';
 import Layout from './components/Layout';
 import ProxyManager from './components/ProxyLogs';
 import ModelManager from './components/ModelManager';
+import SettingsPage from './components/SettingsPage';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -19,6 +20,7 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/chat" element={<Chat />} />
             <Route path="/proxy-manager" element={<ProxyManager />} />
             <Route path="/model-manager" element={<ModelManager />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Route>
         </Routes>
       </SettingsProvider>
