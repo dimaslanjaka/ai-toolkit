@@ -1,5 +1,6 @@
 import * as mariadb from 'mariadb';
 import type { Pool, PoolConnection } from 'mariadb';
+import BaseSQL from './BaseSQL.js';
 
 export interface MySQLConfig {
   host: string;
@@ -11,17 +12,18 @@ export interface MySQLConfig {
   connectTimeout?: number;
 }
 
-export class MySQLHelper {
+export class MySQLHelper extends BaseSQL {
   private pool?: Pool;
   private config: MySQLConfig;
   public ready = false;
   private initializing?: Promise<void>;
 
   constructor(config: MySQLConfig) {
+    super();
     this.config = config;
   }
 
-  async initialize() {
+  async initialize(): Promise<void> {
     if (this.ready && this.pool) return;
     if (this.initializing) {
       await this.initializing;

@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import type { RunResult } from 'better-sqlite3';
 import fs from 'fs-extra';
 import path from 'upath';
+import BaseSQL from './BaseSQL.js';
 
 export interface SQLiteConfig {
   filename: string;
@@ -10,13 +11,14 @@ export interface SQLiteConfig {
   verbose?: boolean;
 }
 
-export class SQLiteHelper {
+export class SQLiteHelper extends BaseSQL {
   private db?: Database.Database;
   private config: SQLiteConfig;
   public ready = false;
   private initializing?: Promise<void>;
 
   constructor(config: SQLiteConfig) {
+    super();
     this.config = config;
   }
 
