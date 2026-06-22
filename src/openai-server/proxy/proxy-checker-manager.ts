@@ -61,7 +61,7 @@ export class ProxyCheckerManager {
 
   getProxyCheckerRunnerCandidates(): ResolvedProxyCheckerRunner[] {
     const packageRoot = path.join(this.projectRoot, 'node_modules', '@dimaslanjaka', 'ai-toolkit');
-    const runnerNames = ['checker.runner', 'opencode-checker.runner'];
+    const runnerNames = ['checker.runner', 'opencode-checker.runner', 'google-checker.runner'];
 
     const localCandidates = runnerNames.flatMap((name) => [
       { kind: 'ts' as const, file: path.join(this.projectRoot, 'src', 'proxy', `${name}.ts`) },

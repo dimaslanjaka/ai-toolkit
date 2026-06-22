@@ -59,6 +59,7 @@ export function buildRollup() {
       ROLLUP_ENTRIES: [
         'src/proxy/opencode-checker.runner.ts',
         'src/proxy/checker.runner.ts',
+        'src/proxy/google-checker.runner.ts',
         'src/mcp-server/wrapper/octocode.cjs',
         'src/mcp-server/wrapper/filesystem.cjs',
         'src/proxy/server.runner.ts',
