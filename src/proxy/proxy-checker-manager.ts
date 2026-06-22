@@ -7,8 +7,8 @@ import {
   createProxyCheckerLockEnv,
   releaseProxyCheckerLock,
   tryAcquireProxyCheckerLock
-} from '../../proxy/proxy-checker-lock.js';
-import { spawnNewTerminal } from '../../utils/spawn-new-terminal.js';
+} from './proxy-checker-lock.js';
+import { spawnNewTerminal } from '../utils/spawn-new-terminal.js';
 
 export type ProxyCheckerRunnerKind = 'ts' | 'mjs' | 'cjs';
 
