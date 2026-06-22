@@ -122,7 +122,9 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
   const resolvedModel = await resolveModel(model);
   const includeUsage = stream_options?.include_usage === true;
 
-  serverLogger.log(`OpenCode Chat - Model: ${resolvedModel}, Stream: ${!!stream}, Messages Length: ${messages.length}`);
+  serverLogger.log(
+    `OpenCode /v1/chat/completions - Model: ${resolvedModel}, Stream: ${!!stream}, Messages Length: ${messages.length}`
+  );
 
   // Repair message sequence: fill missing tool responses before sending upstream.
   // DeepSeek rejects sequences where an assistant message with tool_calls
@@ -526,10 +528,9 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
   const { model, messages, stream, temperature, max_tokens } = chatReq;
   const resolvedModel = await resolveModel(model);
 
-  const promptPreview = (messages || [])
-    .map((m: any) => `${m.role}: ${(m.content || '').toString().substring(0, 80)}`)
-    .join(' | ');
-  serverLogger.log(`OpenCode Responses - Model: ${resolvedModel}, Stream: ${!!stream}, Messages: ${promptPreview}`);
+  serverLogger.log(
+    `OpenCode /v1/responses - Model: ${resolvedModel}, Stream: ${!!stream}, Messages Length: ${messages.length}`
+  );
   // const responsesLogFile = logMessageToFile('OPENCODE RESPONSES REQUEST', JSON.stringify(requestData, null, 2));
 
   const client = await getOpenCode();
