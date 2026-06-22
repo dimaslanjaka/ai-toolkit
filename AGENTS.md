@@ -6,7 +6,7 @@
 - Build: `yarn build` (multi-step: `tsc -p tsconfig.build.json` → `rollup -c` → `build-cli.mjs` → `tsc -p tsconfig.dts.json` → `vite build`). Intermediate TS compiles to `tmp/dist/` before Rollup bundles to `dist/`.
 - Include excluded entries in Rollup: `ROLLUP_ENTRIES=src/path/to/file.ts` adds files the default glob ignores (e.g., `*.runner.*`).
 
-- Lint/format: prefer `corepack yarn exec eslint --fix <files>` (the repo does not define a `yarn eslint` script); TypeScript check `tsc --noEmit`.
+- Lint/format: prefer `corepack yarn exec eslint --fix <files>` (the repo does not define a `yarn eslint` script); TypeScript check `corepack yarn exec tsc --noEmit`.
 - Test: `yarn test` (Jest) – tests under `test/`; single Jest file via `corepack yarn jest --runTestsByPath <file>`.
 - Run single TS file: `node --no-warnings=ExperimentalWarning --loader ts-node/esm <file.ts>`.
 

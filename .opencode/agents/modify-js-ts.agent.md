@@ -40,11 +40,11 @@ Follow this mandatory checklist in order. Do not skip steps.
    - Produce a unified git-style diff for each changed file and a machine-readable JSON summary with file paths and change types.
 
 4. Run ESLint auto-fix
-   - Use `eslint --fix <changed files>` instead of manual formatting decisions.
+   - Use `corepack yarn exec eslint --fix <changed files>` instead of manual formatting decisions.
    - Do not block changes because of style warnings.
 
 5. Run TypeScript validation
-   - Run `tsc --noEmit` when the repository root contains `tsconfig.json` or any `.ts`/`.tsx` files.
+   - Run `corepack yarn exec tsc --noEmit` when the repository root contains `tsconfig.json` or any `.ts`/`.tsx` files.
    - If neither exists, skip TypeScript validation.
 
 6. Update memory files
@@ -127,12 +127,12 @@ Why the change was needed.
 * Always defer formatting fixes to:
 
 ```bash
-eslint --fix <changed files>
+corepack yarn exec eslint --fix <changed files>
 ```
 
 * Do not block changes because of style warnings.
 * Prefer functional correctness over formatting perfection.
-* Run `tsc --noEmit` when the repository root contains `tsconfig.json` or any `.ts`/`.tsx` files. If neither exists, skip TypeScript validation.
+* Run `corepack yarn exec tsc --noEmit` when the repository root contains `tsconfig.json` or any `.ts`/`.tsx` files. If neither exists, skip TypeScript validation.
 
 ---
 

@@ -16,13 +16,13 @@ When modifying JavaScript or TypeScript source code in this project:
 1. **Verify input**: Confirm target files exist or feature description is unambiguous
 2. **Plan**: Read related modules, understand patterns, detect shared utilities
 3. **Edit**: Apply changes to `src/` only; produce unified git-style diff + JSON summary
-4. **Lint**: Run `eslint --fix <changed files>` — do not format manually
-5. **TypeScript**: Run `tsc --noEmit` if tsconfig.json exists
+4. **Lint**: Run `corepack yarn exec eslint --fix <changed files>` — do not format manually
+5. **TypeScript**: Run `corepack yarn exec tsc --noEmit` if tsconfig.json exists
 6. **Memory**: Save a memory file to `.opencode/memory/<sanitized-filepath>.md` after edits
 
 ## Formatting Rules
 - Never perform manual formatting decisions
-- Always defer to `eslint --fix <changed files>`
+- Always defer to `corepack yarn exec eslint --fix <changed files>`
 - Do not block changes because of style warnings
 - Prefer functional correctness over formatting perfection
 
