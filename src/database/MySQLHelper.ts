@@ -37,11 +37,27 @@ export class MySQLHelper {
         database: this.config.database,
         port: parseInt(String(this.config.port || 3306), 10),
         connectionLimit: this.config.connectionLimit || 5,
-        connectTimeout: this.config.connectTimeout || 60000,
-        allowPublicKeyRetrieval: true
+        connectTimeout: this.config.connectTimeout || 10000,
+        allowPublicKeyRetrieval: true,
+        acquireTimeout: 10000,
+        initializationTimeout: 10000
       });
 
-      this.ready = true;
+      // Test the connection
+      let conn;
+      try {
+        conn = await this.pool.getConnection();
+        this.ready = true;
+      } catch (error) {
+        // Connection failed, clean up pool
+        if (this.pool) {
+          await this.pool.end().catch(() => {});
+          this.pool = undefined;
+        }
+        throw error;
+      } finally {
+        if (conn) conn.release();
+      }
     })();
 
     try {
