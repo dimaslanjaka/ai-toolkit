@@ -42,14 +42,19 @@
   - **ai-memory MCP** (SQLite-backed) for semantic recall and persistent agent knowledge
 
   **Letta Markdown Files:**
-  - After any file edit, create or update a memory block at `.opencode/memory/<sanitized-filepath>.md` ([block format](https://github.com/joshuadavidthomas/opencode-agent-memory#block-format))
+  - Before editing a file, check if its memory file exists at `.opencode/memory/<sanitized-filepath>.md` and read it first to understand prior context.
+  - After editing a file, create or overwrite its memory block at `.opencode/memory/<sanitized-filepath>.md` with the updated content ([block format](https://github.com/joshuadavidthomas/opencode-agent-memory#block-format)).
   - Sanitize the edited file path by replacing `/` and `\` with `_`
   - Required YAML front-matter:
     - `description`: accurate purpose of the block—the file or feature it tracks
     - `label`: unique identifier equal to the sanitized filepath
     - `limit`: character budget; default to `5000`
     - `read_only: false`: allow future updates
-  - Content: plain prose or bullets covering what changed, why, and any migration notes
+  - Content structure (see `.opencode/memory/` for existing examples):
+    - **Core Memory** — what the file or feature does (overview)
+    - **Archival Memory** — dated entries (`### YYYY-MM-DD — Title`) with what happened and `**Tags**: `#tag``
+    - **Recalled Memory (Working Context)** — active task context and relevant history retrieved
+    - **Unresolved Threads / TODO** — follow-ups organized by priority
 
   **ai-memory MCP Integration:**
   - Database: `.opencode/memory/memories.db` (per-project, auto-created)
