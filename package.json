@@ -138,6 +138,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
     "autoprefixer": "^10.4.23",
+    "babel-jest": "^30.4.1",
     "globals": "^17.6.0",
     "gulp": "^5.0.1",
     "husky": "^9.1.7",

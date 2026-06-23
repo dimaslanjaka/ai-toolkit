@@ -21,13 +21,15 @@ const config = {
         },
         useESM: true
       }
-    ]
+    ],
+    // Use babel-jest for javascript
+    '^.+\\.(jsx|js|mjs|cjs)$': 'babel-jest'
   },
   extensionsToTreatAsEsm: ['.ts'],
   testEnvironment: 'node',
   roots: ['<rootDir>/src', '<rootDir>/test'],
-  testMatch: ['**/*.test.ts'],
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
+  testMatch: ['**/*.test.ts', '**/*.test.mjs'],
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'mjs', 'json', 'node'],
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1'
   },
