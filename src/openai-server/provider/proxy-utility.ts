@@ -5,11 +5,10 @@
  * Supports per-host proxy caching to allow different proxies for different targets.
  */
 
-import fs from 'fs-extra';
-import { isEmpty, writefile } from 'sbg-utility';
+import { isEmpty } from 'sbg-utility';
 import path from 'upath';
 import SQLiteProxy from '../../database/SQLiteProxy.js';
-import { getSQLite } from '../../database/shared.js';
+import { getSettings, getSQLite } from '../../database/shared.js';
 import { serverLogger } from '../utils.js';
 
 // ---------------------------------------------------------------------------
@@ -18,7 +17,7 @@ import { serverLogger } from '../utils.js';
 
 /**
  * Generate the path for storing the last working proxy for a given host.
- *
+ * @deprecated
  * @param host - The target host (e.g., 'opencode.ai', 'api.example.com')
  * @returns Path to the proxy cache file for this host
  */
@@ -69,9 +68,10 @@ export function getProxyLabel(proxyUrl: string): string {
  * @returns Cached proxy URL, or `undefined` if not found or invalid
  */
 export async function readLastWorkingProxy(host: string): Promise<string | undefined> {
-  const proxyPath = getLastWorkingProxyPath(host);
   try {
-    const proxyUrl = (await fs.readFile(proxyPath, 'utf8')).trim();
+    const settings = await getSettings();
+    const proxyUrl = await settings?.getSetting('OPENCODE_CACHED_PROXY');
+
     if (!proxyUrl) return undefined;
 
     const parsed = new URL(proxyUrl);
@@ -82,9 +82,7 @@ export async function readLastWorkingProxy(host: string): Promise<string | undef
     serverLogger.log(`Reusing cached proxy for ${host}: ${getProxyLabel(proxyUrl)}`);
     return proxyUrl;
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-      serverLogger.logSync(`Unable to read cached proxy for ${host}: ${error}`);
-    }
+    serverLogger.logSync(`Unable to read cached proxy for ${host}: ${error}`);
     return undefined;
   }
 }
@@ -98,9 +96,9 @@ export async function readLastWorkingProxy(host: string): Promise<string | undef
 export async function cacheWorkingProxy(host: string, proxyUrl: string | undefined): Promise<void> {
   if (!proxyUrl) return;
 
-  const proxyPath = getLastWorkingProxyPath(host);
   try {
-    writefile(proxyPath, `${proxyUrl}\n`);
+    const settings = await getSettings();
+    await settings?.setSetting('OPENCODE_CACHED_PROXY', proxyUrl);
     serverLogger.log(`Cached proxy for ${host}: ${getProxyLabel(proxyUrl)}`);
   } catch (error) {
     serverLogger.logSync(`Unable to cache proxy for ${host}: ${error}`);

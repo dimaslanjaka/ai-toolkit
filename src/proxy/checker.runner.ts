@@ -73,10 +73,9 @@ async function run() {
     const acquired = tryAcquireProxyCheckerLock();
 
     if (!acquired.acquired) {
+      const { ownerPid } = acquired as { acquired: false; ownerPid: number | null };
       console.log(
-        acquired.ownerPid
-          ? `Proxy checker is already running with PID ${acquired.ownerPid}`
-          : 'Proxy checker is already running'
+        ownerPid ? `Proxy checker is already running with PID ${ownerPid}` : 'Proxy checker is already running'
       );
       return;
     }

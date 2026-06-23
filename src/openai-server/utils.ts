@@ -1,5 +1,4 @@
 import https from 'https';
-import moment from 'moment';
 import net from 'net';
 import path from 'upath';
 import { PersistentLogger } from '../utils/logs.cjs';
@@ -18,17 +17,18 @@ export const serverLogger = new PersistentLogger(LOG_FILE);
  * @returns The absolute file path of the created log file, for use with appendMessageToFile
  */
 export function logMessageToFile(prefix: string, content: string): string {
-  const timestamp = moment().format('DD-MM-YYYY-HH-mm-ss');
-  const filename = `${prefix.replace(/[^a-zA-Z0-9-]/g, '_').toLowerCase()}_${timestamp}.log`;
+  const filename = `${prefix.replace(/[^a-zA-Z0-9-]/g, '_').toLowerCase()}.log`;
   const filePath = path.join(process.cwd(), 'tmp/logs/openai-compatible/messages', filename);
 
   const messageLogger = new PersistentLogger(filePath);
   messageLogger.logSync(`\n--- ${prefix} ---\n${content}\n----------------${'-'.repeat(prefix.length)}\n`);
 
   // Write the file path to the main server log and console
-  const infoMsg = `Logged ${prefix} to: ${filePath}`;
-  serverLogger.log(infoMsg);
-  console.log(infoMsg);
+  const infoMsgServer = `Logged ${prefix} to: ${filePath}`;
+  serverLogger.log(infoMsgServer);
+  const relativeFilePath = path.relative(process.cwd(), filePath);
+  const infoMsgConsole = `Logged ${prefix} to: ${relativeFilePath}`;
+  console.log(infoMsgConsole);
 
   return filePath;
 }
@@ -45,9 +45,11 @@ export function appendMessageToFile(filePath: string, prefix: string, content: s
   const messageLogger = new PersistentLogger(filePath);
   messageLogger.logSync(`\n--- ${prefix} ---\n${content}\n----------------${'-'.repeat(prefix.length)}\n`);
 
-  const infoMsg = `Appended ${prefix} to: ${filePath}`;
-  serverLogger.log(infoMsg);
-  console.log(infoMsg);
+  const infoMsgServer = `Appended ${prefix} to: ${filePath}`;
+  serverLogger.log(infoMsgServer);
+  const relativeFilePath = path.relative(process.cwd(), filePath);
+  const infoMsgConsole = `Appended ${prefix} to: ${relativeFilePath}`;
+  console.log(infoMsgConsole);
 }
 
 export interface StartServerOptions {
@@ -74,7 +76,6 @@ export async function startServer(
 
   return new Promise<{ state: ServerState; server: net.Server }>((resolve, reject) => {
     let attempts = 0;
-    let listeningServer: net.Server;
 
     const tryListen = (port: number): void => {
       attempts++;
@@ -108,7 +109,6 @@ export async function startServer(
         if (attempts > 1) {
           serverLogger.log(`Preferred port ${startPort} was in use, using port ${port} instead`);
         }
-        listeningServer = server;
 
         const state: ServerState = {
           port,

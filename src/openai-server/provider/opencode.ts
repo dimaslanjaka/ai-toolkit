@@ -1,8 +1,7 @@
 import type { Request } from 'express';
-import fs from 'fs-extra';
 import { OpenAI } from 'openai';
 import { ProxyAgent } from 'undici';
-import { getSharedModels } from '../../database/shared.js';
+import { getSettings, getSharedModels } from '../../database/shared.js';
 import { opencodeProvider } from '../../provider/opencode/get.js';
 import { isProxyReachable } from '../../proxy/isProxyReachable.cjs';
 
@@ -17,13 +16,7 @@ import { toolRegistry } from '../tools/tool-registry.js';
 import { serverLogger } from '../utils.js';
 import type { ProviderResult } from './index.js';
 import { isConnectionError, repairMessageSequence } from './message-repair.js';
-import {
-  cacheWorkingProxy,
-  getLastWorkingProxyPath,
-  getProxyClient,
-  getProxyLabel,
-  selectProxyUrl
-} from './proxy-utility.js';
+import { cacheWorkingProxy, getProxyClient, getProxyLabel, selectProxyUrl } from './proxy-utility.js';
 
 // Lazy-load the OpenCode provider to avoid SDK init at import time
 let opencodeClient: OpenAI | null = null;
@@ -119,11 +112,12 @@ async function markProxyDeadSafely(proxyUrl: string): Promise<void> {
     await proxyClient.markProxyDeadForHost(proxyAddress, 'opencode.ai');
     serverLogger.log(`Marked dead proxy for host opencode.ai: ${getProxyLabel(proxyUrl)}`);
 
-    // Clear the cached proxy file since it's no longer working
+    // Clear the cached proxy setting since it's no longer working
     try {
-      await fs.unlink(getLastWorkingProxyPath('opencode.ai'));
+      const settings = await getSettings();
+      await settings?.deleteSetting('OPENCODE_CACHED_PROXY');
     } catch {
-      // File may not exist, which is fine
+      // Setting may not exist, which is fine
     }
   } catch (error) {
     serverLogger.logSync(`Failed to mark proxy dead: ${error}`);
