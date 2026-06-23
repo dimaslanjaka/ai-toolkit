@@ -1,9 +1,0 @@
-{
-  "journal": {
-    "enabled": true,
-    "tags": [
-      { "name": "perf", "description": "Performance optimization work" },
-      { "name": "debugging", "description": "Debugging sessions and findings" }
-    ]
-  }
-}

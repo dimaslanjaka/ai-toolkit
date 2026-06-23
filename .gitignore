@@ -107,7 +107,7 @@ coverage.*
 # Non-indexed files
 .opencode/*
 !.opencode/plugins/memory
-!.opencode/opencode.json*
+!.opencode/opencode-*
 !.opencode/agents/
 !.opencode/skills/
 !.opencode/memory/
