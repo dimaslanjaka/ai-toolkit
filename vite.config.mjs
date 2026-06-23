@@ -78,7 +78,13 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       outDir: path.join(packageDirectory, 'dist/openai-server/frontend'),
-      emptyOutDir: true
+      emptyOutDir: true,
+      commonjsOptions: {
+        transformMixedEsModules: true,
+        // Include node_modules and all .cjs files under src so Vite's
+        // CommonJS transformer picks them up automatically.
+        include: [/node_modules/, /src\/.*\.cjs$/]
+      }
     },
     optimizeDeps: {
       include: ['ansi-to-html', 'dompurify']

@@ -14,7 +14,6 @@
 
     // Specify directories for type definitions
     "typeRoots": ["./types", "./node_modules/@types"],
-    "types": ["node", "jest"],
 
     // Enable importing JSON files as modules
     "resolveJsonModule": true,
@@ -26,13 +25,14 @@
     "checkJs": false,
 
     // Generate declaration files for TypeScript files
-    "declaration": false,
+    "declaration": true,
 
     // Generate source maps for debugging purposes
     "sourceMap": true,
 
     // Specify the directory for emitted files
-    "outDir": "./tmp/dist",
+    "outDir": "./tmp/dist-project",
+
     "rootDir": ".",
 
     // Enable interoperability between ES Modules and CommonJS modules
@@ -45,7 +45,37 @@
     "skipLibCheck": true,
 
     // Enable support for JSX/TSX
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+
+    "types": ["node", "jest"]
   },
-  "exclude": ["node_modules", "dist", "tmp"]
+  "typeAcquisition": {
+    // Enable automatic type acquisition for JavaScript projects
+    "enable": true
+  },
+  "exclude": [
+    // Exclude specific directories and patterns from the compilation
+    "**/node_modules/**",
+    "**/tmp/**",
+    "**/.cache/**",
+    "**/__pycache__/**",
+    "**/dist/**",
+    "**/coverage/**",
+    "**/public/**"
+  ],
+  "ts-node": {
+    // Enable ECMAScript module support in ts-node
+    "esm": true,
+
+    // Allow experimental resolution of module specifiers
+    "experimentalSpecifierResolution": "node",
+
+    "compilerOptions": {
+      // Override module configuration for ts-node
+      "module": "ESNext",
+
+      // Disable strict type-checking in ts-node
+      "strict": false
+    }
+  }
 }
