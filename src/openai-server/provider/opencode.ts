@@ -4,6 +4,7 @@ import { OpenAI } from 'openai';
 import { ProxyAgent } from 'undici';
 import { getSharedModels } from '../../database/shared.js';
 import { opencodeProvider } from '../../provider/opencode/get.js';
+import { isProxyReachable } from '../../proxy/isProxyReachable.cjs';
 
 import {
   convertChatCompletionsToResponses,
@@ -32,6 +33,26 @@ async function getOpenCode(): Promise<OpenAI> {
   if (!opencodeClient) {
     // Filter for HTTP proxies only since undici ProxyAgent doesn't support SOCKS5.
     opencodeClientProxy = await selectProxyUrl('opencode.ai');
+
+    // Validate proxy is reachable before using it
+    if (opencodeClientProxy) {
+      serverLogger.log(`Validating proxy reachability: ${getProxyLabel(opencodeClientProxy)}`);
+      const result = await isProxyReachable({
+        type: 'http',
+        proxy: opencodeClientProxy.replace(/^https?:\/\//, '').replace(/^[^@]+@/, ''),
+        timeout: 5000
+      });
+      if (!result.ok) {
+        serverLogger.logSync(
+          `Proxy ${getProxyLabel(opencodeClientProxy)} is not reachable: ${result.error || `failed at ${result.stage}`}`
+        );
+        await markProxyDeadSafely(opencodeClientProxy);
+        // Try to get another proxy
+        opencodeClientProxy = await selectProxyUrl('opencode.ai');
+      } else {
+        serverLogger.log(`Proxy ${getProxyLabel(opencodeClientProxy)} is reachable`);
+      }
+    }
 
     // getSQLite provides the centralized SQLite connection
     const proxyClient = await getProxyClient();
@@ -95,8 +116,8 @@ async function markProxyDeadSafely(proxyUrl: string): Promise<void> {
     const proxyAddress = `${url.hostname}:${url.port}`;
 
     const proxyClient = await getProxyClient();
-    await proxyClient.markProxyDead(proxyAddress);
-    serverLogger.log(`Marked dead proxy: ${getProxyLabel(proxyUrl)}`);
+    await proxyClient.markProxyDeadForHost(proxyAddress, 'opencode.ai');
+    serverLogger.log(`Marked dead proxy for host opencode.ai: ${getProxyLabel(proxyUrl)}`);
 
     // Clear the cached proxy file since it's no longer working
     try {
@@ -110,7 +131,31 @@ async function markProxyDeadSafely(proxyUrl: string): Promise<void> {
 }
 
 async function createProxyDispatcher(): Promise<{ dispatcher?: ProxyAgent; proxyUrl?: string }> {
-  const proxyUrl = await selectProxyUrl('opencode.ai');
+  let proxyUrl = await selectProxyUrl('opencode.ai');
+
+  // Validate proxy is reachable before using it
+  if (proxyUrl) {
+    serverLogger.log(`Validating proxy reachability: ${getProxyLabel(proxyUrl)}`);
+    const result = await isProxyReachable({
+      type: 'http',
+      proxy: proxyUrl.replace(/^https?:\/\//, '').replace(/^[^@]+@/, ''),
+      timeout: 5000
+    });
+    if (!result.ok) {
+      serverLogger.logSync(
+        `Proxy ${getProxyLabel(proxyUrl)} is not reachable: ${result.error || `failed at ${result.stage}`}`
+      );
+      await markProxyDeadSafely(proxyUrl);
+      // Try to get another proxy
+      proxyUrl = await selectProxyUrl('opencode.ai');
+      if (proxyUrl) {
+        serverLogger.log(`Switched to proxy: ${getProxyLabel(proxyUrl)}`);
+      }
+    } else {
+      serverLogger.log(`Proxy ${getProxyLabel(proxyUrl)} is reachable`);
+    }
+  }
+
   return {
     dispatcher: proxyUrl ? new ProxyAgent(proxyUrl) : undefined,
     proxyUrl
