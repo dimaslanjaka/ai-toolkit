@@ -1,7 +1,8 @@
 import crypto from 'node:crypto';
 import { Request, Response } from 'express';
 import { serverLogger } from '../utils.js';
-import { getSettings } from '../../database/shared.js';
+import { getSettings, getSharedModels } from '../../database/shared.js';
+import { DEFAULT_PROVIDERS, DEFAULT_ORDER_PROVIDERS } from '../constant.js';
 
 // ---- Provider result types ----
 
@@ -26,8 +27,8 @@ type ProviderHandlerName =
 
 // ---- Fallback chain ----
 
-const KNOWN_PROVIDERS = ['opencode', 'puter', 'chatgpt'];
-const HARDCODED_FALLBACK = ['opencode', 'puter', 'chatgpt'];
+const KNOWN_PROVIDERS = DEFAULT_PROVIDERS;
+const HARDCODED_FALLBACK = DEFAULT_ORDER_PROVIDERS;
 
 function getRequestedProvider(req: Request): string | null {
   const header = req.headers['x-request-provider'];
@@ -44,14 +45,40 @@ async function getDBFallbackOrder(): Promise<string[] | null> {
     const settings = await getSettings();
     if (!settings) return null;
 
+    // Get enabled providers from the providers table in models database
+    const enabledProviders = new Set<string>();
+    try {
+      const modelDb = await getSharedModels();
+      await modelDb.initialize();
+      const rows = await modelDb.query<{ provider: string; enabled: number }>(
+        'SELECT provider FROM providers WHERE enabled = 1'
+      );
+      if (Array.isArray(rows)) {
+        rows.forEach((row) => {
+          if (row.provider && KNOWN_PROVIDERS.includes(row.provider)) {
+            enabledProviders.add(row.provider);
+          }
+        });
+      }
+    } catch (err) {
+      serverLogger.logSync(`Warning: could not read enabled providers from DB: ${err}`);
+      // Fall through - treat all as enabled
+    }
+
     const defaultProvider = await settings.getSetting('DEFAULT_PROVIDER');
     const fallbackOrderJson = await settings.getSetting('FALLBACK_ORDER');
 
     if (fallbackOrderJson) {
       try {
         const parsed = JSON.parse(fallbackOrderJson);
-        if (Array.isArray(parsed) && parsed.length > 0 && parsed.every((p: any) => KNOWN_PROVIDERS.includes(p))) {
-          return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Filter by KNOWN_PROVIDERS and enabled status
+          const filtered = parsed.filter(
+            (p: any) => KNOWN_PROVIDERS.includes(p) && (enabledProviders.size === 0 || enabledProviders.has(p))
+          );
+          if (filtered.length > 0) {
+            return filtered;
+          }
         }
       } catch {
         serverLogger.logSync(`Invalid FALLBACK_ORDER JSON in DB: ${fallbackOrderJson}`);
@@ -59,8 +86,14 @@ async function getDBFallbackOrder(): Promise<string[] | null> {
     }
 
     if (defaultProvider && KNOWN_PROVIDERS.includes(defaultProvider)) {
-      const remaining = HARDCODED_FALLBACK.filter((p) => p !== defaultProvider);
-      return [defaultProvider, ...remaining];
+      const remaining = HARDCODED_FALLBACK.filter(
+        (p) => p !== defaultProvider && (enabledProviders.size === 0 || enabledProviders.has(p))
+      );
+      const result = [defaultProvider, ...remaining];
+      // Only return if default provider is enabled
+      if (enabledProviders.size === 0 || enabledProviders.has(defaultProvider)) {
+        return result;
+      }
     }
 
     return null;

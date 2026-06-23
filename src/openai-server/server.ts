@@ -11,6 +11,7 @@ import { toolRegistry, registerTool, type ToolDefinition } from './tools/tool-re
 import './tools/index.js'; // Auto-register built-in tools
 
 import { appendMessageToFile, logMessageToFile, serverLogger } from './utils.js';
+import { DEFAULT_PROVIDER, DEFAULT_PROVIDERS, DEFAULT_ORDER_PROVIDERS } from './constant.js';
 
 const proxyChecker = new ProxyCheckerManager();
 const app = express();
@@ -289,137 +290,163 @@ app.get('/proxy-checker/proxies', async (req, res) => {
   }
 });
 
-// ── Admin Model Management CRUD ────────────────────────────────────────────
+// ── Model Management API (unified under /api/models) ──────────────────────────
 
 /**
- * GET /admin/models — list all models (optional ?provider= filter)
+ * GET /api/models — list all models (optional ?provider= filter)
  */
-app.get('/admin/models', async (_req, res) => {
+app.get('/api/models', async (req: Request, res: Response) => {
   try {
     const modelDb = await getSharedModels();
     await modelDb.initialize();
     const modelsApi = await modelDb.models();
 
-    const where = _req.query.provider ? { provider: _req.query.provider as string } : {};
+    const where = req.query.provider ? { provider: req.query.provider as string } : {};
     const dbModels = await modelsApi.find(where);
 
-    const data = dbModels.map((model: any) => ({
-      id: model.id,
-      object: model.object,
-      created: model.created,
-      owned_by: model.owned_by,
-      permission: model.permission,
-      root: model.root,
-      parent: model.parent,
-      provider: model.provider,
-      enabled: model.enabled !== 0
-    }));
-
-    res.json({ ok: true, data });
-  } catch (error) {
-    res.status(500).json({
-      ok: false,
-      message: error instanceof Error ? error.message : String(error)
+    res.json({
+      models: dbModels.map((model: any) => ({
+        id: model.id,
+        object: model.object,
+        created: model.created,
+        owned_by: model.owned_by,
+        permission: model.permission,
+        root: model.root,
+        parent: model.parent,
+        provider: model.provider,
+        enabled: model.enabled !== 0
+      }))
     });
+  } catch (error) {
+    serverLogger.logSync(`Models GET error: ${error}`);
+    res
+      .status(500)
+      .json({ error: 'Internal server error', details: error instanceof Error ? error.message : String(error) });
   }
 });
 
 /**
- * POST /admin/models — add a new model
- * Body: { id, provider, object?, created?, owned_by?, permission?, root?, parent?, enabled? }
+ * GET /api/models/:provider/:id — get model by provider and id
  */
-app.post('/admin/models', async (req, res) => {
+app.get('/api/models/:provider/:id', async (req: Request, res: Response) => {
   try {
     const modelDb = await getSharedModels();
     await modelDb.initialize();
     const modelsApi = await modelDb.models();
+    const { provider, id } = req.params;
 
-    const { id, provider, object, created, owned_by, permission, root, parent, enabled } = req.body;
-
-    if (!id || !provider) {
-      res.status(400).json({ ok: false, message: 'id and provider are required' });
-      return;
+    const dbModel = await modelsApi.findOne({ id, provider });
+    if (!dbModel) {
+      return res.status(404).json({ error: `Model not found: ${id}` });
     }
 
-    await modelsApi.insert({
-      id,
-      provider,
-      object: object || 'model',
-      created: created ?? Math.floor(Date.now() / 1000),
-      owned_by: owned_by || provider,
-      permission: permission ?? '[]',
-      root: root || id,
-      parent: parent ?? null,
-      enabled: enabled !== undefined ? (enabled ? 1 : 0) : 1
+    res.json({
+      id: dbModel.id,
+      object: dbModel.object,
+      created: dbModel.created,
+      owned_by: dbModel.owned_by,
+      permission: dbModel.permission,
+      root: dbModel.root,
+      parent: dbModel.parent,
+      provider: dbModel.provider,
+      enabled: dbModel.enabled !== 0
     });
-
-    res.json({ ok: true, message: 'Model added' });
   } catch (error) {
-    res.status(500).json({
-      ok: false,
-      message: error instanceof Error ? error.message : String(error)
-    });
+    serverLogger.logSync(`Model GET error: ${error}`);
+    res
+      .status(500)
+      .json({ error: 'Internal server error', details: error instanceof Error ? error.message : String(error) });
   }
 });
 
 /**
- * PUT /admin/models — update an existing model
- * Body: { id, provider, ...fields }
+ * POST /api/models/:provider/:id — create or update model
+ * Body: { object?, owned_by?, permission?, root?, parent?, enabled? }
  */
-app.put('/admin/models', async (req, res) => {
+app.post('/api/models/:provider/:id', async (req: Request, res: Response) => {
   try {
     const modelDb = await getSharedModels();
     await modelDb.initialize();
     const modelsApi = await modelDb.models();
+    const { provider, id } = req.params;
+    const { object, owned_by, permission, root, parent, enabled } = req.body;
 
-    const { id, provider, ...updates } = req.body;
-
-    if (!id || !provider) {
-      res.status(400).json({ ok: false, message: 'id and provider are required' });
-      return;
+    const existing = await modelsApi.findOne({ id, provider });
+    if (existing) {
+      const updates: any = {};
+      if (object !== undefined) updates.object = object;
+      if (owned_by !== undefined) updates.owned_by = owned_by;
+      if (permission !== undefined) updates.permission = permission;
+      if (root !== undefined) updates.root = root;
+      if (parent !== undefined) updates.parent = parent;
+      if (enabled !== undefined) updates.enabled = enabled ? 1 : 0;
+      await modelsApi.update(updates, { id, provider });
+      res.json({ success: true, id, provider, action: 'updated' });
+    } else {
+      await modelsApi.insert({
+        id,
+        provider,
+        object: object || 'model',
+        created: Math.floor(Date.now() / 1000),
+        owned_by: owned_by || provider,
+        permission: permission ?? '[]',
+        root: root || id,
+        parent: parent ?? null,
+        enabled: enabled !== false ? 1 : 0
+      });
+      res.json({ success: true, id, provider, action: 'created' });
     }
-
-    const data: any = { ...updates };
-    if (data.enabled !== undefined) {
-      data.enabled = data.enabled ? 1 : 0;
-    }
-
-    await modelsApi.update(data, { id, provider });
-
-    res.json({ ok: true, message: 'Model updated' });
   } catch (error) {
-    res.status(500).json({
-      ok: false,
-      message: error instanceof Error ? error.message : String(error)
-    });
+    serverLogger.logSync(`Model POST error: ${error}`);
+    res
+      .status(500)
+      .json({ error: 'Internal server error', details: error instanceof Error ? error.message : String(error) });
   }
 });
 
 /**
- * DELETE /admin/models — delete a model
- * Query: ?id=...&provider=...
+ * POST /api/models/:provider/:id/toggle — toggle enabled state
+ * Body: { enabled?: boolean } — if omitted, toggles current state
  */
-app.delete('/admin/models', async (req, res) => {
+app.post('/api/models/:provider/:id/toggle', async (req: Request, res: Response) => {
   try {
     const modelDb = await getSharedModels();
     await modelDb.initialize();
     const modelsApi = await modelDb.models();
+    const { provider, id } = req.params;
 
-    const { id, provider } = req.query;
-
-    if (!id || !provider) {
-      res.status(400).json({ ok: false, message: 'id and provider are required' });
-      return;
+    const existing = await modelsApi.findOne({ id, provider });
+    if (!existing) {
+      return res.status(404).json({ error: `Model not found: ${id}` });
     }
 
-    await modelsApi.delete({ id: id as string, provider: provider as string });
-
-    res.json({ ok: true, message: 'Model deleted' });
+    const currentEnabled = existing.enabled !== 0;
+    const newEnabled = req.body.enabled !== undefined ? !!req.body.enabled : !currentEnabled;
+    await modelsApi.update({ enabled: newEnabled ? 1 : 0 }, { id, provider });
+    res.json({ success: true, id, provider, enabled: newEnabled });
   } catch (error) {
-    res.status(500).json({
-      ok: false,
-      message: error instanceof Error ? error.message : String(error)
-    });
+    serverLogger.logSync(`Model toggle error: ${error}`);
+    res
+      .status(500)
+      .json({ error: 'Internal server error', details: error instanceof Error ? error.message : String(error) });
+  }
+});
+
+/**
+ * DELETE /api/models/:provider/:id — delete model
+ */
+app.delete('/api/models/:provider/:id', async (req: Request, res: Response) => {
+  try {
+    const modelDb = await getSharedModels();
+    await modelDb.initialize();
+    const modelsApi = await modelDb.models();
+    await modelsApi.delete({ id: req.params.id, provider: req.params.provider });
+    res.json({ success: true, id: req.params.id, provider: req.params.provider });
+  } catch (error) {
+    serverLogger.logSync(`Model DELETE error: ${error}`);
+    res
+      .status(500)
+      .json({ error: 'Internal server error', details: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -566,8 +593,14 @@ app.post('/admin/tools/execute', async (req, res) => {
 
 // ── Settings API ───────────────────────────────────────────────────────────
 
+const SETTINGS_DEFAULTS: Record<string, string> = {
+  RTK_ENABLED: 'false',
+  DEFAULT_PROVIDER,
+  FALLBACK_ORDER: JSON.stringify(DEFAULT_ORDER_PROVIDERS)
+};
+
 /**
- * GET /api/settings/:key — retrieve a setting by key
+ * GET /api/settings/:key — retrieve a setting by key (returns default if not set)
  */
 app.get('/api/settings/:key', async (req: Request, res: Response) => {
   try {
@@ -576,10 +609,16 @@ app.get('/api/settings/:key', async (req: Request, res: Response) => {
       return res.status(503).json({ error: 'Settings service unavailable' });
     }
     const key = req.params.key as string;
-    const value = await settings.getSetting(key);
+    let value = await settings.getSetting(key);
+
+    // Return default if not set
     if (value === null || value === undefined) {
-      return res.status(404).json({ error: `Setting not found: ${key}` });
+      value = SETTINGS_DEFAULTS[key];
+      if (value === undefined) {
+        return res.status(404).json({ error: `Setting not found: ${key}` });
+      }
     }
+
     res.json({ key, value });
   } catch (error) {
     serverLogger.logSync(`Settings GET error: ${error}`);
@@ -613,6 +652,85 @@ app.post('/api/settings/:key', async (req: Request, res: Response) => {
     res.json({ success: true, key, value: storeValue });
   } catch (error) {
     serverLogger.logSync(`Settings POST error: ${error}`);
+    res.status(500).json({
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+// ── Provider Management API ───────────────────────────────────────────────────
+
+/**
+ * GET /api/providers — list all providers with enabled status
+ */
+app.get('/api/providers', async (req: Request, res: Response) => {
+  try {
+    const modelDb = await getSharedModels();
+    await modelDb.initialize();
+
+    const providers = DEFAULT_PROVIDERS;
+    const result = await Promise.all(
+      providers.map(async (provider) => {
+        try {
+          const rows = await modelDb.query<{ provider: string; enabled: number }>(
+            'SELECT enabled FROM providers WHERE provider = ?',
+            [provider]
+          );
+          const enabled = rows.length > 0 ? rows[0].enabled === 1 : true;
+          return { provider, enabled };
+        } catch {
+          return { provider, enabled: true };
+        }
+      })
+    );
+
+    res.json({ providers: result });
+  } catch (error) {
+    serverLogger.logSync(`Providers GET error: ${error}`);
+    res.status(500).json({
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+/**
+ * POST /api/providers/:provider/toggle — enable/disable a provider
+ * Body: { enabled: boolean }
+ */
+app.post('/api/providers/:provider/toggle', async (req: Request, res: Response) => {
+  try {
+    const provider = req.params.provider;
+    const { enabled } = req.body;
+
+    if (!provider || typeof enabled !== 'boolean') {
+      return res.status(400).json({ error: 'provider and enabled (boolean) must be provided' });
+    }
+
+    const modelDb = await getSharedModels();
+    await modelDb.initialize();
+
+    const enabledInt = enabled ? 1 : 0;
+
+    // Insert or update provider in providers table
+    try {
+      await modelDb.execute(
+        `INSERT OR REPLACE INTO providers (provider, enabled, priority, config)
+         VALUES (?, ?, 0, NULL)`,
+        [provider, enabledInt]
+      );
+    } catch (err) {
+      serverLogger.logSync(`Error toggling provider ${provider}: ${err}`);
+      return res.status(500).json({
+        error: 'Failed to update provider',
+        details: (err as any)?.message || String(err)
+      });
+    }
+
+    res.json({ success: true, provider, enabled });
+  } catch (error) {
+    serverLogger.logSync(`Provider toggle error: ${error}`);
     res.status(500).json({
       error: 'Internal server error',
       details: error instanceof Error ? error.message : String(error)
