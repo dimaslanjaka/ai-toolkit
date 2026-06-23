@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "tmp/dist",
+    "declaration": false,
+    "sourceMap": true,
+    "declarationMap": false
+  },
+  "include": ["src"],
+  "exclude": ["**/frontend/**"]
+}

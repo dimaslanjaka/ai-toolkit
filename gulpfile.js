@@ -50,7 +50,10 @@ export function copySql() {
 }
 
 // Rollup build
-export function buildRollup() {
+export async function buildRollup() {
+  // build special for server
+  await runCommand('yarn', ['tsc', '-p', 'tsconfig.server.json']);
+
   const { ROLLUP_ENTRIES: existingEntries, ...parentEnv } = process.env;
 
   return runCommand('npx', ['rollup', '-c'], {
@@ -80,7 +83,7 @@ export function buildWeb() {
 }
 
 // OpenAI-compatible server build
-export const buildServer = series(parallel(buildTs, copySql), buildRollup);
+export const buildServer = series(copySql, buildRollup);
 
 // Clean build artifacts
 export function clean() {
@@ -88,6 +91,6 @@ export function clean() {
 }
 
 // Main build sequence
-export const build = series(clean, buildServer, buildDeclarations, buildWeb);
+export const build = series(clean, parallel(copySql, buildTs), buildServer, buildDeclarations, buildWeb);
 
 export default build;
