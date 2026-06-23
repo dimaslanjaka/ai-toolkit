@@ -7,7 +7,7 @@ import { loadDotenv } from 'binary-collections';
 import fs from 'fs-extra';
 import { getServerState } from '../utils/utils-server-state.cjs';
 import { fetch, Agent } from 'undici';
-import { findFreePort, startServer, stopServer } from './utils.js';
+import { startServer, stopServer } from './utils.js';
 import { app } from './server.js';
 import { Server } from 'node:net';
 
@@ -22,7 +22,7 @@ async function main() {
   let server: Server | undefined = undefined;
   let state = await getServerState();
   if (!state) {
-    ({ state, server } = await startServer(app, await findFreePort()));
+    ({ state, server } = await startServer(app));
   }
   if (!state) throw new Error('Server state not available');
 

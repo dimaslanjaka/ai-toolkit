@@ -56,47 +56,8 @@ export interface StartServerOptions {
 }
 
 /**
- * Find a free port starting from a preferred port
- * @param startPort The port to start searching from (default: 5758)
- * @param maxAttempts Maximum number of ports to try (default: 100)
- */
-export function findFreePort(startPort: number = 5758, maxAttempts: number = 100): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const attemptPort = (port: number, attemptsLeft: number): void => {
-      if (attemptsLeft <= 0) {
-        reject(new Error(`Could not find a free port after ${maxAttempts} attempts starting from port ${startPort}`));
-        return;
-      }
-
-      const server = net.createServer();
-      server.unref();
-      server.on('error', (err: any) => {
-        if (err.code === 'EADDRINUSE') {
-          if (port === startPort) {
-            serverLogger.log(`Port ${startPort} is in use, searching for free port...`);
-          }
-          attemptPort(port + 1, attemptsLeft - 1);
-        } else {
-          reject(err);
-        }
-      });
-      server.listen(port, () => {
-        const { port: foundPort } = server.address() as net.AddressInfo;
-        server.close(() => {
-          if (foundPort !== startPort) {
-            serverLogger.log(`Preferred port ${startPort} was in use, using port ${foundPort} instead`);
-          }
-          resolve(foundPort);
-        });
-      });
-    };
-
-    attemptPort(startPort, maxAttempts);
-  });
-}
-
-/**
- * Start the OpenAI-compatible server on a free port and save state
+ * Start the OpenAI-compatible server on a free port and save state.
+ * Tries to bind directly; if EADDRINUSE, increments port and retries.
  */
 export async function startServer(
   app: import('express').Express,
@@ -106,41 +67,73 @@ export async function startServer(
   // Reset log on startup
   serverLogger.reset();
 
-  const port = await findFreePort(preferredPort);
+  const startPort = preferredPort ?? 5758;
   const hostname = options.hostname || '0.0.0.0';
   const protocol = options.https ? 'https' : 'http';
+  const maxAttempts = 100;
 
-  return new Promise<{ state: ServerState; server: net.Server }>((resolve) => {
-    let server: net.Server;
-    const handleListening = () => {
-      const state: ServerState = {
-        port,
-        pid: process.pid,
-        startedAt: new Date().toISOString(),
-        url: `${protocol}://localhost:${port}`,
-        server: server // Add the server instance to the state
-      };
+  return new Promise<{ state: ServerState; server: net.Server }>((resolve, reject) => {
+    let attempts = 0;
+    let listeningServer: net.Server;
 
-      saveServerState(state);
+    const tryListen = (port: number): void => {
+      attempts++;
+      if (attempts > maxAttempts) {
+        reject(new Error(`Could not find a free port after ${maxAttempts} attempts starting from ${startPort}`));
+        return;
+      }
 
-      serverLogger.log(`OpenAI-compatible server running on ${protocol}://${hostname}:${port}`);
-      serverLogger.log(`State saved to ${STATE_FILE}`);
-      serverLogger.log(`Provider: ${process.env.PROVIDER || 'puter'}`);
+      if (attempts > 1) {
+        serverLogger.log(`Port ${port - 1} is in use, trying ${port}...`);
+      }
 
-      resolve({ state, server });
+      let server: net.Server;
+      if (options.https) {
+        server = https.createServer(options.https, app);
+        server.listen(port, hostname);
+      } else {
+        server = app.listen(port, hostname);
+      }
 
-      // Setup cleanup on server close
-      server.on('close', () => {
-        serverLogger.log('Server shutting down');
+      server.once('error', (err: any) => {
+        if (err.code === 'EADDRINUSE') {
+          server.close();
+          tryListen(port + 1);
+        } else {
+          reject(err);
+        }
+      });
+
+      server.once('listening', () => {
+        if (attempts > 1) {
+          serverLogger.log(`Preferred port ${startPort} was in use, using port ${port} instead`);
+        }
+        listeningServer = server;
+
+        const state: ServerState = {
+          port,
+          pid: process.pid,
+          startedAt: new Date().toISOString(),
+          url: `${protocol}://localhost:${port}`,
+          server
+        };
+
+        saveServerState(state);
+
+        serverLogger.log(`OpenAI-compatible server running on ${protocol}://${hostname}:${port}`);
+        serverLogger.log(`State saved to ${STATE_FILE}`);
+        serverLogger.log(`Provider: ${process.env.PROVIDER || 'puter'}`);
+
+        // Setup cleanup on server close
+        server.on('close', () => {
+          serverLogger.log('Server shutting down');
+        });
+
+        resolve({ state, server });
       });
     };
 
-    if (options.https) {
-      server = https.createServer(options.https, app);
-      server.listen(port, hostname, handleListening);
-    } else {
-      server = app.listen(port, hostname, handleListening);
-    }
+    tryListen(startPort);
   });
 }
 

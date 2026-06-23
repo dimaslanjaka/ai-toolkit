@@ -3,7 +3,7 @@ import axios from 'axios';
 import https from 'https';
 import { Server } from 'net';
 import { app } from '../../../src/openai-server/server.js';
-import { findFreePort, startServer, stopServer } from '../../../src/openai-server/utils.js';
+import { startServer, stopServer } from '../../../src/openai-server/utils.js';
 import { getServerState } from '../../../src/utils/utils-server-state.cjs';
 import context1 from './thinking_mode_error.json' with { type: 'json' };
 import context2 from './thinking_mode_error2.json' with { type: 'json' };
@@ -24,7 +24,7 @@ describe('Tool calling with reasoning_content handling', () => {
   beforeAll(async () => {
     state = await getServerState();
     if (!state) {
-      ({ state, server } = await startServer(app, await findFreePort()));
+      ({ state, server } = await startServer(app));
     }
     checkServerStateAndRunning(state);
     console.log('Server running at', state!.url);

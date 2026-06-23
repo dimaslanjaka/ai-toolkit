@@ -4,7 +4,7 @@ import https from 'https';
 import { Server } from 'net';
 import { app } from '../../../src/openai-server/server.js';
 import { getServerState } from '../../../src/utils/utils-server-state.cjs';
-import { findFreePort, startServer, stopServer } from '../../../src/openai-server/utils.js';
+import { startServer, stopServer } from '../../../src/openai-server/utils.js';
 
 type ServerState = NonNullable<Awaited<ReturnType<typeof getServerState>>>;
 
@@ -16,7 +16,7 @@ describe('Weather tool call (streaming)', () => {
   beforeAll(async () => {
     state = await getServerState();
     if (!state) {
-      ({ state, server } = await startServer(app, await findFreePort()));
+      ({ state, server } = await startServer(app));
     }
 
     if (!state) throw new Error('Server state not available');

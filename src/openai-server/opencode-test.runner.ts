@@ -3,7 +3,7 @@
  * Starts server, sends one request, then checks the messages dir.
  */
 import fs from 'fs-extra';
-import { findFreePort, startServer, stopServer } from './utils.js';
+import { startServer, stopServer } from './utils.js';
 import { app } from './server.js';
 import { loadDotenv } from 'binary-collections';
 
@@ -15,8 +15,8 @@ async function main() {
   fs.rmSync(logDir, { recursive: true, force: true });
   fs.mkdirSync(logDir, { recursive: true });
 
-  // Start server
-  const { state, server } = await startServer(app, await findFreePort());
+  // Start server (finds free port automatically)
+  const { state, server } = await startServer(app);
   console.log('Server running at', state.url);
 
   // Send a chat completion request via fetch
