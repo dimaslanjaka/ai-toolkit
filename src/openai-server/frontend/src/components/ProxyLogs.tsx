@@ -139,6 +139,26 @@ function formatDuration(startedAt: string | null, finishedAt: string | null, cur
   return `${remainder}s`;
 }
 
+function getProtocolBadgeClasses(type: string): string {
+  const base = 'rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide';
+  switch (type.toLowerCase()) {
+    case 'http':
+      return `${base} border border-sky-500/20 bg-sky-500/10 text-sky-300`;
+    case 'https':
+      return `${base} border border-emerald-500/20 bg-emerald-500/10 text-emerald-300`;
+    case 'socks4':
+      return `${base} border border-amber-500/20 bg-amber-500/10 text-amber-300`;
+    case 'socks4a':
+      return `${base} border border-orange-500/20 bg-orange-500/10 text-orange-300`;
+    case 'socks5':
+      return `${base} border border-violet-500/20 bg-violet-500/10 text-violet-300`;
+    case 'socks5h':
+      return `${base} border border-fuchsia-500/20 bg-fuchsia-500/10 text-fuchsia-300`;
+    default:
+      return `${base} border border-neutral-500/20 bg-neutral-500/10 text-neutral-300`;
+  }
+}
+
 function shortPath(value: string): string {
   const normalized = value.replace(/\\/g, '/');
   const marker = normalized.lastIndexOf('/tmp/');
@@ -178,7 +198,10 @@ export default function ProxyManager() {
   const [currentTime, setCurrentTime] = useState(0);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [workingProxies, setWorkingProxies] = useState<WorkingProxy[]>([]);
-  const [activeTab, setActiveTab] = useState<'control' | 'list'>('control');
+  const [cachedProxy, setCachedProxy] = useState<string | null>(null);
+  const [settingProxy, setSettingProxy] = useState(false);
+  const [proxySetNotice, setProxySetNotice] = useState('');
+  const [activeTab, setActiveTab] = useState<'control' | 'list' | 'opencode'>('control');
   const initialLoadRef = useRef(true);
 
   const isActive = status ? ACTIVE_STATES.includes(status.state) : false;
@@ -231,13 +254,55 @@ export default function ProxyManager() {
     }
   }, [apiBase, apiKey]);
 
+  const loadCachedProxy = useCallback(async () => {
+    try {
+      const response = await fetch(createApiUrl('/api/settings/OPENCODE_CACHED_PROXY', { apiBase }), {
+        headers: requestHeaders(apiKey)
+      });
+      if (!response.ok) {
+        setCachedProxy(null);
+        return;
+      }
+      const payload = (await response.json()) as { key: string; value: string };
+      setCachedProxy(payload.value ?? null);
+    } catch {
+      setCachedProxy(null);
+    }
+  }, [apiBase, apiKey]);
+
+  const setOpenCodeProxy = useCallback(
+    async (proxy: string) => {
+      setSettingProxy(true);
+      setProxySetNotice('');
+      try {
+        const response = await fetch(createApiUrl('/api/settings/OPENCODE_CACHED_PROXY', { apiBase }), {
+          method: 'POST',
+          headers: { ...requestHeaders(apiKey), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value: proxy })
+        });
+        if (!response.ok) throw new Error(`Failed to set proxy: ${response.status}`);
+        const payload = (await response.json()) as { success: boolean; value: string };
+        if (payload.success) {
+          setCachedProxy(payload.value);
+          setProxySetNotice('Proxy set successfully.');
+        }
+      } catch (e) {
+        setProxySetNotice(e instanceof Error ? e.message : 'Failed to set proxy');
+      } finally {
+        setSettingProxy(false);
+      }
+    },
+    [apiBase, apiKey]
+  );
+
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       void loadStatus();
       void loadWorkingProxies();
+      void loadCachedProxy();
     }, 0);
     return () => window.clearTimeout(timeout);
-  }, [loadStatus, loadWorkingProxies]);
+  }, [loadStatus, loadWorkingProxies, loadCachedProxy]);
 
   useEffect(() => {
     if (!autoRefresh) return;
@@ -246,11 +311,12 @@ export default function ProxyManager() {
       () => {
         void loadStatus(true);
         void loadWorkingProxies();
+        void loadCachedProxy();
       },
       isActive ? 2000 : 5000
     );
     return () => window.clearInterval(interval);
-  }, [autoRefresh, isActive, loadStatus, loadWorkingProxies]);
+  }, [autoRefresh, isActive, loadStatus, loadWorkingProxies, loadCachedProxy]);
 
   useEffect(() => {
     if (!isActive) return;
@@ -435,6 +501,13 @@ export default function ProxyManager() {
             onClick={() => setActiveTab('list')}>
             <i className="fa-solid fa-network-wired mr-1" aria-hidden="true" /> Proxies
           </button>
+          <button
+            type="button"
+            className={`px-4 py-2 rounded-t-md font-medium ${activeTab === 'opencode' ? 'border-b-2 border-emerald-500 text-emerald-400' : 'text-neutral-500'}
+              `}
+            onClick={() => setActiveTab('opencode')}>
+            <i className="fa-solid fa-bolt mr-1" aria-hidden="true" /> OpenCode
+          </button>
         </div>
 
         <div className="mt-5 grid h-[38rem] gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(18rem,0.75fr)]">
@@ -457,6 +530,83 @@ export default function ProxyManager() {
               runAction={runAction}
               loadStatus={loadStatus}
             />
+          ) : activeTab === 'opencode' ? (
+            <div className="h-full overflow-auto rounded-2xl border border-white/10 bg-[#272727] p-5 shadow-lg shadow-black/10">
+              <div className="flex items-center gap-3">
+                <span className="flex size-10 items-center justify-center rounded-xl bg-neutral-800 text-neutral-400">
+                  <i aria-hidden="true" className="fa-solid fa-cloud" />
+                </span>
+                <div>
+                  <h2 className="text-sm font-semibold">OpenCode Proxy</h2>
+                  <p className="text-xs text-neutral-500">Currently cached proxy for opencode.ai</p>
+                </div>
+              </div>
+
+              {cachedProxy ? (
+                <div className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3">
+                  <p className="text-[10px] font-medium tracking-wide text-neutral-500 uppercase">Active proxy</p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <p className="min-w-0 truncate font-mono text-sm text-emerald-300">{cachedProxy}</p>
+                    {(() => {
+                      const proto = cachedProxy.startsWith('https://')
+                        ? 'https'
+                        : cachedProxy.startsWith('socks5h://')
+                          ? 'socks5h'
+                          : cachedProxy.startsWith('socks5://')
+                            ? 'socks5'
+                            : cachedProxy.startsWith('socks4a://')
+                              ? 'socks4a'
+                              : cachedProxy.startsWith('socks4://')
+                                ? 'socks4'
+                                : 'http';
+                      return <span className={getProtocolBadgeClasses(proto)}>{proto}</span>;
+                    })()}
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4 rounded-xl border border-neutral-500/20 bg-neutral-500/10 p-3">
+                  <p className="text-[10px] font-medium tracking-wide text-neutral-500 uppercase">Active proxy</p>
+                  <p className="mt-1 text-xs text-neutral-500">No proxy cached</p>
+                </div>
+              )}
+
+              {proxySetNotice && (
+                <div className="mt-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">
+                  {proxySetNotice}
+                </div>
+              )}
+
+              <div className="mt-5">
+                <p className="mb-2 text-xs font-medium text-neutral-400">Available proxies</p>
+                <div className="space-y-2">
+                  {workingProxies.length ? (
+                    workingProxies.map((proxy, idx) => (
+                      <div
+                        key={`${proxy.proxy}-${idx}`}
+                        className="flex items-center gap-2 rounded-xl border border-white/5 bg-black/10 p-3">
+                        <span
+                          className={`size-2 shrink-0 rounded-full ${proxy.status === 'active' ? 'bg-emerald-400' : 'bg-neutral-500'}`}
+                        />
+                        <p className="min-w-0 flex-1 truncate font-mono text-xs">{proxy.proxy}</p>
+                        {proxy.type && <span className={getProtocolBadgeClasses(proxy.type)}>{proxy.type}</span>}
+                        <button
+                          type="button"
+                          disabled={settingProxy}
+                          onClick={() => void setOpenCodeProxy(proxy.proxy)}
+                          className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-medium text-neutral-300 transition hover:bg-emerald-500/20 hover:text-emerald-300 disabled:opacity-40"
+                          aria-label={`Use proxy ${proxy.proxy}`}>
+                          {settingProxy ? <i aria-hidden="true" className="fa-solid fa-spinner animate-spin" /> : 'Use'}
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs leading-5 text-neutral-500">
+                      No proxies found. Run a scan to discover working proxies for opencode.ai.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
           ) : (
             <ProxyList workingProxies={workingProxies} />
           )}

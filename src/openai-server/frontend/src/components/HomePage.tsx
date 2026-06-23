@@ -34,6 +34,84 @@ const API_ENDPOINTS = [
     category: 'OpenAI-Compatible'
   },
   {
+    method: 'GET',
+    path: '/api/models',
+    description: 'List all registered models across providers. Optional query: `?provider=`.',
+    category: 'Model Management'
+  },
+  {
+    method: 'GET',
+    path: '/api/models/:provider/:id',
+    description: 'Get a specific model by provider and id.',
+    category: 'Model Management'
+  },
+  {
+    method: 'POST',
+    path: '/api/models/:provider/:id',
+    description: 'Create or update a model. Body: `{ owned_by?, enabled?, root?, parent? }`.',
+    category: 'Model Management'
+  },
+  {
+    method: 'POST',
+    path: '/api/models/:provider/:id/toggle',
+    description: 'Toggle model enabled state. Body: `{ enabled?: boolean }`.',
+    category: 'Model Management'
+  },
+  {
+    method: 'DELETE',
+    path: '/api/models/:provider/:id',
+    description: 'Delete a model by provider and id.',
+    category: 'Model Management'
+  },
+  {
+    method: 'GET',
+    path: '/api/providers',
+    description: 'List all providers with enabled/disabled status.',
+    category: 'Provider Management'
+  },
+  {
+    method: 'POST',
+    path: '/api/providers/:provider/toggle',
+    description: 'Enable or disable a provider. Body: `{ enabled: boolean }`.',
+    category: 'Provider Management'
+  },
+  {
+    method: 'GET',
+    path: '/api/settings/:key',
+    description: 'Retrieve a setting by key. Returns default if not set.',
+    category: 'Settings'
+  },
+  {
+    method: 'POST',
+    path: '/api/settings/:key',
+    description: 'Write a setting. Body: `{ value }`.',
+    category: 'Settings'
+  },
+  {
+    method: 'GET',
+    path: '/admin/tools',
+    description: 'List all registered tools.',
+    category: 'Tool Registry'
+  },
+  {
+    method: 'POST',
+    path: '/admin/tools',
+    description: 'Register a custom tool. Body: `{ name, description, parameters, handler }`.',
+    category: 'Tool Registry'
+  },
+  {
+    method: 'DELETE',
+    path: '/admin/tools',
+    description: 'Unregister a tool. Query: `?name=`.',
+    category: 'Tool Registry'
+  },
+  {
+    method: 'POST',
+    path: '/admin/tools/execute',
+    description: 'Manually execute a tool. Body: `{ name, arguments }`.',
+    category: 'Tool Registry'
+  },
+  {
     method: 'ALL',
     path: '/proxy-checker/start',
     description: 'Starts the proxy checker process. Returns 202 on success, 409 if already running.',
@@ -224,7 +302,8 @@ export default function HomePage() {
     { id: 'endpoints', label: 'API Endpoints', icon: 'fa-code' },
     { id: 'quickstart', label: 'Quick Start', icon: 'fa-rocket' },
     { id: 'providers', label: 'Providers', icon: 'fa-server' },
-    { id: 'config', label: 'Configuration', icon: 'fa-gear' }
+    { id: 'config', label: 'Configuration', icon: 'fa-gear' },
+    { id: 'routes', label: 'Routes', icon: 'fa-route' }
   ];
 
   const groupedEndpoints = API_ENDPOINTS.reduce(
@@ -620,8 +699,107 @@ OPENAI_SERVER_HTTPS_CERT_FILE=.cert/cert.pem`}</code>
             </div>
           </div>
         )}
-      </div>
 
+        {/* Routes Section */}
+        {activeSection === 'routes' && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold">Routes</h2>
+              <p className="mt-2 text-neutral-400">Frontend routing and navigation structure.</p>
+            </div>
+
+            {/* Frontend Routes */}
+            <div className="rounded-xl border border-white/10 bg-neutral-800/40 p-6">
+              <h3 className="text-lg font-semibold">Frontend Routes</h3>
+              <p className="mt-2 text-sm text-neutral-400">
+                Single Page Application (SPA) served by Express static middleware.
+              </p>
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center gap-3 rounded-lg border border-white/5 bg-neutral-900 p-3">
+                  <MethodBadge method="GET" />
+                  <code className="flex-1 text-sm font-mono text-emerald-400">/</code>
+                  <span className="text-sm text-neutral-400">HomePage</span>
+                </div>
+                <div className="flex items-center gap-3 rounded-lg border border-white/5 bg-neutral-900 p-3">
+                  <MethodBadge method="GET" />
+                  <code className="flex-1 text-sm font-mono text-emerald-400">/home</code>
+                  <span className="text-sm text-neutral-400">HomePage</span>
+                </div>
+                <div className="flex items-center gap-3 rounded-lg border border-white/5 bg-neutral-900 p-3">
+                  <MethodBadge method="GET" />
+                  <code className="flex-1 text-sm font-mono text-emerald-400">/chat</code>
+                  <span className="text-sm text-neutral-400">Chat Interface</span>
+                </div>
+                <div className="flex items-center gap-3 rounded-lg border border-white/5 bg-neutral-900 p-3">
+                  <MethodBadge method="GET" />
+                  <code className="flex-1 text-sm font-mono text-emerald-400">/chat/*</code>
+                  <span className="text-sm text-neutral-400">Chat Interface</span>
+                </div>
+                <div className="flex items-center gap-3 rounded-lg border border-white/5 bg-neutral-900 p-3">
+                  <MethodBadge method="GET" />
+                  <code className="flex-1 text-sm font-mono text-emerald-400">/proxy-manager</code>
+                  <span className="text-sm text-neutral-400">Proxy Logs</span>
+                </div>
+                <div className="flex items-center gap-3 rounded-lg border border-white/5 bg-neutral-900 p-3">
+                  <MethodBadge method="GET" />
+                  <code className="flex-1 text-sm font-mono text-emerald-400">/model-manager</code>
+                  <span className="text-sm text-neutral-400">Model Manager</span>
+                </div>
+                <div className="flex items-center gap-3 rounded-lg border border-white/5 bg-neutral-900 p-3">
+                  <MethodBadge method="GET" />
+                  <code className="flex-1 text-sm font-mono text-emerald-400">/settings</code>
+                  <span className="text-sm text-neutral-400">Settings Page</span>
+                </div>
+              </div>
+            </div>
+
+            {/* API Proxy Configuration */}
+            <div className="rounded-xl border border-white/10 bg-neutral-800/40 p-6">
+              <h3 className="text-lg font-semibold">Vite API Proxy</h3>
+              <p className="mt-2 text-sm text-neutral-400">
+                Vite development server proxies these paths to the Express backend.
+              </p>
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center gap-3 rounded-lg border border-white/5 bg-neutral-900 p-3">
+                  <code className="flex-1 text-sm font-mono text-emerald-400">/v1/*</code>
+                  <span className="text-sm text-neutral-400">→ Express (5758)</span>
+                </div>
+                <div className="flex items-center gap-3 rounded-lg border border-white/5 bg-neutral-900 p-3">
+                  <code className="flex-1 text-sm font-mono text-emerald-400">/proxy-checker/*</code>
+                  <span className="text-sm text-neutral-400">→ Express (5758)</span>
+                </div>
+                <div className="flex items-center gap-3 rounded-lg border border-white/5 bg-neutral-900 p-3">
+                  <code className="flex-1 text-sm font-mono text-emerald-400">/api/*</code>
+                  <span className="text-sm text-neutral-400">→ Express (5758)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Express Static Middleware */}
+            <div className="rounded-xl border border-white/10 bg-neutral-800/40 p-6">
+              <h3 className="text-lg font-semibold">Express Static Frontend</h3>
+              <p className="mt-2 text-sm text-neutral-400">Production build is served via Express static middleware.</p>
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center gap-3 rounded-lg border border-white/5 bg-neutral-900 p-3">
+                  <MethodBadge method="GET" />
+                  <code className="flex-1 text-sm font-mono text-emerald-400">/</code>
+                  <span className="text-sm text-neutral-400">Redirects to /chat/</span>
+                </div>
+                <div className="flex items-center gap-3 rounded-lg border border-white/5 bg-neutral-900 p-3">
+                  <MethodBadge method="GET" />
+                  <code className="flex-1 text-sm font-mono text-emerald-400">/chat</code>
+                  <span className="text-sm text-neutral-400">Serves index.html</span>
+                </div>
+                <div className="flex items-center gap-3 rounded-lg border border-white/5 bg-neutral-900 p-3">
+                  <MethodBadge method="GET" />
+                  <code className="flex-1 text-sm font-mono text-emerald-400">/chat/*</code>
+                  <span className="text-sm text-neutral-400">Serves index.html (SPA)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
       {/* Footer */}
       <footer className="mt-16 border-t border-white/5 py-8">
         <div className="mx-auto max-w-6xl px-4 text-center">

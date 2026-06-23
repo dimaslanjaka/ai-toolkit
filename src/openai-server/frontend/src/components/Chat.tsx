@@ -568,14 +568,14 @@ export default function Chat() {
                   onChange={(event) =>
                     setSettings((current) => ({ ...current, provider: event.target.value as Provider }))
                   }
-                  className={`max-w-[6rem] appearance-none truncate rounded-lg border-0 bg-transparent py-1 pr-5 pl-1.5 text-xs focus:ring-2 focus:ring-emerald-500 md:max-w-[8rem] text-neutral-400`}>
+                  className={`max-w-[6rem] appearance-none truncate rounded-lg border-0 bg-transparent py-1 pr-6 pl-1.5 text-xs focus:ring-2 focus:ring-emerald-500 md:max-w-[8rem] text-neutral-400`}>
                   {PROVIDER_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
                     </option>
                   ))}
                 </select>
-                <span className="pointer-events-none absolute top-1/2 right-1.5 -translate-y-1/2 text-[10px] text-neutral-500">
+                <span className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-[10px] text-neutral-500">
                   ▾
                 </span>
               </label>
@@ -586,14 +586,14 @@ export default function Chat() {
                   <select
                     value={settings.model}
                     onChange={(event) => setSettings((current) => ({ ...current, model: event.target.value }))}
-                    className={`max-w-[6rem] appearance-none truncate rounded-lg border-0 bg-transparent py-1 pr-5 pl-1.5 text-xs focus:ring-2 focus:ring-emerald-500 md:max-w-[8rem] text-neutral-400`}>
+                    className={`max-w-[6rem] appearance-none truncate rounded-lg border-0 bg-transparent py-1 pr-6 pl-1.5 text-xs focus:ring-2 focus:ring-emerald-500 md:max-w-[8rem] text-neutral-400`}>
                     {models.map((model) => (
                       <option key={model.id} value={model.id}>
                         {model.id}
                       </option>
                     ))}
                   </select>
-                  <span className="pointer-events-none absolute top-1/2 right-1.5 -translate-y-1/2 text-[10px] text-neutral-500">
+                  <span className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-[10px] text-neutral-500">
                     ▾
                   </span>
                 </label>

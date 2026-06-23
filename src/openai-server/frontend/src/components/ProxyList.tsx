@@ -56,7 +56,7 @@ export default function ProxyList({ workingProxies }: ProxyListProps) {
         </span>
         <div>
           <h2 className="text-sm font-semibold">Working proxies</h2>
-          <p className="text-xs text-neutral-500">Validated for opencode.ai</p>
+          <p className="text-xs text-neutral-500">Proxies validated for specific hosts and performance metrics</p>
         </div>
       </div>
 
