@@ -558,6 +558,7 @@ export default function Chat() {
               onChange={(event) => setComposer(event.target.value)}
               onKeyDown={handleComposerKeyDown}
               className={`app-scrollbar max-h-48 min-h-11 w-full resize-none overflow-y-auto border-0 bg-transparent px-3 py-2.5 text-[15px] leading-6 outline-none placeholder:text-neutral-500 focus:ring-0 text-neutral-100`}
+              style={{ fieldSizing: 'content' }}
             />
             <div className="flex items-center gap-2 px-1 pb-1">
               <label className="relative">

@@ -40,10 +40,6 @@ select {
   -webkit-tap-highlight-color: transparent;
 }
 
-textarea {
-  field-sizing: content;
-}
-
 .app-scrollbar {
   scrollbar-color: rgb(115 115 115 / 45%) transparent;
   scrollbar-width: thin;
