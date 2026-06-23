@@ -2,6 +2,7 @@ import { loadDotenv } from 'binary-collections';
 import fs from 'fs-extra';
 import path from 'upath';
 import { closeAllDatabases } from '../database/shared.js';
+import { isDevelopmentMode } from '../utils/env.js';
 import { app } from './server.js';
 import { serverLogger, startServer } from './utils.js';
 
@@ -66,22 +67,25 @@ app.use((err: any, _req: any, res: any, _next: any) => {
   }
 });
 
-startServer(app, preferredPort, { https: getHttpsOptions() }).then(({ state }) => {
-  const endpoints = [
-    ['GET', '/chat/'],
-    ['GET', '/v1/models'],
-    ['POST', '/v1/chat/completions'],
-    ['POST', '/v1/responses'],
-    ['POST', '/v1/completions'],
-    ['POST', '/v1/embeddings'],
-    ['ALL', '/proxy-checker/start'],
-    ['ALL', '/proxy-checker/stop'],
-    ['GET', '/proxy-checker/status'],
-    ['GET', '/proxy-checker/logs']
-  ];
+startServer(app, preferredPort, { https: getHttpsOptions() }).then((_serverState) => {
+  const protocol = httpsEnabled ? 'https' : 'http';
+
+  // Frontend URL from Vite env vars
+  const frontendHost = process.env.VITE_HOSTNAME || 'localhost';
+  const frontendPort = process.env.VITE_PORT || '5173';
+  const frontendUrl = `${protocol}://${frontendHost}:${frontendPort}`;
+
+  // Backend URL: dev vs prod hostname
+  const backendHost = isDevelopmentMode()
+    ? process.env.VITE_BACKEND_HOSTNAME_DEV || `127.0.0.1:${preferredPort}`
+    : process.env.VITE_BACKEND_HOSTNAME_PROD || `localhost:${preferredPort}`;
+  const backendUrl = backendHost.includes(':')
+    ? `${protocol}://${backendHost}`
+    : `${protocol}://${backendHost}:${preferredPort}`;
+
   const message = [
-    'Available endpoints:',
-    ...endpoints.map(([method, route]) => `  ${method} ${state.url}${route}`)
+    'Backend (OpenAI-Compatible):  ' + backendUrl + '/v1',
+    'Frontend (Homepage):          ' + frontendUrl + '/'
   ].join('\n');
 
   console.log(message);
