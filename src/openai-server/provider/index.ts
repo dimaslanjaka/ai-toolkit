@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { Request, Response } from 'express';
 import { serverLogger } from '../utils.js';
+import { getSettings } from '../../database/shared.js';
 
 // ---- Provider result types ----
 
@@ -25,7 +26,8 @@ type ProviderHandlerName =
 
 // ---- Fallback chain ----
 
-const FALLBACK_ORDER = ['opencode', 'puter', 'chatgpt'];
+const KNOWN_PROVIDERS = ['opencode', 'puter', 'chatgpt'];
+const HARDCODED_FALLBACK = ['opencode', 'puter', 'chatgpt'];
 
 function getRequestedProvider(req: Request): string | null {
   const header = req.headers['x-request-provider'];
@@ -37,14 +39,50 @@ function getRequestedProvider(req: Request): string | null {
   return null;
 }
 
-function getProviderCandidates(req: Request): string[] {
+async function getDBFallbackOrder(): Promise<string[] | null> {
+  try {
+    const settings = await getSettings();
+    if (!settings) return null;
+
+    const defaultProvider = await settings.getSetting('DEFAULT_PROVIDER');
+    const fallbackOrderJson = await settings.getSetting('FALLBACK_ORDER');
+
+    if (fallbackOrderJson) {
+      try {
+        const parsed = JSON.parse(fallbackOrderJson);
+        if (Array.isArray(parsed) && parsed.length > 0 && parsed.every((p: any) => KNOWN_PROVIDERS.includes(p))) {
+          return parsed;
+        }
+      } catch {
+        serverLogger.logSync(`Invalid FALLBACK_ORDER JSON in DB: ${fallbackOrderJson}`);
+      }
+    }
+
+    if (defaultProvider && KNOWN_PROVIDERS.includes(defaultProvider)) {
+      const remaining = HARDCODED_FALLBACK.filter((p) => p !== defaultProvider);
+      return [defaultProvider, ...remaining];
+    }
+
+    return null;
+  } catch (err) {
+    serverLogger.logSync(`Error reading provider settings from DB: ${err}`);
+    return null;
+  }
+}
+
+async function getProviderCandidates(req: Request): Promise<string[]> {
   const requested = getRequestedProvider(req);
 
   if (requested) {
     return [requested]; // Explicit provider only. No fallback.
   }
 
-  return FALLBACK_ORDER;
+  const dbOrder = await getDBFallbackOrder();
+  if (dbOrder) {
+    return dbOrder;
+  }
+
+  return HARDCODED_FALLBACK;
 }
 
 async function loadProviderModule(provider: string) {
@@ -66,7 +104,7 @@ async function loadProviderModule(provider: string) {
  * Throws only if all candidates fail.
  */
 async function callWithFallback(req: Request, handlerName: ProviderHandlerName): Promise<ProviderResult> {
-  const candidates = getProviderCandidates(req);
+  const candidates = await getProviderCandidates(req);
   let lastError: any;
 
   for (const provider of candidates) {
@@ -100,7 +138,7 @@ async function callWithFallback(req: Request, handlerName: ProviderHandlerName):
  * Throws only when a matching provider exists but fails.
  */
 async function tryCallWithFallback(req: Request, handlerName: ProviderHandlerName): Promise<ProviderResult | null> {
-  const candidates = getProviderCandidates(req);
+  const candidates = await getProviderCandidates(req);
   let lastError: any;
   let foundHandler = false;
 
