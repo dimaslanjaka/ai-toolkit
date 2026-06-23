@@ -75,6 +75,7 @@
     "diff": "^9.0.0",
     "dompurify": "^3.4.11",
     "dotenv": "^17.4.2",
+    "env-paths": "^4.0.0",
     "express": "^5.2.1",
     "flowbite": "^3.1.2",
     "fs-extra": "^11.3.5",

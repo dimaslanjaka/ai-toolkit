@@ -1,0 +1,134 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "nodejs-openai-compatible": {
+      "name": "nodejs openai compatible",
+      "npm": "@ai-sdk/openai-compatible",
+      "options": {
+        "baseURL": "https://localhost:5758/v1",
+        "apiKey": "sk-c2aafb0983f2f86b-9gjb00-e3f39ea4",
+        "timeout": 300000
+      },
+      "models": {
+        "auto": {
+          "name": "Auto Model"
+        },
+        "opencode": {
+          "name": "OpenCode + Proxy",
+          "headers": {
+            "X-Request-Provider": "opencode"
+          },
+          "tool_call": true,
+          "reasoning": true,
+          "interleaved": true,
+          "temperature": true,
+          "experimental": true
+        }
+      }
+    }
+  },
+  "mode": {
+    "build": {
+      "disable": true
+    },
+    "plan": {
+      "disable": true
+    }
+  },
+  "autoupdate": true,
+  "snapshot": true,
+  "formatter": false,
+  "lsp": true,
+  "shell": "cmd",
+  "plugin": [
+    "oh-my-opencode-slim@latest",
+    "envsitter-guard@latest",
+    // "opencode-agent-memory@https://github.com/dimaslanjaka/opencode-file-memory/raw/refs/heads/main/release/opencode-agent-memory.tgz",
+    "@tarquinen/opencode-smart-title@latest",
+    "@tarquinen/opencode-dcp@latest",
+    "superpowers@git+https://github.com/obra/superpowers.git",
+    "@zenobius/opencode-skillful"
+  ],
+  "instructions": [
+    "AGENTS.md"
+    // ".github/instructions/*.md",
+    // ".github/*.md",
+    // "packages/*/AGENTS.md"
+  ],
+  "mcp": {
+    "sequential-thinking": {
+      "enabled": true,
+      "timeout": 300000,
+      "type": "local",
+      "environment": {},
+      "command": ["npx", "-y", "@modelcontextprotocol/server-sequential-thinking"]
+    },
+    "playwright": {
+      "enabled": true,
+      "timeout": 300000,
+      "type": "local",
+      "command": ["npx", "-y", "@playwright/mcp@latest"]
+    },
+    "MCP SQLite Server": {
+      "enabled": false,
+      "timeout": 300000,
+      "type": "local",
+      "command": ["npx", "-y", "mcp-sqlite", "${workspaceFolder}/tmp/database/ai-toolkit.db"]
+    },
+    "ai-memory": {
+      "type": "local",
+      "timeout": 300000,
+      "command": ["ai-memory", "--db", "${workspaceFolder}/.opencode/memory/memories.db", "mcp", "--tier", "smart"],
+      "enabled": true
+    },
+    "octocode": {
+      "type": "local",
+      "timeout": 300000,
+      "command": ["npx", "-y", "octocode-mcp@latest"],
+      "environment": {
+        "GITHUB_TOKEN": "${process.env.GITHUB_TOKEN}",
+        "ALLOWED_PATHS": "${workspaceFolder}",
+        "WORKSPACE_ROOT": "${workspaceFolder}"
+      }
+    },
+    "super-shell": {
+      "enabled": true,
+      "timeout": 300000,
+      "type": "local",
+      "command": ["npx", "-y", "super-shell-mcp", "${home}"],
+      "cwd": "${workspaceFolder}",
+      "environment": {
+        "CUSTOM_SHELL": "${shell}",
+        "SUPER_SHELL_USE_SHELL": "true"
+      }
+    },
+    "fast-filesystem": {
+      "enabled": true,
+      "timeout": 300000,
+      "type": "local",
+      "command": ["npx", "-y", "fast-filesystem-mcp"],
+      "environment": {
+        "CREATE_BACKUP_FILES": "true",
+        "DEBUG_MCP": "true",
+        "MCP_LOG_FILE": "${workspaceFolder}/tmp/logs/fast-filesystem-mcp.log"
+      }
+    },
+    "filesystem": {
+      "enabled": true,
+      "timeout": 300000,
+      "type": "local",
+      "command": [
+        "cmd",
+        "/c",
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "${home}/Desktop",
+        "${workspaceFolder}"
+      ]
+    }
+  },
+  "permission": {
+    "super-shell_*": "ask"
+  }
+}
