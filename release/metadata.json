@@ -1,11 +1,11 @@
 {
   "/release/ai-toolkit.tgz": {
     "integrity": {
-      "sha1": "f71487a2e3f31fc6e0eaff33d7239b0c716f1c2b",
-      "sha256": "L40fOWYpQO1xMMSjhw4PmoBr9letibNYtsR4aOwqiZE=",
-      "md5": "b9e169e569525b67ad75536ae09c6833",
-      "sha512": "AfTTMn1flvv63eoEt97q8Oo3tg1Qe0+HIPp3BGNI+bpkufKB7lHYc81WeFLbcHthzKM0sLo1ZaN8+7La+IuPQw=="
+      "sha1": "a01c9b6049add5a939b42a38a50b8d03d53d6797",
+      "sha256": "PX4bNaEe71DlZ1nG13ywMPleb1FfWpRnO8knKh8E0Ig=",
+      "md5": "a83252a31aa32fdb81d2593173a012fd",
+      "sha512": "cWkp1YzRS8GjdNWjqOrseA2vZjXEirTmYJ0HzQpkQH/ZH7HoHFy/4EspkZ/O+5S6clYgk68l7wH/gMNLs2FuPg=="
     },
-    "size": "500.51 KB"
+    "size": "509.99 KB"
   }
 }
