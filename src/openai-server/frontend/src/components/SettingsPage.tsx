@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useSettings, type Provider } from '../context/SettingsContext';
 import { sanitizeStoredApiBase } from '../utils/url';
-
-const PROVIDER_OPTIONS: { value: Provider; label: string }[] = [
-  { value: 'auto', label: 'Auto' },
-  { value: 'opencode', label: 'OpenCode' },
-  { value: 'puter', label: 'Puter' },
-  { value: 'chatgpt', label: 'ChatGPT' }
-];
+import {
+  PROVIDER_OPCODE,
+  PROVIDER_PUTER,
+  PROVIDER_CHATGPT,
+  DEFAULT_PROVIDER,
+  DEFAULT_ORDER_PROVIDERS
+} from '../../../constant.js';
 
 interface RtkState {
   enabled: boolean;
@@ -32,8 +32,20 @@ export default function SettingsPage() {
     saving: boolean;
     error: string | null;
   }>({
-    defaultProvider: 'opencode',
-    fallbackOrder: ['opencode', 'puter', 'chatgpt'],
+    defaultProvider: DEFAULT_PROVIDER as Provider,
+    fallbackOrder: [...DEFAULT_ORDER_PROVIDERS] as Provider[],
+    loading: true,
+    saving: false,
+    error: null
+  });
+
+  const [providers, setProviders] = useState<{
+    list: Array<{ provider: string; enabled: boolean }>;
+    loading: boolean;
+    saving: boolean;
+    error: string | null;
+  }>({
+    list: [],
     loading: true,
     saving: false,
     error: null
@@ -72,12 +84,12 @@ export default function SettingsPage() {
           fetch('/api/settings/FALLBACK_ORDER')
         ]);
 
-        let defaultProvider: Provider | '' = 'opencode';
-        let fallbackOrder: Provider[] = ['opencode', 'puter', 'chatgpt'];
+        let defaultProvider: Provider | '' = DEFAULT_PROVIDER as Provider;
+        let fallbackOrder: Provider[] = [...DEFAULT_ORDER_PROVIDERS] as Provider[];
 
         if (defaultRes.ok) {
           const data = await defaultRes.json();
-          defaultProvider = (data.value as Provider) || 'opencode';
+          defaultProvider = (data.value as Provider) || (DEFAULT_PROVIDER as Provider);
         }
 
         if (orderRes.ok) {
@@ -106,6 +118,30 @@ export default function SettingsPage() {
     };
 
     fetchProviderSettings();
+  }, []);
+
+  // Fetch provider enabled states
+  useEffect(() => {
+    const fetchProviders = async () => {
+      try {
+        const response = await fetch('/api/providers');
+        if (!response.ok) throw new Error('Failed to fetch providers');
+        const data = await response.json();
+        setProviders((prev) => ({
+          ...prev,
+          list: data.providers || [],
+          loading: false
+        }));
+      } catch (err) {
+        setProviders((prev) => ({
+          ...prev,
+          loading: false,
+          error: err instanceof Error ? err.message : 'Failed to load providers'
+        }));
+      }
+    };
+
+    fetchProviders();
   }, []);
 
   const handleRtkToggle = async () => {
@@ -167,6 +203,29 @@ export default function SettingsPage() {
     }
   };
 
+  const handleProviderToggle = async (provider: string, enabled: boolean) => {
+    setProviders((prev) => ({ ...prev, saving: true, error: null }));
+    try {
+      const response = await fetch(`/api/providers/${provider}/toggle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled })
+      });
+      if (!response.ok) throw new Error(`Failed to toggle ${provider}`);
+      setProviders((prev) => ({
+        ...prev,
+        list: prev.list.map((p) => (p.provider === provider ? { ...p, enabled } : p)),
+        saving: false
+      }));
+    } catch (err) {
+      setProviders((prev) => ({
+        ...prev,
+        saving: false,
+        error: err instanceof Error ? err.message : 'Unknown error'
+      }));
+    }
+  };
+
   const moveProvider = (index: number, direction: 'up' | 'down') => {
     const order = [...providerChain.fallbackOrder];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
@@ -190,20 +249,6 @@ export default function SettingsPage() {
             <p className="mt-0.5 text-xs text-neutral-400">Saved only in this browser.</p>
           </div>
           <div className="space-y-5 p-6">
-            <label className="block">
-              <span className="mb-2 block text-sm font-medium text-neutral-100">Provider</span>
-              <select
-                value={settings.provider}
-                onChange={(e) => setSettings((current) => ({ ...current, provider: e.target.value as Provider }))}
-                className="block w-full rounded-lg border border-neutral-600 bg-neutral-800 px-3 py-2.5 text-sm text-white focus:border-emerald-500 focus:ring-emerald-500">
-                {PROVIDER_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
             <label className="block">
               <span className="mb-2 block text-sm font-medium text-neutral-100">API base URL</span>
               <input
@@ -254,7 +299,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Feature settings */}
-        <div className="rounded-xl border border-white/10 bg-[#242424]">
+        <div className="mb-6 rounded-xl border border-white/10 bg-[#242424]">
           <div className="border-b border-white/10 px-6 py-4">
             <h2 className="text-lg font-medium text-neutral-100">Features</h2>
           </div>
@@ -343,17 +388,20 @@ export default function SettingsPage() {
                 {/* Default provider */}
                 <label className="block">
                   <span className="mb-2 block text-sm font-medium text-neutral-100">Default provider</span>
-                  <select
-                    value={providerChain.defaultProvider}
-                    disabled={providerChain.saving}
-                    onChange={(e) => handleDefaultProviderChange(e.target.value as Provider)}
-                    className="block w-full rounded-lg border border-neutral-600 bg-neutral-800 px-3 py-2.5 text-sm text-white focus:border-emerald-500 focus:ring-emerald-500 disabled:opacity-50">
-                    {PROVIDER_OPTIONS.filter((o) => o.value !== 'auto').map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
+                  <label className="relative">
+                    <select
+                      value={providerChain.defaultProvider}
+                      disabled={providerChain.saving}
+                      onChange={(e) => handleDefaultProviderChange(e.target.value as Provider)}
+                      className="appearance-none block w-full rounded-lg border border-neutral-600 bg-neutral-800 px-3 py-2.5 pr-8 text-sm text-white focus:border-emerald-500 focus:ring-emerald-500 disabled:opacity-50">
+                      <option value={PROVIDER_OPCODE}>OpenCode</option>
+                      <option value={PROVIDER_PUTER}>Puter</option>
+                      <option value={PROVIDER_CHATGPT}>ChatGPT</option>
+                    </select>
+                    <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-[10px] text-neutral-500">
+                      ▾
+                    </span>
+                  </label>
                   <span className="mt-1.5 block text-xs text-neutral-400">
                     Used when no X-Request-Provider header is sent. The first provider tried in the fallback chain.
                   </span>
@@ -401,6 +449,49 @@ export default function SettingsPage() {
                     Saving...
                   </div>
                 )}
+
+                {/* Provider toggles */}
+                <div className="mt-6">
+                  <span className="mb-2 block text-sm font-medium text-neutral-100">Provider enabled</span>
+                  {providers.loading && (
+                    <div className="flex items-center py-2">
+                      <i aria-hidden="true" className="fa-solid fa-spinner animate-spin text-emerald-500" />
+                      <span className="ml-2 text-sm text-neutral-400">Loading providers...</span>
+                    </div>
+                  )}
+                  {providers.error && (
+                    <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-2">
+                      <p className="text-xs text-red-400">{providers.error}</p>
+                    </div>
+                  )}
+                  {!providers.loading &&
+                    providers.list.map((p) => (
+                      <label
+                        key={p.provider}
+                        className="flex cursor-pointer items-center gap-4 rounded-lg p-4 transition hover:bg-neutral-700/30">
+                        <div
+                          className="relative flex h-6 w-11 items-center rounded-full bg-neutral-700 transition"
+                          role="switch"
+                          aria-checked={p.enabled}>
+                          <input
+                            type="checkbox"
+                            checked={p.enabled}
+                            disabled={providers.saving}
+                            onChange={() => handleProviderToggle(p.provider, !p.enabled)}
+                            className="peer sr-only"
+                            aria-label={`Toggle ${p.provider}`}
+                          />
+                          <span
+                            className={`absolute left-1 h-4 w-4 rounded-full transition ${p.enabled ? 'translate-x-5 bg-emerald-500' : 'bg-neutral-500'} ${providers.saving ? 'opacity-50' : ''}`}
+                          />
+                        </div>
+                        <span className="flex-1 text-sm font-medium text-neutral-100 capitalize">{p.provider}</span>
+                        {providers.saving && (
+                          <i aria-hidden="true" className="fa-solid fa-spinner animate-spin text-sm text-emerald-500" />
+                        )}
+                      </label>
+                    ))}
+                </div>
               </div>
             )}
           </div>

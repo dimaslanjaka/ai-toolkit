@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSettings } from '../context/SettingsContext';
 import { createApiUrl } from '../utils/url';
+import { PROVIDER_OPCODE, PROVIDER_PUTER, PROVIDER_CHATGPT } from '../../../constant.js';
 
 interface Model {
   id: string;
@@ -12,12 +13,6 @@ interface Model {
   parent?: string;
   provider: string;
   enabled: boolean;
-}
-
-interface ApiResponse<T = unknown> {
-  ok: boolean;
-  data?: T;
-  message?: string;
 }
 
 type ModalMode = 'add' | 'edit' | 'delete' | null;
@@ -53,7 +48,7 @@ export default function ModelManager() {
 
   const [formData, setFormData] = useState({
     id: '',
-    provider: 'opencode',
+    provider: PROVIDER_OPCODE,
     object: 'model',
     owned_by: '',
     permission: '',
@@ -67,15 +62,15 @@ export default function ModelManager() {
     setError('');
 
     try {
-      const url = createApiUrl('/admin/models', { apiBase });
+      const url = createApiUrl('/api/models', { apiBase });
       const response = await fetch(url, { headers: requestHeaders(apiKey) });
-      const payload = (await response.json()) as ApiResponse<Model[]>;
+      const payload = (await response.json()) as { models?: Model[]; error?: string; message?: string };
 
-      if (!response.ok || !payload.ok) {
-        throw new Error(payload.message || `Failed to load models (${response.status})`);
+      if (!response.ok) {
+        throw new Error(payload.error || payload.message || `Failed to load models (${response.status})`);
       }
 
-      setModels(payload.data || []);
+      setModels(payload.models || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -113,7 +108,7 @@ export default function ModelManager() {
   const openAddModal = () => {
     setFormData({
       id: '',
-      provider: 'opencode',
+      provider: PROVIDER_OPCODE,
       object: 'model',
       owned_by: '',
       permission: '',
@@ -150,7 +145,7 @@ export default function ModelManager() {
     setEditingModel(null);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
     setError('');
 
@@ -158,10 +153,9 @@ export default function ModelManager() {
     if (!mode || mode === 'delete') return;
 
     try {
-      const url = createApiUrl('/admin/models', { apiBase });
+      const modelId = encodeURIComponent(formData.id.trim());
+      const url = createApiUrl(`/api/models/${formData.provider}/${modelId}`, { apiBase });
       const body = {
-        id: formData.id.trim(),
-        provider: formData.provider,
         object: formData.object,
         owned_by: formData.owned_by.trim() || undefined,
         permission: formData.permission.trim() || undefined,
@@ -171,15 +165,15 @@ export default function ModelManager() {
       };
 
       const response = await fetch(url, {
-        method: mode === 'add' ? 'POST' : 'PUT',
+        method: 'POST',
         headers: { ...requestHeaders(apiKey), 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       });
 
-      const payload = (await response.json()) as ApiResponse;
+      const payload = (await response.json()) as { success?: boolean; error?: string; message?: string };
 
-      if (!response.ok || !payload.ok) {
-        throw new Error(payload.message || `Failed to ${mode} model`);
+      if (!response.ok) {
+        throw new Error(payload.error || payload.message || `Failed to ${mode} model`);
       }
 
       setSuccess(`Model ${mode === 'add' ? 'added' : 'updated'} successfully`);
@@ -195,24 +189,18 @@ export default function ModelManager() {
     setError('');
 
     try {
-      const url = createApiUrl(
-        '/admin/models',
-        { apiBase },
-        {
-          id: editingModel.id,
-          provider: editingModel.provider
-        }
-      );
+      const modelId = encodeURIComponent(editingModel.id);
+      const url = createApiUrl(`/api/models/${editingModel.provider}/${modelId}`, { apiBase });
 
       const response = await fetch(url, {
         method: 'DELETE',
         headers: requestHeaders(apiKey)
       });
 
-      const payload = (await response.json()) as ApiResponse;
+      const payload = (await response.json()) as { success?: boolean; error?: string };
 
-      if (!response.ok || !payload.ok) {
-        throw new Error(payload.message || 'Failed to delete model');
+      if (!response.ok) {
+        throw new Error(payload.error || 'Failed to delete model');
       }
 
       setSuccess('Model deleted successfully');
@@ -231,25 +219,22 @@ export default function ModelManager() {
     );
 
     try {
-      const url = createApiUrl('/admin/models', { apiBase });
+      const modelId = encodeURIComponent(model.id);
+      const url = createApiUrl(`/api/models/${model.provider}/${modelId}/toggle`, { apiBase });
       const response = await fetch(url, {
-        method: 'PUT',
+        method: 'POST',
         headers: { ...requestHeaders(apiKey), 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: model.id,
-          provider: model.provider,
-          enabled: newEnabled ? 1 : 0
-        })
+        body: JSON.stringify({ enabled: newEnabled ? 1 : 0 })
       });
 
-      const payload = (await response.json()) as ApiResponse;
+      const payload = (await response.json()) as { success?: boolean; error?: string };
 
-      if (!response.ok || !payload.ok) {
+      if (!response.ok) {
         // Revert on failure
         setModels((prev) =>
           prev.map((m) => (m.id === model.id && m.provider === model.provider ? { ...m, enabled: model.enabled } : m))
         );
-        throw new Error(payload.message || 'Failed to toggle enabled state');
+        throw new Error(payload.error || 'Failed to toggle enabled state');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -258,9 +243,9 @@ export default function ModelManager() {
 
   const providerBadgeClass = (provider: string) => {
     const badges: Record<string, string> = {
-      opencode: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
-      puter: 'border-sky-500/30 bg-sky-500/10 text-sky-400',
-      chatgpt: 'border-purple-500/30 bg-purple-500/10 text-purple-400'
+      [PROVIDER_OPCODE]: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
+      [PROVIDER_PUTER]: 'border-sky-500/30 bg-sky-500/10 text-sky-400',
+      [PROVIDER_CHATGPT]: 'border-purple-500/30 bg-purple-500/10 text-purple-400'
     };
     return badges[provider] || 'border-neutral-500/30 bg-neutral-500/10 text-neutral-400';
   };
@@ -302,15 +287,20 @@ export default function ModelManager() {
               />
             </div>
 
-            <select
-              value={providerFilter}
-              onChange={(e) => setProviderFilter(e.target.value)}
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white focus:border-emerald-500 focus:ring-emerald-500">
-              <option value="all">All Providers</option>
-              <option value="opencode">OpenCode</option>
-              <option value="puter">Puter</option>
-              <option value="chatgpt">ChatGPT</option>
-            </select>
+            <label className="relative">
+              <select
+                value={providerFilter}
+                onChange={(e) => setProviderFilter(e.target.value)}
+                className="appearance-none rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 pr-8 text-sm text-white focus:border-emerald-500 focus:ring-emerald-500">
+                <option value="all">All Providers</option>
+                <option value="opencode">OpenCode</option>
+                <option value="puter">Puter</option>
+                <option value="chatgpt">ChatGPT</option>
+              </select>
+              <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-[10px] text-neutral-500">
+                ▾
+              </span>
+            </label>
           </div>
 
           {error && (
@@ -481,15 +471,20 @@ export default function ModelManager() {
                       {formData.provider}
                     </div>
                   ) : (
-                    <select
-                      required
-                      value={formData.provider}
-                      onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
-                      className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white focus:border-emerald-500 focus:ring-emerald-500">
-                      <option value="opencode">OpenCode</option>
-                      <option value="puter">Puter</option>
-                      <option value="chatgpt">ChatGPT</option>
-                    </select>
+                    <label className="relative mt-1">
+                      <select
+                        required
+                        value={formData.provider}
+                        onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
+                        className="appearance-none w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 pr-8 text-sm text-white focus:border-emerald-500 focus:ring-emerald-500">
+                        <option value="opencode">OpenCode</option>
+                        <option value="puter">Puter</option>
+                        <option value="chatgpt">ChatGPT</option>
+                      </select>
+                      <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-[10px] text-neutral-500">
+                        ▾
+                      </span>
+                    </label>
                   )}
                 </div>
               </div>
