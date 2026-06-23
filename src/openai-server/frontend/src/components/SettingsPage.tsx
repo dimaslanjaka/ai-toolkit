@@ -25,6 +25,20 @@ export default function SettingsPage() {
     error: null
   });
 
+  const [providerChain, setProviderChain] = useState<{
+    defaultProvider: Provider | '';
+    fallbackOrder: Provider[];
+    loading: boolean;
+    saving: boolean;
+    error: string | null;
+  }>({
+    defaultProvider: 'opencode',
+    fallbackOrder: ['opencode', 'puter', 'chatgpt'],
+    loading: true,
+    saving: false,
+    error: null
+  });
+
   // Fetch RTK setting on mount
   useEffect(() => {
     const fetchRtk = async () => {
@@ -49,6 +63,51 @@ export default function SettingsPage() {
     fetchRtk();
   }, []);
 
+  // Fetch provider settings
+  useEffect(() => {
+    const fetchProviderSettings = async () => {
+      try {
+        const [defaultRes, orderRes] = await Promise.all([
+          fetch('/api/settings/DEFAULT_PROVIDER'),
+          fetch('/api/settings/FALLBACK_ORDER')
+        ]);
+
+        let defaultProvider: Provider | '' = 'opencode';
+        let fallbackOrder: Provider[] = ['opencode', 'puter', 'chatgpt'];
+
+        if (defaultRes.ok) {
+          const data = await defaultRes.json();
+          defaultProvider = (data.value as Provider) || 'opencode';
+        }
+
+        if (orderRes.ok) {
+          const data = await orderRes.json();
+          try {
+            const parsed = JSON.parse(data.value);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              fallbackOrder = parsed;
+            }
+          } catch {}
+        }
+
+        setProviderChain((prev) => ({
+          ...prev,
+          defaultProvider,
+          fallbackOrder,
+          loading: false
+        }));
+      } catch (err) {
+        setProviderChain((prev) => ({
+          ...prev,
+          loading: false,
+          error: err instanceof Error ? err.message : 'Failed to load provider settings'
+        }));
+      }
+    };
+
+    fetchProviderSettings();
+  }, []);
+
   const handleRtkToggle = async () => {
     const newValue = !rtk.enabled;
     setRtk((prev) => ({ ...prev, saving: true, error: null }));
@@ -68,6 +127,52 @@ export default function SettingsPage() {
         enabled: !newValue
       }));
     }
+  };
+
+  const handleDefaultProviderChange = async (value: Provider) => {
+    setProviderChain((prev) => ({ ...prev, saving: true, error: null }));
+    try {
+      const response = await fetch('/api/settings/DEFAULT_PROVIDER', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value })
+      });
+      if (!response.ok) throw new Error('Failed to save default provider');
+      setProviderChain((prev) => ({ ...prev, defaultProvider: value, saving: false }));
+    } catch (err) {
+      setProviderChain((prev) => ({
+        ...prev,
+        saving: false,
+        error: err instanceof Error ? err.message : 'Unknown error'
+      }));
+    }
+  };
+
+  const handleFallbackOrderSave = async (order: Provider[]) => {
+    setProviderChain((prev) => ({ ...prev, saving: true, error: null }));
+    try {
+      const response = await fetch('/api/settings/FALLBACK_ORDER', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: JSON.stringify(order) })
+      });
+      if (!response.ok) throw new Error('Failed to save fallback order');
+      setProviderChain((prev) => ({ ...prev, fallbackOrder: order, saving: false }));
+    } catch (err) {
+      setProviderChain((prev) => ({
+        ...prev,
+        saving: false,
+        error: err instanceof Error ? err.message : 'Unknown error'
+      }));
+    }
+  };
+
+  const moveProvider = (index: number, direction: 'up' | 'down') => {
+    const order = [...providerChain.fallbackOrder];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= order.length) return;
+    [order[index], order[targetIndex]] = [order[targetIndex], order[index]];
+    handleFallbackOrderSave(order);
   };
 
   return (
@@ -201,6 +306,102 @@ export default function SettingsPage() {
                   <i aria-hidden="true" className="fa-solid fa-spinner animate-spin text-sm text-emerald-500" />
                 )}
               </label>
+            )}
+          </div>
+        </div>
+
+        {/* Provider Chain settings */}
+        <div className="rounded-xl border border-white/10 bg-[#242424]">
+          <div className="border-b border-white/10 px-6 py-4">
+            <h2 className="text-lg font-medium text-neutral-100">Provider Chain</h2>
+            <p className="mt-0.5 text-xs text-neutral-400">
+              Configure the default provider and fallback order for server-side requests.
+            </p>
+          </div>
+          <div className="p-6">
+            {providerChain.loading && (
+              <div className="flex items-center justify-center py-8">
+                <i aria-hidden="true" className="fa-solid fa-spinner animate-spin text-lg text-emerald-500" />
+                <span className="ml-2 text-sm text-neutral-400">Loading provider settings...</span>
+              </div>
+            )}
+
+            {providerChain.error && !providerChain.loading && (
+              <div className="mb-6 rounded-lg border border-red-500/30 bg-red-500/10 p-4">
+                <div className="flex items-start gap-3">
+                  <i aria-hidden="true" className="fa-solid fa-exclamation-circle mt-0.5 flex-shrink-0 text-red-500" />
+                  <div>
+                    <p className="text-sm font-medium text-red-400">Error</p>
+                    <p className="mt-0.5 text-xs text-red-300">{providerChain.error}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!providerChain.loading && (
+              <div className="space-y-6">
+                {/* Default provider */}
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-neutral-100">Default provider</span>
+                  <select
+                    value={providerChain.defaultProvider}
+                    disabled={providerChain.saving}
+                    onChange={(e) => handleDefaultProviderChange(e.target.value as Provider)}
+                    className="block w-full rounded-lg border border-neutral-600 bg-neutral-800 px-3 py-2.5 text-sm text-white focus:border-emerald-500 focus:ring-emerald-500 disabled:opacity-50">
+                    {PROVIDER_OPTIONS.filter((o) => o.value !== 'auto').map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="mt-1.5 block text-xs text-neutral-400">
+                    Used when no X-Request-Provider header is sent. The first provider tried in the fallback chain.
+                  </span>
+                </label>
+
+                {/* Fallback order */}
+                <div>
+                  <span className="mb-2 block text-sm font-medium text-neutral-100">Fallback order</span>
+                  <p className="mb-3 text-xs text-neutral-400">
+                    Providers are tried in order. Drag or use the buttons to reorder.
+                  </p>
+                  <div className="space-y-2">
+                    {providerChain.fallbackOrder.map((provider, index) => (
+                      <div
+                        key={provider}
+                        className="flex items-center gap-3 rounded-lg border border-neutral-600 bg-neutral-800 px-3 py-2.5">
+                        <span className="flex h-6 w-6 items-center justify-center rounded bg-neutral-700 text-xs text-neutral-400">
+                          {index + 1}
+                        </span>
+                        <span className="flex-1 text-sm text-white capitalize">{provider}</span>
+                        <button
+                          type="button"
+                          disabled={index === 0 || providerChain.saving}
+                          onClick={() => moveProvider(index, 'up')}
+                          className="flex h-7 w-7 items-center justify-center rounded text-neutral-400 transition hover:bg-neutral-700 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+                          aria-label={`Move ${provider} up`}>
+                          <i aria-hidden="true" className="fa-solid fa-chevron-up text-xs" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={index === providerChain.fallbackOrder.length - 1 || providerChain.saving}
+                          onClick={() => moveProvider(index, 'down')}
+                          className="flex h-7 w-7 items-center justify-center rounded text-neutral-400 transition hover:bg-neutral-700 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+                          aria-label={`Move ${provider} down`}>
+                          <i aria-hidden="true" className="fa-solid fa-chevron-down text-xs" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {providerChain.saving && (
+                  <div className="flex items-center gap-2 text-sm text-neutral-400">
+                    <i aria-hidden="true" className="fa-solid fa-spinner animate-spin text-emerald-500" />
+                    Saving...
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>
