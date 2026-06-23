@@ -1,8 +1,8 @@
-import { jest, describe, it, expect } from '@jest/globals';
+import { describe, expect, it } from '@jest/globals';
 import {
-  repairMessageSequence,
+  isConnectionError,
   noopLogger,
-  isConnectionError
+  repairMessageSequence
 } from '../../../src/openai-server/provider/message-repair.js';
 import context from './long-context.json' with { type: 'json' };
 
