@@ -3,10 +3,23 @@
  */
 
 // Types for Responses API
+export interface ResponseInputMessage {
+  type: 'message';
+  role: 'user' | 'system' | 'assistant' | 'tool';
+  content: Array<{ type: string; text?: string }>;
+}
+
+export interface ResponseInputText {
+  type: 'input_text';
+  text: string;
+}
+
+export type ResponseInputItem = ResponseInputMessage | ResponseInputText;
+
 export interface ResponsesRequest {
   model: string;
   instructions?: string;
-  input: string | Array<{ type: string; text?: string }>;
+  input: string | ResponseInputItem[];
   tools?: any[];
   temperature?: number;
   max_output_tokens?: number;
@@ -58,18 +71,25 @@ export function convertResponsesRequestToChatCompletions(request: ResponsesReque
     messages.push({ role: 'system', content: instructions });
   }
 
-  // Convert input to user message(s)
+  // Convert input to chat completion messages
   if (typeof input === 'string') {
     messages.push({ role: 'user', content: input });
   } else if (Array.isArray(input)) {
-    // Handle array input - extract text content
-    const userContent = input
-      .filter((item) => item.type === 'input_text' && item.text)
-      .map((item) => item.text)
-      .join('\n');
-
-    if (userContent) {
-      messages.push({ role: 'user', content: userContent });
+    // Handle array of response input items (OpenAI Responses API format)
+    for (const item of input) {
+      if (item.type === 'message' && item.role && Array.isArray(item.content)) {
+        // Message-type items: { type: "message", role: "user", content: [{ type: "input_text", text: "..." }] }
+        const textContent = item.content
+          .filter((block: any) => block.type === 'input_text' && block.text)
+          .map((block: any) => block.text)
+          .join('\n');
+        if (textContent) {
+          messages.push({ role: item.role, content: textContent });
+        }
+      } else if (item.type === 'input_text' && item.text) {
+        // Direct input_text items (simpler format)
+        messages.push({ role: 'user', content: item.text });
+      }
     }
   }
 
