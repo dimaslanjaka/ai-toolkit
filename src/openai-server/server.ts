@@ -19,7 +19,7 @@ const app = express();
 // Per-request logging middleware - captures raw HTTP request and response
 app.use((req, res, next) => {
   // Skip logging for high-traffic endpoints
-  const excludePaths = ['/proxy-checker/', '/admin/'];
+  const excludePaths = ['/proxy-checker/', '/admin/', '/api/'];
   if (excludePaths.some((p) => req.path.startsWith(p))) {
     next();
     return;

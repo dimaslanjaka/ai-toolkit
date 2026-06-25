@@ -592,7 +592,10 @@ export default function ProxyManager() {
                         <button
                           type="button"
                           disabled={settingProxy}
-                          onClick={() => void setOpenCodeProxy(proxy.proxy)}
+                          onClick={() => {
+                            const fullUrl = proxy.type ? `${proxy.type}://${proxy.proxy}` : `http://${proxy.proxy}`;
+                            void setOpenCodeProxy(fullUrl);
+                          }}
                           className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-medium text-neutral-300 transition hover:bg-emerald-500/20 hover:text-emerald-300 disabled:opacity-40"
                           aria-label={`Use proxy ${proxy.proxy}`}>
                           {settingProxy ? <i aria-hidden="true" className="fa-solid fa-spinner animate-spin" /> : 'Use'}

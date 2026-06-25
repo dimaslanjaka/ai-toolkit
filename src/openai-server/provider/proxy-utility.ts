@@ -74,13 +74,17 @@ export async function readLastWorkingProxy(host: string): Promise<string | undef
 
     if (!proxyUrl) return undefined;
 
-    const parsed = new URL(proxyUrl);
+    // Handle bare host:port (e.g. "1.2.3.4:8080") by prepending http://
+    // This can happen when the value was stored from the UI without a protocol.
+    const normalizedUrl = proxyUrl.includes('://') ? proxyUrl : `http://${proxyUrl}`;
+
+    const parsed = new URL(normalizedUrl);
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
       return undefined;
     }
 
-    serverLogger.log(`Reusing cached proxy for ${host}: ${getProxyLabel(proxyUrl)}`);
-    return proxyUrl;
+    serverLogger.log(`Reusing cached proxy for ${host}: ${getProxyLabel(normalizedUrl)}`);
+    return normalizedUrl;
   } catch (error) {
     serverLogger.logSync(`Unable to read cached proxy for ${host}: ${error}`);
     return undefined;
