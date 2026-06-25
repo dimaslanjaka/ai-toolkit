@@ -4,6 +4,12 @@ const { HttpsProxyAgent } = require('https-proxy-agent');
 const { SocksProxyAgent } = require('socks-proxy-agent');
 
 /**
+ * In-memory cache for proxy reachability checks.
+ * Maps `${type}:${proxy}` → { result, timestamp }
+ */
+const reachabilityCache = new Map();
+
+/**
  * Parse proxy string into host, port, and optional auth.
  *
  * @param {string} proxy - Proxy string in `ip:port` or `user:pass@ip:port` format.
@@ -151,10 +157,28 @@ async function requestSocks(proxyUrl, timeout) {
  * @param {'http' | 'socks4' | 'socks5'} options.type - Proxy protocol type.
  * @param {string} options.proxy - Proxy string in `ip:port` or `user:pass@ip:port` format.
  * @param {number} [options.timeout=10000] - Connection and request timeout in milliseconds.
- * @returns {Promise<{ok: boolean, stage?: string, host?: string, port?: number, tcp?: boolean, title?: string | null, expected?: string, proxy?: string, error?: string}>}
+ * @param {boolean} [options.useCache=true] - Whether to use cached reachability results.
+ * @param {number} [options.cacheTimeout=300000] - Cache validity duration in milliseconds (default: 5 minutes).
+ * @returns {Promise<{ok: boolean, stage?: string, host?: string, port?: number, tcp?: boolean, title?: string | null, expected?: string, proxy?: string, error?: string, cached?: boolean}>}
  *   Result object indicating whether the proxy is reachable and diagnostic info.
  */
-async function isProxyReachable({ type, proxy, timeout = 10000 }) {
+async function isProxyReachable({ type, proxy, timeout = 10000, useCache = true, cacheTimeout = 300000 }) {
+  const cacheKey = `${type}:${proxy}`;
+  const now = Date.now();
+
+  // Check cache if enabled
+  if (useCache && reachabilityCache.has(cacheKey)) {
+    const cached = reachabilityCache.get(cacheKey);
+    const age = now - cached.timestamp;
+
+    if (age < cacheTimeout) {
+      return { ...cached.result, cached: true };
+    }
+
+    // Expired, remove from cache
+    reachabilityCache.delete(cacheKey);
+  }
+
   const { host, port } = parseProxy(proxy);
 
   // 1. TCP check first
@@ -184,13 +208,20 @@ async function isProxyReachable({ type, proxy, timeout = 10000 }) {
     const title = extractTitle(html);
     const normalized = title?.toLowerCase();
 
-    return {
+    const result = {
       ok: normalized === 'http forever',
       tcp: true,
       title,
       expected: 'http forever',
       proxy: proxyUrl
     };
+
+    // Cache successful checks
+    if (result.ok && useCache) {
+      reachabilityCache.set(cacheKey, { result, timestamp: now });
+    }
+
+    return result;
   } catch (err) {
     return {
       ok: false,
