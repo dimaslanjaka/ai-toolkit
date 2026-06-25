@@ -49,7 +49,11 @@ export function getProxyUrl(item: {
 export function getProxyLabel(proxyUrl: string): string {
   try {
     const parsed = new URL(proxyUrl);
-    return `${parsed.hostname}:${parsed.port}`;
+    if (parsed.port) return `${parsed.hostname}:${parsed.port}`;
+    // Default port for well-known protocols when port is absent
+    if (parsed.protocol === 'http:') return `${parsed.hostname}:80`;
+    if (parsed.protocol === 'https:') return `${parsed.hostname}:443`;
+    return parsed.hostname;
   } catch {
     return proxyUrl;
   }

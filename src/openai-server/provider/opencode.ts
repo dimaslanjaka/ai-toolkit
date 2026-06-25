@@ -593,7 +593,12 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
         res.write(
           `data: ${JSON.stringify({
             type: 'response.created',
-            response: { id: responseId, object: 'response', status: 'in_progress', model: model || 'opencode-default' }
+            response: {
+              id: responseId,
+              object: 'response',
+              status: 'in_progress',
+              model: resolvedModel || 'opencode-default'
+            }
           })}\n\n`
         );
 

@@ -275,29 +275,6 @@ function normalizeEmbeddingInput(input: unknown): string[] {
   return [String(input)];
 }
 
-function deduplicateMessages(messages: any[]): any[] {
-  if (!Array.isArray(messages) || messages.length <= 1) {
-    return messages;
-  }
-
-  const deduplicated: any[] = [messages[0]];
-
-  for (let i = 1; i < messages.length; i++) {
-    const prev = messages[i - 1];
-    const curr = messages[i];
-    const prevHash = `${prev.role}:${typeof prev.content === 'string' ? prev.content : JSON.stringify(prev.content)}`;
-    const currHash = `${curr.role}:${typeof curr.content === 'string' ? curr.content : JSON.stringify(curr.content)}`;
-
-    if (prevHash === currHash) {
-      serverLogger.log(`Removed consecutive duplicate message [${i}]: ${curr.role} - ${currHash.substring(0, 100)}`);
-    } else {
-      deduplicated.push(curr);
-    }
-  }
-
-  return deduplicated;
-}
-
 function estimateTokens(text: string): number {
   return Math.max(1, Math.ceil(text.length / 4));
 }
@@ -438,18 +415,7 @@ export async function handleModels(req: Request, res: Response) {
 
 export async function handleChatCompletion(req: Request, res: Response) {
   try {
-    // Ensure messages are deduplicated before delegating to provider
-    const body = { ...(req.body ?? {}) };
-    if (Array.isArray(body.messages)) {
-      const original = body.messages;
-      const deduped = deduplicateMessages(original);
-      if (original.length !== deduped.length) {
-        serverLogger.log(`Deduplicated chat messages: ${original.length} → ${deduped.length}`);
-      }
-      body.messages = deduped;
-    }
-    const newReq = createRequestWithBody(req, body);
-    const result = await callWithFallback(newReq, 'handleChatCompletion');
+    const result = await callWithFallback(req, 'handleChatCompletion');
     sendResult(res, result);
   } catch (err) {
     if (!res.headersSent) {
@@ -619,18 +585,7 @@ export async function handleEmbeddings(req: Request, res: Response) {
 
 export async function handleResponses(req: Request, res: Response) {
   try {
-    // Ensure messages are deduplicated before delegating to provider
-    const body = { ...(req.body ?? {}) };
-    if (Array.isArray(body.messages)) {
-      const original = body.messages;
-      const deduped = deduplicateMessages(original);
-      if (original.length !== deduped.length) {
-        serverLogger.log(`Deduplicated responses messages: ${original.length} → ${deduped.length}`);
-      }
-      body.messages = deduped;
-    }
-    const newReq = createRequestWithBody(req, body);
-    const result = await callWithFallback(newReq, 'handleResponses');
+    const result = await callWithFallback(req, 'handleResponses');
     sendResult(res, result);
   } catch (err) {
     if (!res.headersSent) {
