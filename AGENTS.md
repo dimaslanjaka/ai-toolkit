@@ -58,13 +58,9 @@
 
   **ai-memory MCP Integration:**
   - Database: `.opencode/memory/memories.db` (per-project, auto-created)
-  - Tier: set via `AI_MEMORY_TIER` env var (default: `semantic`)
-  - Key tools: `memory_store`, `memory_recall`, `memory_search`, `memory_list`, `memory_get`
-  - Full tool reference: https://github.com/alphaonedev/ai-memory-mcp/tree/main
-  - Usage patterns:
-    - **RECALL FIRST**: At conversation start, call `memory_recall` with relevant context
-    - **STORE LEARNINGS**: When user corrects or teaches, call `memory_store` with tier:`long`, priority:`9`
-    - **NAMESPACES**: Organize by project/topic; always pass namespace when storing/recalling
+  - Full CRUD documentation: see [`docs/ai-memory.md`](docs/ai-memory.md)
+  - Quick reference: `memory_store`, `memory_recall`, `memory_search`, `memory_list`, `memory_get`
+  - **RECALL FIRST** at conversation start; **STORE LEARNINGS** when corrected (tier:`long`, priority:`9`)
 - Memory system integration guidance:
   - When delegating to specialist agents (@oracle, @librarian, @explorer), remind them to:
     - Recall relevant memories before starting work
