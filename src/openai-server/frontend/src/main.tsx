@@ -5,7 +5,7 @@ import { SettingsProvider } from './context/SettingsContext';
 import Chat from './components/Chat';
 import HomePage from './components/HomePage';
 import Layout from './components/Layout';
-import ProxyManager from './components/ProxyLogs';
+import ProxyManager from './components/ProxyManager';
 import ModelManager from './components/ModelManager';
 import SettingsPage from './components/SettingsPage';
 
