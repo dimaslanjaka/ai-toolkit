@@ -89,7 +89,7 @@ export default function Chat() {
       setConnectionState('checking');
 
       try {
-        const response = await fetch(createApiUrl('/v1/models', { apiBase: settings.apiBase }), {
+        const response = await fetch(createApiUrl('/v1/models'), {
           headers: getRequestHeaders(settings),
           signal: controller.signal
         });
@@ -138,7 +138,7 @@ export default function Chat() {
           `User: ${prompt.slice(0, 2000)}`,
           `Assistant: ${assistantResponse.slice(0, 2000)}`
         ].join('\n');
-        const response = await fetch(createApiUrl('/v1/chat/completions', { apiBase: settings.apiBase }), {
+        const response = await fetch(createApiUrl('/v1/chat/completions'), {
           method: 'POST',
           headers: getRequestHeaders(settings),
           body: JSON.stringify({
@@ -177,7 +177,7 @@ export default function Chat() {
             content: message.content
           }))
         ];
-        const response = await fetch(createApiUrl('/v1/chat/completions', { apiBase: settings.apiBase }), {
+        const response = await fetch(createApiUrl('/v1/chat/completions'), {
           method: 'POST',
           headers: getRequestHeaders(settings),
           body: JSON.stringify({

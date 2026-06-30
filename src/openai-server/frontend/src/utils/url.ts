@@ -1,9 +1,3 @@
-interface ApiUrlOptions {
-  apiBase?: string;
-  backendDev?: string;
-  backendProd?: string;
-}
-
 function sanitizeApiBase(apiBase: string): string {
   const trimmed = apiBase.trim();
 
@@ -45,23 +39,20 @@ function hostnameToUrl(hostname: string): string {
   return `${window.location.protocol}//${trimmed}`;
 }
 
-export function getApiBaseUrl(options: ApiUrlOptions = {}): URL {
-  const manualBase = sanitizeApiBase(options.apiBase ?? '');
+export function getApiBaseUrl(): URL {
   const backendHostname = import.meta.env.DEV
-    ? options.backendDev || import.meta.env.VITE_BACKEND_HOSTNAME_DEV || ''
-    : options.backendProd || import.meta.env.VITE_BACKEND_HOSTNAME_PROD || '';
+    ? import.meta.env.VITE_BACKEND_HOSTNAME_DEV || ''
+    : import.meta.env.VITE_BACKEND_HOSTNAME_PROD || '';
   const environmentBase = sanitizeApiBase(hostnameToUrl(backendHostname));
-  const selectedBase = manualBase || environmentBase;
 
-  return selectedBase ? new URL(selectedBase, `${window.location.origin}/`) : new URL(window.location.origin);
+  return environmentBase ? new URL(environmentBase) : new URL(window.location.origin);
 }
 
 export function createApiUrl(
   pathname: string,
-  options: ApiUrlOptions = {},
   params: Record<string, string | number | boolean | null | undefined> = {}
 ): string {
-  const base = getApiBaseUrl(options);
+  const base = getApiBaseUrl();
   const endpoint = pathname.replace(/^\/+/, '');
   const url = new URL(endpoint, `${base.href.replace(/\/+$/, '')}/`);
 
@@ -72,8 +63,4 @@ export function createApiUrl(
   }
 
   return url.href;
-}
-
-export function sanitizeStoredApiBase(apiBase: string): string {
-  return sanitizeApiBase(apiBase);
 }

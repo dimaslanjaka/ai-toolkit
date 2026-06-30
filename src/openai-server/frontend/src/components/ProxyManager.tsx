@@ -166,7 +166,7 @@ function MetricCard({ icon, label, value, detail }: { icon: string; label: strin
 
 export default function ProxyManager() {
   const { settings } = useSettings();
-  const { apiBase, apiKey } = settings;
+  const { apiKey } = settings;
 
   const [status, setStatus] = useState<ProxyCheckerStatus | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
@@ -199,7 +199,7 @@ export default function ProxyManager() {
       if (!quiet) setLoading(true);
 
       try {
-        const response = await fetch(createApiUrl('/proxy-checker/logs', { apiBase }, { limit: 500 }), {
+        const response = await fetch(createApiUrl('/proxy-checker/logs', { limit: 500 }), {
           headers: requestHeaders(apiKey)
         });
         const payload = (await response.json()) as ProxyLogsResponse;
@@ -220,12 +220,12 @@ export default function ProxyManager() {
         initialLoadRef.current = false;
       }
     },
-    [apiBase, apiKey]
+    [apiKey]
   );
 
   const loadWorkingProxies = useCallback(async () => {
     try {
-      const response = await fetch(createApiUrl('/proxy-checker/proxies', { apiBase }, { host: 'opencode.ai' }), {
+      const response = await fetch(createApiUrl('/proxy-checker/proxies', { host: 'opencode.ai' }), {
         headers: requestHeaders(apiKey)
       });
       const payload = (await response.json()) as WorkingProxiesResponse;
@@ -239,11 +239,11 @@ export default function ProxyManager() {
       console.error('Failed to load working proxies:', loadError);
       setWorkingProxies([]);
     }
-  }, [apiBase, apiKey]);
+  }, [apiKey]);
 
   const loadCachedProxy = useCallback(async () => {
     try {
-      const response = await fetch(createApiUrl('/api/settings/OPENCODE_CACHED_PROXY', { apiBase }), {
+      const response = await fetch(createApiUrl('/api/settings/OPENCODE_CACHED_PROXY'), {
         headers: requestHeaders(apiKey)
       });
       if (!response.ok) {
@@ -255,7 +255,7 @@ export default function ProxyManager() {
     } catch {
       setCachedProxy(null);
     }
-  }, [apiBase, apiKey]);
+  }, [apiKey]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -301,7 +301,7 @@ export default function ProxyManager() {
       setNotice('');
 
       try {
-        const response = await fetch(createApiUrl(`/proxy-checker/${nextAction}`, { apiBase }), {
+        const response = await fetch(createApiUrl(`/proxy-checker/${nextAction}`), {
           method: 'POST',
           headers: requestHeaders(apiKey)
         });
@@ -321,7 +321,7 @@ export default function ProxyManager() {
         setAction(null);
       }
     },
-    [apiBase, apiKey, loadStatus]
+    [apiKey, loadStatus]
   );
 
   const runtimeFiles = status
@@ -496,7 +496,6 @@ export default function ProxyManager() {
             <ProxyOpenCode
               cachedProxy={cachedProxy}
               workingProxies={workingProxies}
-              apiBase={apiBase}
               apiKey={apiKey}
               onProxySet={setCachedProxy}
             />

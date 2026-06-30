@@ -33,7 +33,7 @@ function formatDate(timestamp?: number): string {
 
 export default function ModelManager() {
   const { settings } = useSettings();
-  const { apiBase, apiKey } = settings;
+  const { apiKey } = settings;
 
   const [models, setModels] = useState<Model[]>([]);
   const [filteredModels, setFilteredModels] = useState<Model[]>([]);
@@ -62,7 +62,7 @@ export default function ModelManager() {
     setError('');
 
     try {
-      const url = createApiUrl('/api/models', { apiBase });
+      const url = createApiUrl('/api/models');
       const response = await fetch(url, { headers: requestHeaders(apiKey) });
       const payload = (await response.json()) as { models?: Model[]; error?: string; message?: string };
 
@@ -76,7 +76,7 @@ export default function ModelManager() {
     } finally {
       setLoading(false);
     }
-  }, [apiBase, apiKey]);
+  }, [apiKey]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -154,7 +154,7 @@ export default function ModelManager() {
 
     try {
       const modelId = encodeURIComponent(formData.id.trim());
-      const url = createApiUrl(`/api/models/${formData.provider}/${modelId}`, { apiBase });
+      const url = createApiUrl(`/api/models/${formData.provider}/${modelId}`);
       const body = {
         object: formData.object,
         owned_by: formData.owned_by.trim() || undefined,
@@ -190,7 +190,7 @@ export default function ModelManager() {
 
     try {
       const modelId = encodeURIComponent(editingModel.id);
-      const url = createApiUrl(`/api/models/${editingModel.provider}/${modelId}`, { apiBase });
+      const url = createApiUrl(`/api/models/${editingModel.provider}/${modelId}`);
 
       const response = await fetch(url, {
         method: 'DELETE',
@@ -220,7 +220,7 @@ export default function ModelManager() {
 
     try {
       const modelId = encodeURIComponent(model.id);
-      const url = createApiUrl(`/api/models/${model.provider}/${modelId}/toggle`, { apiBase });
+      const url = createApiUrl(`/api/models/${model.provider}/${modelId}/toggle`);
       const response = await fetch(url, {
         method: 'POST',
         headers: { ...requestHeaders(apiKey), 'Content-Type': 'application/json' },

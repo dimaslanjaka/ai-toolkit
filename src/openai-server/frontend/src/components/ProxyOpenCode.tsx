@@ -13,7 +13,6 @@ interface WorkingProxy {
 interface ProxyOpenCodeProps {
   cachedProxy: string | null;
   workingProxies: WorkingProxy[];
-  apiBase: string;
   apiKey: string;
   onProxySet: (proxy: string) => void;
 }
@@ -50,13 +49,7 @@ function getProtocolBadgeClasses(type: string): string {
   }
 }
 
-export default function ProxyOpenCode({
-  cachedProxy,
-  workingProxies,
-  apiBase,
-  apiKey,
-  onProxySet
-}: ProxyOpenCodeProps) {
+export default function ProxyOpenCode({ cachedProxy, workingProxies, apiKey, onProxySet }: ProxyOpenCodeProps) {
   const [settingProxy, setSettingProxy] = useState(false);
   const [proxySetNotice, setProxySetNotice] = useState('');
 
@@ -65,7 +58,7 @@ export default function ProxyOpenCode({
       setSettingProxy(true);
       setProxySetNotice('');
       try {
-        const response = await fetch(createApiUrl('/api/settings/OPENCODE_CACHED_PROXY', { apiBase }), {
+        const response = await fetch(createApiUrl('/api/settings/OPENCODE_CACHED_PROXY'), {
           method: 'POST',
           headers: { ...requestHeaders(apiKey), 'Content-Type': 'application/json' },
           body: JSON.stringify({ value: proxy })
@@ -82,7 +75,7 @@ export default function ProxyOpenCode({
         setSettingProxy(false);
       }
     },
-    [apiBase, apiKey, onProxySet]
+    [apiKey, onProxySet]
   );
   return (
     <div className="h-full overflow-auto rounded-2xl border border-white/10 bg-[#272727] p-5 shadow-lg shadow-black/10">

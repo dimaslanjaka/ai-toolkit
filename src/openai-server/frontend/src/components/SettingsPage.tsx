@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useSettings, type Provider } from '../context/SettingsContext';
-import { sanitizeStoredApiBase } from '../utils/url';
 import {
   PROVIDER_OPCODE,
   PROVIDER_PUTER,
@@ -249,23 +248,6 @@ export default function SettingsPage() {
             <p className="mt-0.5 text-xs text-neutral-400">Saved only in this browser.</p>
           </div>
           <div className="space-y-5 p-6">
-            <label className="block">
-              <span className="mb-2 block text-sm font-medium text-neutral-100">API base URL</span>
-              <input
-                type="url"
-                value={settings.apiBase}
-                placeholder="Optional absolute URL"
-                onChange={(e) => setSettings((current) => ({ ...current, apiBase: e.target.value }))}
-                onBlur={(e) =>
-                  setSettings((current) => ({ ...current, apiBase: sanitizeStoredApiBase(e.target.value) }))
-                }
-                className="block w-full rounded-lg border border-neutral-600 bg-neutral-800 px-3 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-emerald-500 focus:ring-emerald-500"
-              />
-              <span className="mt-1.5 block text-xs text-neutral-400">
-                Only complete HTTP(S) URLs are accepted. Leave empty to use the environment backend hostname.
-              </span>
-            </label>
-
             <label className="block">
               <span className="mb-2 block text-sm font-medium text-neutral-100">Bearer token</span>
               <input

@@ -1,10 +1,8 @@
 import { createContext, useContext, useState, useMemo, ReactNode } from 'react';
-import { sanitizeStoredApiBase } from '../utils/url';
 
 type Provider = 'auto' | 'opencode' | 'puter' | 'chatgpt';
 
 interface ChatSettings {
-  apiBase: string;
   apiKey: string;
   provider: Provider;
   model: string;
@@ -20,7 +18,6 @@ const STORAGE_KEY = 'ai-toolkit-chat-state-v1';
 const DEFAULT_MODEL = '';
 
 const DEFAULT_SETTINGS: ChatSettings = {
-  apiBase: '',
   apiKey: '',
   provider: 'auto',
   model: DEFAULT_MODEL,
@@ -34,8 +31,7 @@ function getInitialSettings(): ChatSettings {
       const parsed = JSON.parse(stored) as { settings?: Partial<ChatSettings> };
       return {
         ...DEFAULT_SETTINGS,
-        ...parsed.settings,
-        apiBase: sanitizeStoredApiBase(parsed.settings?.apiBase ?? '')
+        ...parsed.settings
       };
     }
   } catch {
