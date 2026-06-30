@@ -24,33 +24,39 @@ let opencodeClientProxy: string | undefined;
 
 async function getOpenCode(): Promise<OpenAI> {
   if (!opencodeClient) {
-    // Filter for HTTP proxies only since undici ProxyAgent doesn't support SOCKS5.
-    opencodeClientProxy = await selectProxyUrl('opencode.ai');
+    opencodeClientProxy = undefined;
 
-    // Validate proxy is reachable before using it
-    if (opencodeClientProxy) {
-      serverLogger.log(`Validating proxy reachability: ${getProxyLabel(opencodeClientProxy)}`);
-      const result = await isProxyReachable({
-        type: 'http',
-        proxy: opencodeClientProxy.replace(/^https?:\/\//, '').replace(/^[^@]+@/, ''),
-        timeout: 5000
-      });
-      if (!result.ok) {
-        serverLogger.logSync(
-          `Proxy ${getProxyLabel(opencodeClientProxy)} is not reachable: ${result.error || `failed at ${result.stage}`}`
-        );
-        await markProxyDeadSafely(opencodeClientProxy);
-        // Try to get another proxy
-        opencodeClientProxy = await selectProxyUrl('opencode.ai');
-      } else {
-        serverLogger.log(`Proxy ${getProxyLabel(opencodeClientProxy)} is reachable`);
+    const useProxy = process.env.OPENCODE_NO_PROXY !== '1';
+
+    if (useProxy) {
+      // Filter for HTTP proxies only since undici ProxyAgent doesn't support SOCKS5.
+      opencodeClientProxy = await selectProxyUrl('opencode.ai');
+
+      // Validate proxy is reachable before using it
+      if (opencodeClientProxy) {
+        serverLogger.log(`Validating proxy reachability: ${getProxyLabel(opencodeClientProxy)}`);
+        const result = await isProxyReachable({
+          type: 'http',
+          proxy: opencodeClientProxy.replace(/^https?:\/\//, '').replace(/^[^@]+@/, ''),
+          timeout: 5000
+        });
+        if (!result.ok) {
+          serverLogger.logSync(
+            `Proxy ${getProxyLabel(opencodeClientProxy)} is not reachable: ${result.error || `failed at ${result.stage}`}`
+          );
+          await markProxyDeadSafely(opencodeClientProxy);
+          // Try to get another proxy
+          opencodeClientProxy = await selectProxyUrl('opencode.ai');
+        } else {
+          serverLogger.log(`Proxy ${getProxyLabel(opencodeClientProxy)} is reachable`);
+        }
       }
-    }
 
-    // getSQLite provides the centralized SQLite connection
-    const proxyClient = await getProxyClient();
-    await proxyClient.initialize();
-    serverLogger.log('Proxy client initialized.');
+      // getSQLite provides the centralized SQLite connection
+      const proxyClient = await getProxyClient();
+      await proxyClient.initialize();
+      serverLogger.log('Proxy client initialized.');
+    }
 
     opencodeClient = await opencodeProvider({
       model: 'deepseek-v4-flash-free',
@@ -163,9 +169,11 @@ async function createProxyDispatcher(): Promise<{ dispatcher?: ProxyAgent; proxy
 }
 
 export async function handleChatCompletion(req: Request): Promise<ProviderResult> {
-  const { model, messages, stream, temperature, max_tokens, stream_options, tools, tool_choice } = req.body as any;
+  const { model, messages, stream, temperature, max_tokens, stream_options, tools, tool_choice, reasoning_effort } =
+    req.body as any;
   const resolvedModel = await resolveModel(model);
   const includeUsage = stream_options?.include_usage === true;
+  const isThinkingMode = !!reasoning_effort;
 
   serverLogger.log(
     `OpenCode /v1/chat/completions - Model: ${resolvedModel}, Stream: ${!!stream}, Messages Length: ${messages.length}`
@@ -183,6 +191,24 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
   //   'OPENCODE REQUEST',
   //   JSON.stringify({ model: resolvedModel, messages: repairedMessages, stream, temperature, max_tokens }, null, 2)
   // );
+
+  // When reasoning_effort is active (DeepSeek thinking mode), ensure ALL
+  // tool-call assistant messages include reasoning_content. Missing it causes
+  // 400: "The reasoning_content in the thinking mode must be passed back."
+  if (isThinkingMode) {
+    let lastReasoningContent: string | undefined;
+    for (const msg of repairedMessages) {
+      if (msg.role === 'assistant' && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+        const m = msg as any;
+        if (m.reasoning_content) {
+          lastReasoningContent = m.reasoning_content;
+        } else {
+          // Use previous reasoning_content, or a placeholder if none exists yet
+          m.reasoning_content = lastReasoningContent || 'Thinking...';
+        }
+      }
+    }
+  }
 
   const client = await getOpenCode();
   const baseBody: Record<string, any> = {

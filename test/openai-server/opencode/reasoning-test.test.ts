@@ -25,10 +25,7 @@ describe('Tool calling with reasoning_content handling', () => {
   beforeAll(async () => {
     // Force direct connection (no proxy) for reasoning tests
     process.env.OPENCODE_NO_PROXY = '1';
-    state = await getServerState();
-    if (!state) {
-      ({ state, server } = await startServer(app));
-    }
+    ({ state, server } = await startServer(app));
     checkServerStateAndRunning(state);
     console.log('Server running at', state!.url);
   }, jestTimeout);
