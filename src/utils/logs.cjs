@@ -36,16 +36,18 @@ class PersistentLogger {
    * @private
    */
   _initializePrimaryHandler() {
-    // Only set up once per logger instance
-    if (!this._handlerInitialized) {
+    // Only set up once globally since cluster is a singleton EventEmitter
+    if (!PersistentLogger._primaryHandlerInitialized) {
       cluster.on('message', (worker, message) => {
         if (message && message.type === 'PERSISTENT_LOG' && message.filePath === this.filePath) {
           this._writeToFile(message.payload);
         }
       });
-      this._handlerInitialized = true;
+      PersistentLogger._primaryHandlerInitialized = true;
     }
   }
+
+  static _primaryHandlerInitialized = false;
 
   /**
    * Write data directly to file (primary process only)
