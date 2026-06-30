@@ -53,9 +53,12 @@
   "autopep8.args": ["--ignore", "E401,E402,E211,E501"],
   "code-runner.clearPreviousOutput": true,
   "code-runner.cwd": "${workspaceFolder}",
+  "code-runner.executorMap": {
+    "javascript": "node --no-warnings=ExperimentalWarning",
+    "typescript": "node --no-warnings=ExperimentalWarning --loader ts-node/esm"
+  },
   "code-runner.executorMapByGlob": {
     "*.electron.js": "cross-env-shell NODE_ENV=development electron -r ts-node/register",
-    "*.mjs": "node --no-warnings=ExperimentalWarning",
     "*.py": "py -u",
     "*.test.{js,ts}": "node --disable-warning=ExperimentalWarning --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --detectOpenHandles --config jest.config.mjs --testPathPatterns=$fileName",
     "*.test.cjs": "node --disable-warning=ExperimentalWarning --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --detectOpenHandles --config jest.config.mjs --testPathPatterns=\"$fileName\"",
@@ -65,7 +68,7 @@
     "rollup.*.{js,cjs,mjs,ts}": "rollup -c",
     "*.sh": "sh",
     "*.bat": "cmd /c",
-    "*.ts": "node --no-warnings=ExperimentalWarning --loader ts-node/esm"
+    "*.cmd": "cmd /c"
   },
   "code-runner.ignoreSelection": true,
   "code-runner.respectShebang": false,
@@ -360,5 +363,11 @@
       ".continue/**/*.yaml",
       "file:///c%3A/Users/Dell/.continue/config.yaml"
     ]
+  },
+  "chat.agentFilesLocations": {
+    ".opencode/agents": true,
+    ".github/agents": true,
+    ".claude/agents": true,
+    "~/.copilot/agents": true
   }
 }
