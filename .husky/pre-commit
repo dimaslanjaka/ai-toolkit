@@ -1,28 +1,28 @@
 #!/bin/sh
 
 # Auto-stage submodule pointer changes
-if [ -n "$GITHUB_ACTIONS" ] || [ -n "$CI" ]; then
-  echo "[pre-commit] CI detected — skipping submodule staging"
-else
-  if git submodule status 2>/dev/null; then
-    git submodule status 2>/dev/null | awk '{print $2}' | xargs -r git add 2>/dev/null || true
-  else
-    echo "[pre-commit] Submodules are not fully initialized, skipping submodule staging"
-  fi
-fi
+# if [ -n "$GITHUB_ACTIONS" ] || [ -n "$CI" ]; then
+#   echo "[pre-commit] CI detected — skipping submodule staging"
+# else
+#   if git submodule status 2>/dev/null; then
+#     git submodule status 2>/dev/null | awk '{print $2}' | xargs -r git add 2>/dev/null || true
+#   else
+#     echo "[pre-commit] Submodules are not fully initialized, skipping submodule staging"
+#   fi
+# fi
 
 # Conditionally regenerate and stage workflow/action YAML files when test files are modified (skips on CI)
-if [ -n "$GITHUB_ACTIONS" ] || [ -n "$CI" ]; then
-  echo "CI environment detected — skipping CI generation"
-else
-  staged_files=$(git diff --cached --name-only)
-  if echo "$staged_files" | grep -q "test"; then
-    bcc generate-ci
-    git add .github/workflows/test.yml .github/actions/setup-environments/action.yml .github/workflows/build-release.yml
-  else
-    echo "No test files staged — skipping CI generation"
-  fi
-fi
+# if [ -n "$GITHUB_ACTIONS" ] || [ -n "$CI" ]; then
+#   echo "CI environment detected — skipping CI generation"
+# else
+#   staged_files=$(git diff --cached --name-only)
+#   if echo "$staged_files" | grep -q "test"; then
+#     bcc generate-ci
+#     git add .github/workflows/test.yml .github/actions/setup-environments/action.yml .github/workflows/build-release.yml
+#   else
+#     echo "No test files staged — skipping CI generation"
+#   fi
+# fi
 
 # Run lint-staged through Yarn so the local binary is resolved consistently (skips on CI)
 if [ -n "$GITHUB_ACTIONS" ] || [ -n "$CI" ]; then
