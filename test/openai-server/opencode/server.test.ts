@@ -1,10 +1,10 @@
-import { jest, describe, beforeAll, afterAll, it, expect } from '@jest/globals';
+import { afterAll, beforeAll, describe, expect, it } from '@jest/globals';
 import axios from 'axios';
 import https from 'https';
 import { Server } from 'net';
 import { app } from '../../../src/openai-server/server.js';
-import { getServerState } from '../../../src/utils/utils-server-state.cjs';
 import { startServer, stopServer } from '../../../src/openai-server/utils.js';
+import { getServerState } from '../../../src/utils/utils-server-state.cjs';
 
 type ServerState = NonNullable<Awaited<ReturnType<typeof getServerState>>>;
 
