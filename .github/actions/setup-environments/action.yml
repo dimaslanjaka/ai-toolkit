@@ -8,7 +8,7 @@ inputs:
   python-version:
     description: Python version to install (skip Python setup if empty)
     required: false
-    default: ''
+    default: ""
   prefix-cache-key:
     description: Prefix for cache keys
     required: false
@@ -80,7 +80,7 @@ runs:
           git submodule foreach "git submodule sync"
           echo "update submodules"
           npx -y rimraf .git/modules
-          npx --legacy-peer-deps -y binary-collections@https://raw.githubusercontent.com/dimaslanjaka/bin/master/releases/bin.tgz submodule-install
+          npx --legacy-peer-deps -y binary-collections@https://github.com/dimaslanjaka/bin/raw/9688287aecab1a125de2d63fdd30651017a9862e/releases/bin.tgz submodule-install
         else
           echo "No submodules found or .gitmodules is empty, skipping update."
           exit 0

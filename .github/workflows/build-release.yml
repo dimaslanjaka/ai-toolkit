@@ -2,23 +2,23 @@ name: Build Release
 on:
   push:
     paths-ignore:
-      - '**/*.tgz'
-      - '**/*.gz'
-      - '**/*.tar.gz'
-      - '**/dist/**'
-      - '**/release/**'
-      - '**/releases/**'
-      - '**/_auto*/**'
-      - '**/.husky/**'
-      - '**/garbage-collector/**'
-      - '**/codeql/**'
+      - "**/*.tgz"
+      - "**/*.gz"
+      - "**/*.tar.gz"
+      - "**/dist/**"
+      - "**/release/**"
+      - "**/releases/**"
+      - "**/_auto*/**"
+      - "**/.husky/**"
+      - "**/garbage-collector/**"
+      - "**/codeql/**"
       - .github/workflows/tester.yml
-      - '**/*.log'
-      - '**/*.txt'
-      - '**/*.zip'
-      - '**/test*'
-      - '**/docs/**'
-      - '**/*.{spec,test}.{js,ts,cjs,mjs}'
+      - "**/*.log"
+      - "**/*.txt"
+      - "**/*.zip"
+      - "**/test*"
+      - "**/docs/**"
+      - "**/*.{spec,test}.{js,ts,cjs,mjs}"
   workflow_dispatch: {}
 concurrency:
   group: build-release
@@ -27,8 +27,8 @@ jobs:
   build-release:
     name: build release
     env:
-      PUPPETEER_SKIP_DOWNLOAD: 'true'
-      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      PUPPETEER_SKIP_DOWNLOAD: "true"
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
       NODE_OPTIONS: --max_old_space_size=8192
       YARN_ENABLE_IMMUTABLE_INSTALLS: false
       YARN_ENABLE_GLOBAL_CACHE: false
@@ -51,7 +51,7 @@ jobs:
         uses: ./.github/actions/setup-environments
         with:
           node-version: 24.x
-          python-version: '3.11'
+          python-version: "3.11"
           token: ${{ secrets.ACCESS_TOKEN || github.token }}
           prefix-cache-key: ${{ runner.os }}-${{ github.event.repository.name }}-
       - name: 📝 Dump environment info
@@ -216,6 +216,5 @@ jobs:
       - name: 🧹 Clean GitHub Actions cache (npx)
         continue-on-error: true
         run: npx --legacy-peer-deps -y
-          binary-collections@https://raw.githubusercontent.com/dimaslanjaka/bin/master/releases/bin.tgz
-          clean-github-actions-caches --repo "${{ github.repository }}" --sha
-          "${{ github.sha }}"
+          binary-collections@https://github.com/dimaslanjaka/bin/raw/9688287aecab1a125de2d63fdd30651017a9862e/releases/bin.tgz
+          --repo "${{ github.repository }}" --sha "${{ github.sha }}"

@@ -7,6 +7,7 @@ import { startServer, stopServer } from '../../../src/openai-server/utils.js';
 import { getServerState } from '../../../src/utils/utils-server-state.cjs';
 import context1 from './thinking_mode_error.json' with { type: 'json' };
 import context2 from './thinking_mode_error2.json' with { type: 'json' };
+import context3 from './reasoning_error.json' with { type: 'json' };
 
 type ServerState = NonNullable<Awaited<ReturnType<typeof getServerState>>>;
 
@@ -14,7 +15,7 @@ function checkServerStateAndRunning(state: ServerState | null) {
   if (!state) throw new Error('Server state not available');
 }
 
-const fixtures = [context1, context2];
+const fixtures = [context1, context2, context3];
 
 describe('Tool calling with reasoning_content handling', () => {
   let server: Server | undefined = undefined;
