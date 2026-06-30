@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from '@jest/globals';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'upath';
-import { ProxyCheckerManager } from '../../../src/openai-server/proxy/proxy-checker-manager.js';
+import { ProxyCheckerManager } from '../../../src/proxy/proxy-checker-manager.js';
 
 const temporaryRoots: string[] = [];
 

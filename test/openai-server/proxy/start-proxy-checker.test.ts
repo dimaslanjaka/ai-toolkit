@@ -33,7 +33,7 @@ describe('startProxyChecker', () => {
       ownerPid: 123
     });
 
-    const { ProxyCheckerManager } = await import('../../../src/openai-server/proxy/proxy-checker-manager.js');
+    const { ProxyCheckerManager } = await import('../../../src/proxy/proxy-checker-manager.js');
     jest.spyOn(ProxyCheckerManager.prototype, 'resolveProxyCheckerRunner').mockReturnValue({
       kind: 'mjs',
       file: 'runner.mjs'
@@ -55,7 +55,7 @@ describe('startProxyChecker', () => {
       }
     });
 
-    const { ProxyCheckerManager } = await import('../../../src/openai-server/proxy/proxy-checker-manager.js');
+    const { ProxyCheckerManager } = await import('../../../src/proxy/proxy-checker-manager.js');
     jest.spyOn(ProxyCheckerManager.prototype, 'resolveProxyCheckerRunner').mockReturnValue({
       kind: 'mjs',
       file: 'runner.mjs'
