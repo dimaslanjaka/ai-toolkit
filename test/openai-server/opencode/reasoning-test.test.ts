@@ -23,6 +23,8 @@ describe('Tool calling with reasoning_content handling', () => {
   const jestTimeout = 180000;
 
   beforeAll(async () => {
+    // Force direct connection (no proxy) for reasoning tests
+    process.env.OPENCODE_NO_PROXY = '1';
     state = await getServerState();
     if (!state) {
       ({ state, server } = await startServer(app));
@@ -103,7 +105,10 @@ describe('Tool calling with reasoning_content handling', () => {
                 {
                   role: 'assistant',
                   content: message.content || null,
-                  tool_calls: message.tool_calls
+                  tool_calls: message.tool_calls,
+                  ...((message as any).reasoning_content
+                    ? { reasoning_content: (message as any).reasoning_content }
+                    : {})
                 },
                 ...toolResults
               ]

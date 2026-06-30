@@ -125,6 +125,12 @@ async function markProxyDeadSafely(proxyUrl: string): Promise<void> {
 }
 
 async function createProxyDispatcher(): Promise<{ dispatcher?: ProxyAgent; proxyUrl?: string }> {
+  // Allow direct connection bypass via env var (used by tests)
+  if (process.env.OPENCODE_NO_PROXY === '1') {
+    serverLogger.log('OpenCode: Direct connection mode (OPENCODE_NO_PROXY=1)');
+    return { dispatcher: undefined, proxyUrl: undefined };
+  }
+
   let proxyUrl = await selectProxyUrl('opencode.ai');
 
   // Validate proxy is reachable before using it
@@ -274,9 +280,10 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
             if (delta?.role) forwardDelta.role = delta.role;
             if (content) forwardDelta.content = content;
             if (toolCalls) forwardDelta.tool_calls = toolCalls;
+            if (reasoningContent) forwardDelta.reasoning_content = reasoningContent;
 
-            // Write every chunk that has content, tool_calls, or a finish_reason
-            if (content || toolCalls || finishReason) {
+            // Write every chunk that has content, tool_calls, reasoning_content, or a finish_reason
+            if (content || toolCalls || reasoningContent || finishReason) {
               res.write(
                 `data: ${JSON.stringify({
                   id: chunk.id || completionId,
@@ -351,6 +358,7 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
                   const content = delta?.content || '';
                   const toolCalls = delta?.tool_calls;
                   const finishReason = choice?.finish_reason;
+                  const reasoningContent = (delta as any)?.reasoning_content || '';
 
                   // if (content) {
                   //   followUpResponse += content;
@@ -360,8 +368,9 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
                   if (delta?.role) forwardDelta.role = delta.role;
                   if (content) forwardDelta.content = content;
                   if (toolCalls) forwardDelta.tool_calls = toolCalls;
+                  if (reasoningContent) forwardDelta.reasoning_content = reasoningContent;
 
-                  if (content || toolCalls || finishReason) {
+                  if (content || toolCalls || reasoningContent || finishReason) {
                     res.write(
                       `data: ${JSON.stringify({
                         id: chunk.id || completionId,
@@ -430,6 +439,9 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
   }
 
   try {
+    serverLogger.log(
+      `OpenCode: Sending request to upstream (model=${resolvedModel}, messages=${baseBody.messages.length})`
+    );
     const completion = await client.chat.completions.create(
       {
         ...baseBody,
@@ -437,6 +449,7 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
       } as OpenAI.ChatCompletionCreateParamsNonStreaming,
       { fetchOptions: { dispatcher } }
     );
+    serverLogger.log(`OpenCode: Received response from upstream`);
     await cacheWorkingProxy('opencode.ai', proxyUrl);
 
     // Preserve the full upstream response including tool_calls and finish_reason
@@ -511,6 +524,11 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
           responseChoice.message.tool_calls = followUpToolCalls;
         }
 
+        // Forward reasoning_content if present
+        if ((followUpMessage as any)?.reasoning_content) {
+          responseChoice.message.reasoning_content = (followUpMessage as any).reasoning_content;
+        }
+
         return {
           type: 'json',
           data: {
@@ -538,6 +556,11 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
     // Forward tool_calls to the client so agentic tools work
     if (upstreamToolCalls && upstreamToolCalls.length > 0) {
       responseChoice.message.tool_calls = upstreamToolCalls;
+    }
+
+    // Forward reasoning_content if present
+    if ((upstreamMessage as any)?.reasoning_content) {
+      responseChoice.message.reasoning_content = (upstreamMessage as any).reasoning_content;
     }
 
     return {
