@@ -1,15 +1,6 @@
 ---
-name: "Git Committer"
-description: >-
-  Commit changes using AI-generated conventional commit messages.
-  Delegates message crafting to @Conventional Commit Creator and writes
-  to tmp/commit.txt. Supports staged, unstaged, specific-file, and all-changes workflows.
-
-  Triggers: "commit staged", "commit unstaged", "commit all", "commit <file>",
-  "gen commit", "create commit", "generate commit"
-tags:
-  - git
-  - commits
+name: git-committer
+description: Commit changes using AI-generated conventional commit messages. Delegates message crafting to @conventional-commit-creator and writes to tmp/commit.txt.
 mode: all
 ---
 

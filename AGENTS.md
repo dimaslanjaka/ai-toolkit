@@ -70,7 +70,7 @@
 - Staged‑file commit: use `git diff --staged` then generate conventional commit `<type>(<scope>): <subject>`; run `git commit -F tmp/commit.txt`. **Never run `git add` or `git commit` without the user's explicit request.**
   - **Never use `git add .` or `git add -A` or `git add --all`** — stage files per-file or per-logical-group only (`git add <file1> <file2>`).
   - Commit message must follow conventional commit format: `<type>(<scope>): <subject>` (e.g. `feat(cli): add --dry-run flag`, `fix(imports): resolve circular dependency`).
-  - Commit messages should be generated via the @Conventional Commit Creator agent, which respects the rules in `commitlint.config.js`. The actual commit must be performed by the @Git Committer agent.
+  - Commit messages should be generated via the @Conventional Commit Creator agent, which respects the rules in `commitlint.config.js`. The actual commit must be performed by the @git-committer agent.
 - React/TSX guidelines (`*.tsx, *.jsx`): Tailwind utility classes, Flowbite patterns, Font Awesome Pro icons; no CDN tags; PascalCase filenames; functional components default export.
 - Python files (`*.py`): PEP 8, Black formatting, type hints, tests with pytest.
 - PHP files (`*.php`): PSR‑12, PHP 8.1+, typed properties, PHPDoc for public API.
