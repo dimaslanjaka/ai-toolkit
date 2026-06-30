@@ -10,6 +10,7 @@ import { fetch, Agent } from 'undici';
 import { startServer, stopServer } from './utils.js';
 import { app } from './server.js';
 import { Server } from 'node:net';
+import { inspect } from 'node:util';
 
 loadDotenv();
 
@@ -61,7 +62,7 @@ async function main() {
   });
 
   const data = await res.json();
-  console.log('Response:', data);
+  console.log('Response:', inspect(data, { depth: 4, colors: true }));
 
   const files = fs.readdirSync(logDir);
   console.log('\nMessage files:', files);
@@ -69,7 +70,7 @@ async function main() {
   for (const file of files) {
     const content = fs.readFileSync(`${logDir}/${file}`, 'utf-8');
     console.log(`\n--- ${file} ---`);
-    console.log(content.substring(0, 500));
+    console.log(inspect(content, { depth: 4, colors: true }));
   }
 
   if (server) await stopServer(server);

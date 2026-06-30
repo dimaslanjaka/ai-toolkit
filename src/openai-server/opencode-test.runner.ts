@@ -6,8 +6,14 @@ import fs from 'fs-extra';
 import { startServer, stopServer } from './utils.js';
 import { app } from './server.js';
 import { loadDotenv } from 'binary-collections';
+import { getServerState } from '../utils/utils-server-state.cjs';
+import { Server } from 'node:net';
+import { inspect } from 'node:util';
 
 loadDotenv();
+
+// Allow self-signed certificates for local HTTPS server
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 async function main() {
   // Clear + recreate messages dir
@@ -15,8 +21,12 @@ async function main() {
   fs.rmSync(logDir, { recursive: true, force: true });
   fs.mkdirSync(logDir, { recursive: true });
 
-  // Start server (finds free port automatically)
-  const { state, server } = await startServer(app);
+  let server: Server | undefined = undefined;
+  let state = await getServerState();
+  if (!state) {
+    ({ state, server } = await startServer(app));
+  }
+  if (!state) throw new Error('Server state not available');
   console.log('Server running at', state.url);
 
   // Send a chat completion request via fetch
@@ -31,7 +41,7 @@ async function main() {
   });
 
   const data = await res.json();
-  console.log('Response:', data);
+  console.log('Response:', inspect(data, { depth: 4, colors: true }));
 
   // Check messages dir
   const files = fs.readdirSync(logDir);
@@ -40,10 +50,12 @@ async function main() {
   for (const file of files) {
     const content = fs.readFileSync(`${logDir}/${file}`, 'utf-8');
     console.log(`\n--- ${file} ---`);
-    console.log(content.substring(0, 500));
+    console.log(inspect(content, { depth: 4, colors: true }));
   }
 
-  await stopServer(server);
+  if (server) {
+    await stopServer(server);
+  }
 }
 
 main().catch((err) => {
