@@ -29,7 +29,7 @@
     "preview:web": "vite preview --config vite.config.mjs",
     "test": "node --disable-warning=ExperimentalWarning --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --detectOpenHandles --config jest.config.mjs",
     "jest": "node --disable-warning=ExperimentalWarning --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --detectOpenHandles --config jest.config.mjs",
-    "update:ncu": "npx -y npm-check-updates -u"
+    "update:ncu": "npx -y npm-check-updates@latest -u --reject '/eslint|rollup|lint-staged|react|babel|commitlint/'"
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
@@ -59,12 +59,12 @@
   "dependencies": {
     "@babel/parser": "^7.29.7",
     "@babel/traverse": "^7.29.7",
-    "@heyputer/puter.js": "^2.5.1",
-    "@opencode-ai/plugin": "^1.16.0",
-    "@qwen-code/qwen-code": "^0.15.11",
+    "@heyputer/puter.js": "^2.5.4",
+    "@opencode-ai/plugin": "^1.17.11",
+    "@qwen-code/qwen-code": "^0.19.3",
     "ansi-colors": "^4.1.3",
     "ansi-to-html": "^0.7.2",
-    "axios": "^1.18.0",
+    "axios": "^1.18.1",
     "better-sqlite3": "^12.11.1",
     "binary-collections": "^2.0.15",
     "bluebird": "^3.7.2",
@@ -81,7 +81,7 @@
     "fs-extra": "^11.3.5",
     "fuse.js": "^7.3.0",
     "glob": "^13.0.6",
-    "groq-sdk": "^1.2.1",
+    "groq-sdk": "^1.3.0",
     "happy-dom": "^20.10.6",
     "http-proxy-agent": "^9.1.0",
     "https-proxy-agent": "^9.1.0",
@@ -140,7 +140,9 @@
     "@vitejs/plugin-react": "^5.1.1",
     "autoprefixer": "^10.4.23",
     "babel-jest": "^30.4.1",
-    "globals": "^17.6.0",
+    "eslint": "9",
+    "eslint-plugin-prettier": "^5.5.6",
+    "globals": "^17.7.0",
     "gulp": "^5.0.1",
     "husky": "^9.1.7",
     "jest": "^30.4.2",
@@ -164,9 +166,9 @@
     "zod": "^4.4.3"
   },
   "resolutions": {
-    "browser-automation": "https://github.com/dimaslanjaka/browser-automation/raw/b21d75702a50d99a6eb76082def850dcae6939ed/release/browser-automation.tgz",
+    "browser-automation": "https://github.com/dimaslanjaka/browser-automation/raw/d1dc117c62fb32d52e204fad60fc6025790c2d2e/release/browser-automation.tgz",
     "cross-spawn": "https://github.com/dimaslanjaka/node-cross-spawn/raw/f3f4bde1887798c308928fc76dc590b23de992ea/release/cross-spawn.tgz",
-    "binary-collections": "https://github.com/dimaslanjaka/bin/raw/09a1a1dfee36ebf0cc040fdb039f10c47bccffb5/releases/bin.tgz",
+    "binary-collections": "https://github.com/dimaslanjaka/bin/raw/c2b5937461be63b9e214404a41ee3fe2b8c45043/releases/bin.tgz",
     "git-command-helper": "https://github.com/dimaslanjaka/git-command-helper/raw/6b3d00c2ffb72f7aa7dd55a39d022c68eb33ebda/release/git-command-helper.tgz",
     "@dimaslanjaka/eslint-base-config": "https://github.com/dimaslanjaka/eslint-base-config/raw/6d4f527670a0ec5e462fda4a1c9777613c477c84/release/dimaslanjaka-eslint-base-config.tgz",
     "sbg-utility": "https://github.com/dimaslanjaka/static-blog-generator/raw/1ca385787f7287155b547c5b97d5ffd5bcfab482/packages/sbg-utility/release/sbg-utility.tgz"
