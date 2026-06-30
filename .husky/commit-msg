@@ -2,4 +2,4 @@
 
 # npm >= 11 expands --edit to --editor, intercepting commitlint's flag.
 # Pipe the file instead so commitlint reads from stdin.
-cat "$1" | npx --no commitlint
+cat "$1" | corepack yarn exec commitlint
