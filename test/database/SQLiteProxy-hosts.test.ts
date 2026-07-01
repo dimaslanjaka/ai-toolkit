@@ -1,4 +1,4 @@
-import { jest, describe, beforeAll, afterAll, test, expect } from '@jest/globals';
+import { afterAll, beforeAll, describe, expect, test } from '@jest/globals';
 import { SQLiteProxy } from '../../src/database/SQLiteProxy.js';
 
 describe('SQLiteProxy - Hosts and Proxies', () => {

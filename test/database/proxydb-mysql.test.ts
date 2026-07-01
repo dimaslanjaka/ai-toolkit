@@ -1,5 +1,5 @@
 import { getLocalMySQL } from '../../src/database/shared.js';
-import { jest } from '@jest/globals';
+import { jest, describe, test, beforeAll, afterAll, expect } from '@jest/globals';
 
 describe('ProxyDB MySQL', () => {
   jest.setTimeout(20000);

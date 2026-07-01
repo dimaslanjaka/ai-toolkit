@@ -1,8 +1,8 @@
-import { jest, describe, beforeEach, afterEach, test, it, expect } from '@jest/globals';
-import fs from 'fs-extra';
-import upath from 'upath';
+import { afterEach, beforeEach, describe, expect, it, test } from '@jest/globals';
 import Database from 'better-sqlite3';
+import fs from 'fs-extra';
 import moment from 'moment-timezone';
+import upath from 'upath';
 import SQLiteMarker, { UnseenResult } from '../../src/database/SQLiteMarker';
 
 const TEST_BASE_DIR = 'tmp/test-sqlite-marker';
@@ -41,8 +41,7 @@ describe('SQLiteMarker', () => {
 
     const db = new Database(dbPath);
     const table = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get('markers') as
-      | { name: string }
-      | undefined;
+      { name: string } | undefined;
 
     db.close();
 
@@ -236,8 +235,7 @@ describe('SQLiteMarker', () => {
 
     const db = new Database(getDbPath(dbName));
     const row = db.prepare('SELECT proxy FROM proxy_markers WHERE proxy = ?').get('proxy-custom') as
-      | { proxy: string }
-      | undefined;
+      { proxy: string } | undefined;
 
     db.close();
 
