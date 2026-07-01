@@ -2,7 +2,7 @@ import type { Request } from 'express';
 import { OpenAI } from 'openai';
 import { ProxyAgent } from 'undici';
 import { getSettings, getSharedModels } from '../../database/shared.js';
-import { opencodeProvider } from '../../provider/opencode/get.js';
+import { buildOpenAIClient } from '../../utils/buildOpenAIClient.js';
 import { isProxyReachable } from '../../proxy/isProxyReachable.cjs';
 
 import {
@@ -58,11 +58,12 @@ async function getOpenCode(): Promise<OpenAI> {
       serverLogger.log('Proxy client initialized.');
     }
 
-    opencodeClient = await opencodeProvider({
+    const { client } = await buildOpenAIClient({
       model: 'deepseek-v4-flash-free',
       provider: 'opencode',
       proxy: opencodeClientProxy
     });
+    opencodeClient = client;
   }
   return opencodeClient;
 }
