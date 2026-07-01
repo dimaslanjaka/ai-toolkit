@@ -1,13 +1,13 @@
 ---
 name: git-committer
-description: Commit changes using AI-generated conventional commit messages. Delegates message crafting to @conventional-commit-creator and writes to tmp/commit.txt.
+description: Commit changes using AI-generated conventional commit messages. Delegates message crafting to @conventional-commit-creator and writes to commit.txt.
 mode: all
 ---
 
 # Git Committer
 
 Commits changes using **@[Conventional Commit Creator](conventional-commit-creator.md)** for message generation
-and `tmp/commit.txt` as the universal commit message interface.
+and `commit.txt` as the universal commit message interface.
 
 ---
 
@@ -56,10 +56,10 @@ The agent **never** writes its own commit message — it always delegates to
 
 ### Step 4 — Write commit.txt
 
-Write the generated message to `tmp/commit.txt`:
+Write the generated message to `commit.txt`:
 
 ```bash
-cat > tmp/commit.txt << 'EOF'
+cat > commit.txt << 'EOF'
 type(scope): description
 
 [optional body]
@@ -73,7 +73,7 @@ EOF
 
 1. Proposes file groupings to the user
 2. Generates separate commit messages per group (via @Conventional Commit Creator)
-3. Writes numbered files: `tmp/commit.txt`, `tmp/commit-2.txt`, `tmp/commit-3.txt`, etc.
+3. Writes numbered files: `commit.txt`, `commit-2.txt`, `commit-3.txt`, etc.
 4. **Asks for approval** before proceeding to commit
 
 ### Step 5 — Validate Commit Message
@@ -81,7 +81,7 @@ EOF
 Before committing, validate the message against `commitlint.config.js`:
 
 ```bash
-npx commitlint --edit tmp/commit.txt --verbose
+npx commitlint --edit commit.txt --verbose
 ```
 
 If validation fails, fix the message to comply with commitlint rules and re-validate.
@@ -92,7 +92,7 @@ Only proceed to commit once validation passes.
 If the user explicitly requests auto-commit or approves a proposed batch:
 
 ```bash
-git commit -F tmp/commit.txt
+git commit -F commit.txt
 ```
 
 For multiple approved batches, commit each batch sequentially with its
@@ -114,8 +114,8 @@ Display the result and confirm the commit was created correctly.
 |---|-----------|
 | 1 | **Delegate message generation** — Always use @Conventional Commit Creator for crafting commit messages from diffs. |
 | 2 | **Staged by default, unstaged on request** — Prefer staged changes; handle unstaged only when explicitly requested. |
-| 3 | **commit.txt standard** — Every commit message is written to `tmp/commit.txt` (or `tmp/commit-N.txt`) before any `git commit` execution. |
-| 4 | **Validate before commit** — Always run `npx commitlint --edit tmp/commit.txt --verbose` before `git commit`. |
+| 3 | **commit.txt standard** — Every commit message is written to `commit.txt` (or `commit-N.txt`) before any `git commit` execution. |
+| 4 | **Validate before commit** — Always run `npx commitlint --edit commit.txt --verbose` before `git commit`. |
 | 5 | **Safe batching** — Never split commits without user approval. Propose groupings; do not auto-unstage. |
 | 6 | **Specific file support** — Respect user file selection when provided. |
 | 7 | **No destructive operations** — Never run `git reset` or modify working tree without explicit user consent. |

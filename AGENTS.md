@@ -67,7 +67,7 @@
     - Store findings, decisions, and corrections for future sessions
     - Use memory namespaces aligned with the project or topic domain
   - After changing the OpenAI-compatible server or another AI API integration, update `.opencode/memory/openai-compatible.md`; keep it concise and limited to factual architecture details
-- Staged‑file commit: use `git diff --staged` then generate conventional commit `<type>(<scope>): <subject>`; run `git commit -F tmp/commit.txt`. **Never run `git add` or `git commit` without the user's explicit request.**
+- Staged‑file commit: use `git diff --staged` then generate conventional commit `<type>(<scope>): <subject>`; run `git commit -F commit.txt`. **Never run `git add` or `git commit` without the user's explicit request.**
   - **Never use `git add .` or `git add -A` or `git add --all`** — stage files per-file or per-logical-group only (`git add <file1> <file2>`).
   - Commit message must follow conventional commit format: `<type>(<scope>): <subject>` (e.g. `feat(cli): add --dry-run flag`, `fix(imports): resolve circular dependency`).
   - Commit messages should be generated via the @Conventional Commit Creator agent, which respects the rules in `commitlint.config.js`. The actual commit must be performed by the @git-committer agent.

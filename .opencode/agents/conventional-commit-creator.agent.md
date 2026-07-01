@@ -120,11 +120,11 @@ Check for `commitlint.config.js` in the repository root. If present, parse its r
 
 ### 5. Validate Generated Message
 
-After generating the commit message, write it to `tmp/commit.txt` and validate it with commitlint:
+After generating the commit message, write it to `commit.txt` and validate it with commitlint:
 
 ```bash
-echo '<generated_message>' > tmp/commit.txt
-npx commitlint --edit tmp/commit.txt --verbose
+echo '<generated_message>' > commit.txt
+npx commitlint --edit commit.txt --verbose
 ```
 
 If validation fails, fix the message to comply with `commitlint.config.js` rules and re-validate. Only return the message once it passes validation.
