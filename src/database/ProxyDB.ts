@@ -1,11 +1,10 @@
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
-import fs from 'fs-extra';
 import type { PoolConnection } from 'mariadb';
 import path from 'upath';
 import { fileURLToPath } from 'url';
-import { MySQLConfig, MySQLHelper } from './MySQLHelper.js';
-import { SQLiteConfig, SQLiteHelper } from './SQLiteHelper.js';
-import BaseSQL from './BaseSQL.js';
+import { MySQLConfig } from './MySQLHelper.js';
+import { SQLHelper } from './SQLHelper.js';
+import { SQLiteConfig } from './SQLiteHelper.js';
 
 export type DatabaseType = 'mysql' | 'mariadb' | 'sqlite';
 
@@ -90,21 +89,19 @@ export interface UserFields {
   phone?: string;
 }
 
-export class ProxyDB {
-  public helper: BaseSQL;
+export class ProxyDB extends SQLHelper {
   private _config: ProxyDBConfig;
-  public ready = false;
-  temporarily = false;
+  public temporarily: boolean;
 
   constructor(config: ProxyDBConfig) {
-    this._config = config;
+    const dbType = config.db_type === 'sqlite' ? 'sqlite' : 'mysql';
 
     if (config.db_type === 'sqlite') {
       const sqliteConfig: SQLiteConfig = {
         filename: config.sqlite_filename || 'database.sqlite',
         verbose: config.sqlite_verbose
       };
-      this.helper = new SQLiteHelper(sqliteConfig);
+      super(dbType, sqliteConfig);
     } else {
       // Map Python-style config to MySQLHelper format
       const mysqlConfig: MySQLConfig = {
@@ -116,8 +113,11 @@ export class ProxyDB {
         connectionLimit: config.connectionLimit,
         connectTimeout: config.connectTimeout
       };
-      this.helper = new MySQLHelper(mysqlConfig);
+      super(dbType, mysqlConfig);
     }
+
+    this._config = config;
+    this.temporarily = false;
   }
 
   /**
@@ -125,8 +125,7 @@ export class ProxyDB {
    */
   async initialize(): Promise<void> {
     try {
-      await this.helper.initialize();
-      this.ready = this.helper.ready;
+      await super.initialize();
       if (this.ready) {
         await this.initializeSchema();
       }
@@ -137,65 +136,40 @@ export class ProxyDB {
   }
 
   async initializeSchema(customSchema?: string) {
-    const dir = path.dirname(fileURLToPath(import.meta.url));
-    const schemaPath = path.resolve(
-      customSchema && fs.existsSync(customSchema) ? customSchema : path.join(dir, 'schema.sql')
-    );
-
-    // If SQLite in-memory or DB file missing, do not skip schema application.
-    // Otherwise, check lock file.
+    // Determine if using temporary in-memory database
     const isSQLite = this._config.db_type === 'sqlite';
     this.temporarily = isSQLite && this._config.sqlite_filename === ':memory:';
 
-    // Apply schema
-    if (await fs.pathExists(schemaPath)) {
-      const schema = await fs.readFile(schemaPath, 'utf8');
-      const cleanedSchema = schema.replace(/\/\*[\s\S]*?\*\//g, '');
-      const statements = cleanedSchema
-        .split(';')
-        .map((s) => s.trim())
-        .map((s) =>
-          s
-            .split('\n')
-            .map((l) => l.trim())
-            .filter((l) => !l.startsWith('--'))
-            .join('\n')
-            .trim()
-        )
-        .filter((s) => s.length > 0);
-
-      for (const statement of statements) {
-        await this.execute(statement);
-      }
-    }
+    // Delegate to parent's initializeSchema
+    await super.initializeSchema(customSchema || path.join(path.dirname(fileURLToPath(import.meta.url)), 'schema.sql'));
   }
 
   /**
    * Execute a SELECT query and return rows
    */
   async query<T = any>(sql: string, params: any[] = []): Promise<T[]> {
-    return this.helper.query<T>(sql, params);
+    return super.query<T>(sql, params);
   }
 
   /**
    * Execute INSERT, UPDATE, DELETE operations
    */
   async execute(sql: string, params: any[] = []): Promise<{ affectedRows: number; insertId?: number }> {
-    return this.helper.execute(sql, params);
+    return super.execute(sql, params);
   }
 
   /**
    * Execute a transaction with automatic commit/rollback
    */
   async transaction<T>(fn: (conn: PoolConnection | SQLiteDatabase) => Promise<T>): Promise<T> {
-    return this.helper.transaction(fn);
+    return super.transaction(fn);
   }
 
   /**
    * Close the database connection pool
    */
   async close(): Promise<void> {
-    await this.helper.close();
+    await super.close();
     this.ready = false;
   }
 

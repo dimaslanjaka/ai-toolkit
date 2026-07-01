@@ -120,14 +120,15 @@ export async function getSQLHelper(
 
   try {
     if (dbType === 'sqlite') {
-      // Reuse the centralized SQLite instance
+      // Reuse the centralized SQLite instance (ProxyDB extends SQLHelper)
       const proxyDb = await getSQLite();
-      return proxyDb.helper as SQLHelper;
+      return proxyDb as SQLHelper;
     } else if (dbType === 'mysql') {
+      // ProxyDB extends SQLHelper, so we can return it directly
       if (mode === 'development') {
-        return getLocalMySQL().helper as SQLHelper;
+        return getLocalMySQL() as SQLHelper;
       } else {
-        return getProductionMySQL().helper as SQLHelper;
+        return getProductionMySQL() as SQLHelper;
       }
     } else {
       console.warn(`Unknown DATABASE_TYPE: ${dbType}`);
