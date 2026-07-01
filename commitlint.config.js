@@ -81,8 +81,8 @@ const Configuration = {
 
     // Body rules
     'header-trim': [1, 'always'],
-    'header-max-length': [1, 'always', 140],
-    'body-max-line-length': [1, 'always', 120],
+    'header-max-length': [0],
+    'body-max-line-length': [0],
 
     // Type rules
     'type-enum': [
