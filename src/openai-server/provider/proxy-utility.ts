@@ -6,25 +6,9 @@
  */
 
 import { isEmpty } from 'sbg-utility';
-import path from 'upath';
 import SQLiteProxy from '../../database/SQLiteProxy.js';
 import { getSettings, getSQLite } from '../../database/shared.js';
 import { serverLogger } from '../utils.js';
-
-// ---------------------------------------------------------------------------
-// Proxy path management
-// ---------------------------------------------------------------------------
-
-/**
- * Generate the path for storing the last working proxy for a given host.
- * @deprecated
- * @param host - The target host (e.g., 'opencode.ai', 'api.example.com')
- * @returns Path to the proxy cache file for this host
- */
-export function getLastWorkingProxyPath(host: string): string {
-  const sanitizedHost = host.replace(/[^a-z0-9.-]/gi, '_');
-  return path.join(process.cwd(), 'tmp', 'database', `last-proxy-${sanitizedHost}.txt`);
-}
 
 // ---------------------------------------------------------------------------
 // Proxy client and formatting
@@ -87,10 +71,10 @@ export async function readLastWorkingProxy(host: string): Promise<string | undef
       return undefined;
     }
 
-    serverLogger.log(`Reusing cached proxy for ${host}: ${getProxyLabel(normalizedUrl)}`);
+    serverLogger.log(`Reusing cached proxy for ${host}: ${getProxyLabel(normalizedUrl)}`, { console: true });
     return normalizedUrl;
   } catch (error) {
-    serverLogger.logSync(`Unable to read cached proxy for ${host}: ${error}`);
+    serverLogger.logSync(`Unable to read cached proxy for ${host}: ${error}`, { console: true });
     return undefined;
   }
 }
@@ -107,9 +91,9 @@ export async function cacheWorkingProxy(host: string, proxyUrl: string | undefin
   try {
     const settings = await getSettings();
     await settings?.setSetting('OPENCODE_CACHED_PROXY', proxyUrl);
-    serverLogger.log(`Cached proxy for ${host}: ${getProxyLabel(proxyUrl)}`);
+    serverLogger.log(`Cached proxy for ${host}: ${getProxyLabel(proxyUrl)}`, { console: true });
   } catch (error) {
-    serverLogger.logSync(`Unable to cache proxy for ${host}: ${error}`);
+    serverLogger.logSync(`Unable to cache proxy for ${host}: ${error}`, { console: true });
   }
 }
 
@@ -143,7 +127,7 @@ export async function selectProxyUrl(host: string): Promise<string | undefined> 
   if (cachedProxy) return cachedProxy;
 
   const proxyClient = await getProxyClient();
-  const item = await proxyClient.getProxyForHost(host, { type: 'http' });
-  serverLogger.log(`Proxy search result for ${host}: ${JSON.stringify(item)}`);
+  const item = await proxyClient.getProxyForHost(host, { type: 'http', random: true });
+  serverLogger.log(`Proxy search result for ${host}: ${JSON.stringify(item)}`, { console: true });
   return item ? getProxyUrl(item) : undefined;
 }

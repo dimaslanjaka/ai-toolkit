@@ -72,11 +72,21 @@ class PersistentLogger {
    * - In independent process: writes directly with atomic append
    *
    * @param {string} message - Message to log
+   * @param {{ console?: boolean, timestamp?: boolean }} [options]
+   * @param {boolean} [options.console=false] - Also log to console.log
+   * @param {boolean} [options.timestamp=true] - Include timestamp prefix
    * @returns {Promise<void>}
    */
-  async log(message) {
-    const timestamp = new Date().toISOString();
-    const logLine = `[${timestamp}] [PID:${process.pid}] ${message}\n`;
+  async log(message, options = {}) {
+    const { console: consoleOutput = false, timestamp: includeTimestamp = true } = options;
+    const timestamp = includeTimestamp ? new Date().toISOString() : null;
+    const logLine = timestamp
+      ? `[${timestamp}] [PID:${process.pid}] ${message}\n`
+      : `[PID:${process.pid}] ${message}\n`;
+
+    if (consoleOutput) {
+      console.log(message);
+    }
 
     if (cluster.isWorker) {
       // Worker process: send to primary via IPC
@@ -99,10 +109,20 @@ class PersistentLogger {
   /**
    * Synchronous version of log (useful for process exit handlers)
    * @param {string} message - Message to log
+   * @param {{ console?: boolean, timestamp?: boolean }} [options]
+   * @param {boolean} [options.console=false] - Also log to console.log
+   * @param {boolean} [options.timestamp=true] - Include timestamp prefix
    */
-  logSync(message) {
-    const timestamp = new Date().toISOString();
-    const logLine = `[${timestamp}] [PID:${process.pid}] ${message}\n`;
+  logSync(message, options = {}) {
+    const { console: consoleOutput = false, timestamp: includeTimestamp = true } = options;
+    const timestamp = includeTimestamp ? new Date().toISOString() : null;
+    const logLine = timestamp
+      ? `[${timestamp}] [PID:${process.pid}] ${message}\n`
+      : `[PID:${process.pid}] ${message}\n`;
+
+    if (consoleOutput) {
+      console.log(message);
+    }
 
     if (cluster.isWorker && process.send) {
       // For workers, we still try IPC but don't wait
