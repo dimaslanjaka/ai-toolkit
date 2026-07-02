@@ -8,7 +8,12 @@
  * Proxy examples will fail unless you actually have a proxy listening.
  */
 
+import { loadDotenv } from 'binary-collections';
 import { buildOpenAIClient } from './buildOpenAIClient.js';
+import { extractProxies } from '../proxy/proxy-extractor.js';
+import { downloader } from './downloader.js';
+
+loadDotenv();
 
 /* ------------------------------------------------------------------ */
 /*  1. OpenAI provider — no proxy                                     */
@@ -63,29 +68,54 @@ import { buildOpenAIClient } from './buildOpenAIClient.js';
 //   }
 // }
 
+async function downloadProxies() {
+  const [httpRaw, socks5Raw] = await Promise.all([
+    downloader('https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/http.txt'),
+    downloader('https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks5.txt')
+  ]);
+
+  const http = extractProxies(httpRaw).map((p) => ({ ...p, type: 'http' }));
+  const socks5 = extractProxies(socks5Raw).map((p) => ({ ...p, type: 'socks5' }));
+
+  return [...http, ...socks5];
+}
+
 /* ------------------------------------------------------------------ */
 /*  Run a hello prompt                                                */
 /* ------------------------------------------------------------------ */
 async function main() {
-  const { client, model, dispatcher } = await buildOpenAIClient({
-    provider: 'openai',
-    model: 'gpt-4o-mini',
-    proxy: 'http://127.0.0.1:3128'
-  });
-  console.log('Using model:', model);
+  const proxies = (await downloadProxies()).sort(() => Math.random() - 0.5);
+  console.log(`Testing ${proxies.length} proxies...`);
 
-  const completion = await client.chat.completions.create(
-    {
-      model,
-      messages: [{ role: 'user', content: 'Say hello in one sentence.' }]
-    },
-    {
-      // Per-request fetch options — uses the same proxy agent from the client
-      fetchOptions: { dispatcher }
+  for (const entry of proxies) {
+    const proxyUrl = `${entry.type}://${entry.proxy}`;
+
+    try {
+      console.log(`Trying proxy: ${proxyUrl}`);
+      const { client, model, dispatcher } = await buildOpenAIClient({
+        provider: 'opencode',
+        model: 'deepseek-v4-flash-free',
+        proxy: proxyUrl
+      });
+
+      const completion = await client.chat.completions.create(
+        {
+          model,
+          messages: [{ role: 'user', content: 'Say hello in one sentence.' }]
+        },
+        { fetchOptions: { dispatcher } }
+      );
+
+      console.log(`Proxy ${proxyUrl} works!`);
+      console.log('Response:', completion.choices[0]?.message?.content);
+      return; // first success
+    } catch (err) {
+      console.warn(`Proxy ${proxyUrl} failed:`, (err as Error).message);
+      // continue to next proxy
     }
-  );
+  }
 
-  console.log('Response:', completion.choices[0]?.message?.content);
+  console.error('All proxies exhausted — none worked.');
 }
 
 main().catch(console.error);
