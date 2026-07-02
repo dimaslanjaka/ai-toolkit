@@ -6,17 +6,15 @@
  */
 
 import { isEmpty } from 'sbg-utility';
-import SQLiteProxy from '../../database/SQLiteProxy.js';
-import { getSettings, getSQLite } from '../../database/shared.js';
+import { getSettings, getSQLiteProxy } from '../../database/shared.js';
 import { serverLogger } from '../utils.js';
 
 // ---------------------------------------------------------------------------
 // Proxy client and formatting
 // ---------------------------------------------------------------------------
 
-export async function getProxyClient(): Promise<SQLiteProxy> {
-  const sharedDb = await getSQLite();
-  return new SQLiteProxy(sharedDb);
+export async function getProxyClient() {
+  return getSQLiteProxy();
 }
 
 export function getProxyUrl(item: {

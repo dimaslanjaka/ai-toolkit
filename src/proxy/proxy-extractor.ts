@@ -64,7 +64,7 @@ function parseProxyLine(line: string): Proxy | null {
   if (authMatch) {
     username = authMatch[1] || undefined;
     // If the password group captured an empty string, treat as undefined
-    password = authMatch[2] !== undefined ? (authMatch[2] || undefined) : undefined;
+    password = authMatch[2] !== undefined ? authMatch[2] || undefined : undefined;
     rest = rest.slice(authMatch[0].length);
   }
 
@@ -141,9 +141,7 @@ export function extractProxies(input: string): Proxy[] {
  * hasValidProxyAuth({ username: 'u', password: ',' });        // false
  * ```
  */
-export function hasValidProxyAuth(
-  proxy: Pick<Proxy, 'username' | 'password'>
-): boolean {
+export function hasValidProxyAuth(proxy: Pick<Proxy, 'username' | 'password'>): boolean {
   const { username, password } = proxy;
 
   // Must exist and be non-empty
