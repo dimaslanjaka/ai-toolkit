@@ -8,6 +8,8 @@ import Layout from './components/Layout';
 import ProxyManager from './components/ProxyManager';
 import ModelManager from './components/ModelManager';
 import SettingsPage from './components/SettingsPage';
+import ProvidersPage from './components/ProvidersPage';
+import OpenCodeProviderPage from './components/OpenCodeProviderPage';
 
 const PAGE_TITLES: Record<string, string> = {
   '/': 'AI Toolkit Server',
@@ -15,7 +17,9 @@ const PAGE_TITLES: Record<string, string> = {
   '/chat': 'Chat — AI Toolkit',
   '/proxy-manager': 'Proxy Manager — AI Toolkit',
   '/model-manager': 'Model Manager — AI Toolkit',
-  '/settings': 'Settings — AI Toolkit'
+  '/settings': 'Settings — AI Toolkit',
+  '/providers': 'Providers — AI Toolkit',
+  '/provider/opencode': 'OpenCode Provider — AI Toolkit'
 };
 
 function PageTitleSetter() {
@@ -39,6 +43,8 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/proxy-manager" element={<ProxyManager />} />
             <Route path="/model-manager" element={<ModelManager />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/providers" element={<ProvidersPage />} />
+            <Route path="/provider/opencode" element={<OpenCodeProviderPage />} />
           </Route>
         </Routes>
       </SettingsProvider>

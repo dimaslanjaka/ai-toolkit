@@ -3,8 +3,7 @@ import express, { Request, Response } from 'express';
 import fs from 'fs-extra';
 import crypto from 'node:crypto';
 import path from 'upath';
-import { SQLiteProxy } from '../database/SQLiteProxy.js';
-import { getSQLite, getSettings, getSharedModels } from '../database/shared.js';
+import { getSQLiteProxy, getSettings, getSharedModels, getOpenCodeKeysManager } from '../database/shared.js';
 import * as provider from './provider/index.js';
 import { ProxyCheckerManager } from '../proxy/proxy-checker-manager.js';
 import { toolRegistry, registerTool, type ToolDefinition } from './tools/tool-registry.js';
@@ -276,8 +275,7 @@ app.get('/proxy-checker/proxies', async (req, res) => {
       return;
     }
 
-    const db = await getSQLite();
-    const proxyDb = new SQLiteProxy(db);
+    const proxyDb = await getSQLiteProxy();
 
     const proxies = await proxyDb.getProxiesByHostWithAllHosts(host);
 
@@ -731,6 +729,258 @@ app.post('/api/providers/:provider/toggle', async (req: Request, res: Response) 
     res.json({ success: true, provider, enabled });
   } catch (error) {
     serverLogger.logSync(`Provider toggle error: ${error}`);
+    res.status(500).json({
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+// ── OpenCode Keys Management API ───────────────────────────────────────────────
+
+/**
+ * GET /api/providers/:provider/keys — list all keys for a provider (currently only 'opencode')
+ */
+app.get('/api/providers/:provider/keys', async (req: Request, res: Response) => {
+  try {
+    const providerName = req.params.provider;
+
+    if (providerName !== 'opencode') {
+      return res.status(400).json({ error: 'Only opencode provider supports key management' });
+    }
+
+    const keysManager = await getOpenCodeKeysManager();
+    await keysManager.initialize();
+
+    // Join with proxies table to include proxy info
+    const allKeys = await keysManager.query(`
+      SELECT k.*, p.proxy as proxy_address, p.type as proxy_type
+      FROM opencode_keys k
+      LEFT JOIN proxies p ON k.proxy_id = p.id
+      ORDER BY k.name
+    `);
+
+    // Don't expose the actual key values in the response
+    const sanitizedKeys = allKeys.map((k: any) => ({
+      id: k.id,
+      name: k.name,
+      enabled: k.enabled === 1,
+      proxy_id: k.proxy_id || null,
+      proxy_address: k.proxy_address || null,
+      proxy_type: k.proxy_type || null,
+      last_used: k.last_used,
+      last_status: k.last_status,
+      created_at: k.created_at,
+      updated_at: k.updated_at,
+      // Show only first 8 and last 4 characters of the key for identification
+      key_preview: k.key ? `${k.key.substring(0, 8)}...${k.key.substring(k.key.length - 4)}` : ''
+    }));
+
+    res.json({ keys: sanitizedKeys });
+  } catch (error) {
+    serverLogger.logSync(`Keys GET error: ${error}`);
+    // Return empty array instead of error when table doesn't exist (first run)
+    res.json({ keys: [] });
+  }
+});
+
+/**
+ * POST /api/providers/:provider/keys — add a new key
+ * Body: { name: string, key: string, enabled?: boolean }
+ */
+app.post('/api/providers/:provider/keys', async (req: Request, res: Response) => {
+  try {
+    const providerName = req.params.provider;
+
+    if (providerName !== 'opencode') {
+      return res.status(400).json({ error: 'Only opencode provider supports key management' });
+    }
+
+    const { name, key, enabled, proxy_id } = req.body;
+
+    if (!name || typeof name !== 'string' || !key || typeof key !== 'string') {
+      return res.status(400).json({ error: 'name and key are required' });
+    }
+
+    const keysManager = await getOpenCodeKeysManager();
+    await keysManager.initialize();
+
+    const keysApi = await keysManager.keys();
+
+    // Check if name already exists
+    const existing = await keysApi.findOne({ name });
+    if (existing) {
+      return res.status(409).json({ error: 'A key with this name already exists' });
+    }
+
+    // Validate proxy_id if provided
+    if (proxy_id !== undefined && proxy_id !== null) {
+      const pid = parseInt(String(proxy_id), 10);
+      if (isNaN(pid)) {
+        return res.status(400).json({ error: 'Invalid proxy_id' });
+      }
+      const proxyEntry = await keysManager.query('SELECT id FROM proxies WHERE id = ?', [pid]);
+      if (proxyEntry.length === 0) {
+        return res.status(400).json({ error: 'Proxy not found' });
+      }
+    }
+
+    const now = new Date().toISOString();
+    await keysApi.insert({
+      name,
+      key,
+      proxy_id: proxy_id !== undefined && proxy_id !== null ? parseInt(String(proxy_id), 10) : undefined,
+      enabled: enabled === false ? 0 : 1,
+      created_at: now,
+      updated_at: now
+    });
+
+    res.json({ success: true, message: 'Key added successfully' });
+  } catch (error) {
+    serverLogger.logSync(`Keys POST error: ${error}`);
+    res.status(500).json({
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+/**
+ * PATCH /api/providers/:provider/keys/:keyId — update a key
+ * Body: { name?: string, key?: string, enabled?: boolean }
+ */
+app.patch('/api/providers/:provider/keys/:keyId', async (req: Request, res: Response) => {
+  try {
+    const providerName = req.params.provider;
+    const keyIdParam = req.params.keyId;
+    const keyId = parseInt(Array.isArray(keyIdParam) ? keyIdParam[0] : keyIdParam, 10);
+
+    if (providerName !== 'opencode') {
+      return res.status(400).json({ error: 'Only opencode provider supports key management' });
+    }
+
+    if (!keyId || isNaN(keyId)) {
+      return res.status(400).json({ error: 'Invalid key ID' });
+    }
+
+    const { name, key, enabled, proxy_id } = req.body;
+
+    const keysManager = await getOpenCodeKeysManager();
+    await keysManager.initialize();
+
+    const keysApi = await keysManager.keys();
+
+    // Check if key exists
+    const existing = await keysApi.findOne({ id: keyId });
+    if (!existing) {
+      return res.status(404).json({ error: 'Key not found' });
+    }
+
+    // If name is being changed, check for conflicts
+    if (name && name !== existing.name) {
+      const conflict = await keysApi.findOne({ name });
+      if (conflict) {
+        return res.status(409).json({ error: 'A key with this name already exists' });
+      }
+    }
+
+    // Validate proxy_id if provided
+    if (proxy_id !== undefined && proxy_id !== null) {
+      const pid = parseInt(String(proxy_id), 10);
+      if (isNaN(pid)) {
+        return res.status(400).json({ error: 'Invalid proxy_id' });
+      }
+      const proxyEntry = await keysManager.query('SELECT id FROM proxies WHERE id = ?', [pid]);
+      if (proxyEntry.length === 0) {
+        return res.status(400).json({ error: 'Proxy not found' });
+      }
+    }
+
+    const updateData: any = {
+      updated_at: new Date().toISOString()
+    };
+
+    if (name !== undefined) updateData.name = name;
+    if (key !== undefined) updateData.key = key;
+    if (enabled !== undefined) updateData.enabled = enabled ? 1 : 0;
+    if (proxy_id !== undefined) updateData.proxy_id = proxy_id !== null ? parseInt(String(proxy_id), 10) : null;
+
+    await keysApi.update(updateData, { id: keyId });
+
+    res.json({ success: true, message: 'Key updated successfully' });
+  } catch (error) {
+    serverLogger.logSync(`Keys PATCH error: ${error}`);
+    res.status(500).json({
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+/**
+ * GET /api/providers/:provider/proxies — list available proxies for a provider
+ */
+app.get('/api/providers/:provider/proxies', async (req: Request, res: Response) => {
+  try {
+    const providerName = req.params.provider;
+
+    if (providerName !== 'opencode') {
+      return res.status(400).json({ error: 'Only opencode provider supports this' });
+    }
+
+    const proxyClient = await getSQLiteProxy();
+
+    const entries = await proxyClient.proxy_entries();
+    const allProxies = await entries.find({ status: 'active' });
+
+    const sanitized = allProxies.map((p: any) => ({
+      id: p.id,
+      proxy: p.proxy,
+      type: p.type || 'http',
+      username: p.username || null,
+      status: p.status
+    }));
+
+    res.json({ proxies: sanitized });
+  } catch (error) {
+    serverLogger.logSync(`Proxies GET error: ${error}`);
+    res.json({ proxies: [] });
+  }
+});
+
+/**
+ * DELETE /api/providers/:provider/keys/:keyId — delete a key
+ */
+app.delete('/api/providers/:provider/keys/:keyId', async (req: Request, res: Response) => {
+  try {
+    const providerName = req.params.provider;
+    const keyIdParam = req.params.keyId;
+    const keyId = parseInt(Array.isArray(keyIdParam) ? keyIdParam[0] : keyIdParam, 10);
+
+    if (providerName !== 'opencode') {
+      return res.status(400).json({ error: 'Only opencode provider supports key management' });
+    }
+
+    if (!keyId || isNaN(keyId)) {
+      return res.status(400).json({ error: 'Invalid key ID' });
+    }
+
+    const keysManager = await getOpenCodeKeysManager();
+    await keysManager.initialize();
+
+    const keysApi = await keysManager.keys();
+
+    // Check if key exists
+    const existing = await keysApi.findOne({ id: keyId });
+    if (!existing) {
+      return res.status(404).json({ error: 'Key not found' });
+    }
+
+    await keysApi.delete({ id: keyId });
+
+    res.json({ success: true, message: 'Key deleted successfully' });
+  } catch (error) {
+    serverLogger.logSync(`Keys DELETE error: ${error}`);
     res.status(500).json({
       error: 'Internal server error',
       details: error instanceof Error ? error.message : String(error)
