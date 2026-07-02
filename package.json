@@ -29,13 +29,15 @@
     "preview:web": "vite preview --config vite.config.mjs",
     "test": "node --disable-warning=ExperimentalWarning --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --detectOpenHandles --config jest.config.mjs",
     "jest": "node --disable-warning=ExperimentalWarning --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --detectOpenHandles --config jest.config.mjs",
-    "update:ncu": "npx -y npm-check-updates@latest -u --reject '/eslint|rollup|lint-staged|react|babel|commitlint/'"
+    "update:ncu": "npx -y npm-check-updates@latest -u --reject '/eslint|rollup|lint-staged|react|babel|commitlint/'",
+    "postinstall": "node scripts/postinstall.js"
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "bin": {
     "ai-memory-mcp": "./dist/mcp-server/wrapper/ai-memory.cjs",
+    "ai-toolkit-runtime": "./scripts/postinstall.js",
     "check-proxy": "./dist/proxy/checker.runner.cjs",
     "filesystem-mcp": "./dist/mcp-server/wrapper/filesystem.cjs",
     "node-proxy-server": "./dist/proxy/server.runner.cjs",
@@ -51,7 +53,10 @@
   },
   "files": [
     "dist",
-    ".puppeteerrc.cjs"
+    ".puppeteerrc.cjs",
+    "scripts/postinstall.js",
+    "scripts/rtk-installer.js",
+    "scripts/sqlite-installer.js"
   ],
   "workspaces": [
     "packages/*"
