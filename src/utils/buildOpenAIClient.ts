@@ -1,9 +1,9 @@
 import type { BinaryCollectionsConfig, OpenCodeAuthData } from 'binary-collections';
-import { createRequire } from 'node:module';
-const binaryCollectionsRequire = createRequire(import.meta.url);
-const { opencodeFindWorkingKey, getOpenCodeAuth } = binaryCollectionsRequire('binary-collections');
 import OpenAI from 'openai';
-import { fetch as undiciFetch, ProxyAgent } from 'undici';
+import { fetch as undiciFetch, ProxyAgent, Socks5ProxyAgent, type Dispatcher } from 'undici';
+import { opencodeFindWorkingProxy } from '../proxy/opencodeFindWorkingKey.js';
+import { getOpenCodeKeysManager } from '../database/shared.js';
+import type { Proxy } from '../database/ProxyDB.js';
 
 export type BuildOpenAIProvider = 'opencode' | 'nvidia' | 'openai';
 
@@ -15,16 +15,14 @@ export interface BuildOpenAIClientOptions {
   provider: BuildOpenAIProvider;
 
   /**
-   * HTTP/HTTPS proxy URL for all API requests.
+   * HTTP/HTTPS or SOCKS5 proxy URL for all API requests.
    *
    * Supported formats:
    *   - `http://proxy:8080`
    *   - `https://proxy:8443`
    *   - `http://user:pass@proxy:8080`
-   *
-   * SOCKS5 is **not** directly supported by the underlying undici `ProxyAgent`.
-   * For SOCKS5, use an HTTP-to-SOCKS bridge such as `hpts` or set the
-   * `HTTP_PROXY` / `HTTPS_PROXY` environment variables at the process level.
+   *   - `socks5://proxy:1080`
+   *   - `socks5://user:pass@proxy:1080`
    */
   proxy?: string;
 
@@ -32,13 +30,13 @@ export interface BuildOpenAIClientOptions {
    * Pre-resolved auth data (only used for `'opencode'` provider).
    *
    * Accepts either:
-   *   - `OpenCodeAuthData` — auth shape from `getOpenCodeAuth()` with
+   *   - `OpenCodeAuthData` — auth shape with
    *     `{ opencode: { key } }`.
    *   - `BinaryCollectionsConfig` — config file shape with
    *     `{ opencode: { keys: [{ name, key }] } }`. The first key in the
    *     array is extracted automatically.
    *
-   * When provided, skips `getOpenCodeAuth()` and uses these keys directly.
+   * When provided, skips the database fallback and uses these keys directly.
    * Ignored for `'nvidia'` and `'openai'` providers (they use env vars).
    */
   apiKeys?: OpenCodeAuthData | BinaryCollectionsConfig;
@@ -50,12 +48,14 @@ export interface BuildOpenAIClientOptions {
  * Supports two runtime shapes:
  *   1. **OpenCodeAuthData** — detected by `opencode.key` → returned as-is.
  *   2. **BinaryCollectionsConfig** — detected by `opencode.keys` (array) →
- *      the first item is extracted into an `OpenCodeAuthData`-shaped object
- *      with only the `opencode` field populated.
+ *      the first item is extracted into an `OpenCodeAuthData`-shaped object.
+ *      If a `proxy` is also configured, it verifies the proxy works with that
+ *      key before returning.
  *
  * @param keys - Auth data in either supported shape.
+ * @param proxy - Optional proxy URL used to verify the key is reachable.
  * @returns An `OpenCodeAuthData`-shaped object with just the `opencode` token,
- *          or `undefined` if neither shape matched.
+ *          or `undefined` if neither shape matched or proxy verification failed.
  */
 async function extractApiKey(
   keys: OpenCodeAuthData | BinaryCollectionsConfig,
@@ -72,41 +72,51 @@ async function extractApiKey(
 
   // BinaryCollectionsConfig shape: { opencode: { keys: KeyData[] } }
   if ('keys' in keys.opencode && Array.isArray(keys.opencode.keys) && keys.opencode.keys.length > 0) {
-    const pick = await opencodeFindWorkingKey(keys.opencode.keys, { proxy });
-    if (!pick) {
-      return undefined;
+    const firstKey = keys.opencode.keys[0];
+
+    // If a proxy is configured, verify it actually works with this key.
+    if (proxy) {
+      const url = new URL(proxy);
+      const proxyObj: Proxy = {
+        proxy: url.hostname + (url.port ? `:${url.port}` : ''),
+        type: url.protocol.replace(':', ''),
+        username: url.username || undefined,
+        password: url.password || undefined
+      };
+
+      const { result } = await opencodeFindWorkingProxy(firstKey.key, [proxyObj]);
+      if (!result) return undefined;
     }
-    return { opencode: { type: 'binary-collections', key: pick.key } } as OpenCodeAuthData;
+
+    return { opencode: { type: 'binary-collections', key: firstKey.key } } as OpenCodeAuthData;
   }
 
   return undefined;
 }
 
 /**
- * Build fetch options from a proxy URL using undici `ProxyAgent`.
+ * Build a dispatcher from a proxy URL — HTTP/HTTPS via undici `ProxyAgent`
+ * or SOCKS5 via undici `Socks5ProxyAgent`.
  *
- * @param proxy - HTTP/HTTPS proxy URL (SOCKS5 throws).
- * @returns An object with `fetchOptions` (for the OpenAI constructor) and
- *          the raw `dispatcher` (for per-request overrides).
+ * @param proxy - HTTP/HTTPS/SOCKS5 proxy URL.
+ * @returns An object with `dispatcher` (for the OpenAI constructor) and
+ *          the raw `proxy` string.
  */
 function buildProxyOptions(proxy: string): {
-  dispatcher: ProxyAgent;
-  /**  */
+  dispatcher: Dispatcher;
   proxy: string;
 } {
+  if (proxy.startsWith('socks5://') || proxy.startsWith('socks://')) {
+    return { dispatcher: new Socks5ProxyAgent(proxy), proxy };
+  }
+
   if (!proxy.startsWith('http://') && !proxy.startsWith('https://')) {
     throw new Error(
-      `Unsupported proxy protocol: '${proxy.split(':')[0]}'. ` +
-        'Only HTTP/HTTPS proxies are supported. ' +
-        'For SOCKS5, use an HTTP-to-SOCKS bridge (e.g. `hpts`) or set the HTTP_PROXY/HTTPS_PROXY env vars.'
+      `Unsupported proxy protocol: '${proxy.split(':')[0]}'. ` + 'Supported: http://, https://, socks5://, socks://'
     );
   }
 
-  const dispatcher = new ProxyAgent(proxy);
-  return {
-    dispatcher,
-    proxy
-  };
+  return { dispatcher: new ProxyAgent(proxy), proxy };
 }
 
 /**
@@ -117,7 +127,7 @@ function buildProxyOptions(proxy: string): {
  *
  * | Provider    | Auth source                                       | Base URL                                      |
  * |-------------|--------------------------------------------------|-----------------------------------------------|
- * | `opencode`  | `apiKeys` option or `getOpenCodeAuth()`           | `https://opencode.ai/zen/v1`                  |
+ * | `opencode`  | `apiKeys` option or first enabled key from DB    | `https://opencode.ai/zen/v1`                  |
  * | `nvidia`    | `NVIDIA_API_KEY` env var                          | `https://integrate.api.nvidia.com/v1`          |
  * | `openai`    | `OPENAI_API_KEY` env var                          | default OpenAI endpoint                       |
  *
@@ -128,7 +138,7 @@ function buildProxyOptions(proxy: string): {
  */
 export async function buildOpenAIClient(
   options: BuildOpenAIClientOptions
-): Promise<{ client: OpenAI; model: string; dispatcher?: ProxyAgent; proxy?: string }> {
+): Promise<{ client: OpenAI; model: string; dispatcher?: Dispatcher; proxy?: string }> {
   const { model, provider, proxy, apiKeys } = options;
 
   const proxyOptions = proxy ? buildProxyOptions(proxy) : undefined;
@@ -144,14 +154,28 @@ export async function buildOpenAIClient(
 
   switch (provider) {
     case 'opencode': {
-      const auth = apiKeys ? await extractApiKey(apiKeys, proxy) : await getOpenCodeAuth();
-      if (!auth?.opencode?.key) {
+      let key: string | undefined;
+
+      if (apiKeys) {
+        const auth = await extractApiKey(apiKeys, proxy);
+        key = auth?.opencode?.key;
+      } else {
+        // Fall back to database — use the first enabled key
+        const keysManager = await getOpenCodeKeysManager();
+        await keysManager.initialize();
+        const dbKeys = await keysManager.getEnabledKeysWithProxy();
+        if (dbKeys.length > 0) {
+          key = dbKeys[0].key;
+        }
+      }
+
+      if (!key) {
         throw new Error(
-          'No OpenCode API key found.\n' + 'Run `opencode` once to configure, or pass `apiKeys` in options.'
+          'No OpenCode API key found.\n' + 'Add a key in the provider settings, or pass `apiKeys` in options.'
         );
       }
       return {
-        client: createClient('https://opencode.ai/zen/v1', auth.opencode.key),
+        client: createClient('https://opencode.ai/zen/v1', key),
         model,
         dispatcher,
         proxy

@@ -1,9 +1,8 @@
 import type { Request } from 'express';
 import { OpenAI } from 'openai';
-import { ProxyAgent } from 'undici';
-import { getSettings, getSharedModels } from '../../database/shared.js';
+
+import { getSharedModels, getOpenCodeKeysManager } from '../../database/shared.js';
 import { buildOpenAIClient } from '../../utils/buildOpenAIClient.js';
-import { isProxyReachable } from '../../proxy/isProxyReachable.cjs';
 
 import {
   convertChatCompletionsToResponses,
@@ -16,55 +15,91 @@ import { toolRegistry } from '../tools/tool-registry.js';
 import { serverLogger } from '../utils.js';
 import type { ProviderResult } from './index.js';
 import { isConnectionError, repairMessageSequence } from './message-repair.js';
-import { cacheWorkingProxy, getProxyClient, getProxyLabel, selectProxyUrl } from './proxy-utility.js';
+import { getProxyLabel } from './proxy-utility.js';
 
 // Lazy-load the OpenCode provider to avoid SDK init at import time
 let opencodeClient: OpenAI | null = null;
-let opencodeClientProxy: string | undefined;
 
+/**
+ * Get (or create) the cached OpenAI client with per-key proxy support.
+ *
+ * Iterates enabled keys from the database, each optionally associated with a
+ * proxy from the `proxies` table.  Tries each key+proxy combination and caches
+ * the first one that responds successfully.
+ *
+ * Keys without a specific proxy use a direct connection.
+ */
 async function getOpenCode(): Promise<OpenAI> {
-  if (!opencodeClient) {
-    opencodeClientProxy = undefined;
+  if (opencodeClient) return opencodeClient;
 
-    const useProxy = process.env.OPENCODE_NO_PROXY !== '1';
+  // Get enabled keys with proxy info from database
+  const keysManager = await getOpenCodeKeysManager();
+  await keysManager.initialize();
 
-    if (useProxy) {
-      // Filter for HTTP proxies only since undici ProxyAgent doesn't support SOCKS5.
-      opencodeClientProxy = await selectProxyUrl('opencode.ai');
+  // Migration: add proxy_id column if table was created before this feature
+  try {
+    await keysManager.execute('ALTER TABLE opencode_keys ADD COLUMN proxy_id INTEGER REFERENCES proxies(id)');
+  } catch {
+    // Column already exists — this is the common path after first migration
+  }
 
-      // Validate proxy is reachable before using it
-      if (opencodeClientProxy) {
-        serverLogger.log(`Validating proxy reachability: ${getProxyLabel(opencodeClientProxy)}`);
-        const result = await isProxyReachable({
-          type: 'http',
-          proxy: opencodeClientProxy.replace(/^https?:\/\//, '').replace(/^[^@]+@/, ''),
-          timeout: 5000
-        });
-        if (!result.ok) {
-          serverLogger.logSync(
-            `Proxy ${getProxyLabel(opencodeClientProxy)} is not reachable: ${result.error || `failed at ${result.stage}`}`
-          );
-          await markProxyDeadSafely(opencodeClientProxy);
-          // Try to get another proxy
-          opencodeClientProxy = await selectProxyUrl('opencode.ai');
-        } else {
-          serverLogger.log(`Proxy ${getProxyLabel(opencodeClientProxy)} is reachable`);
-        }
-      }
+  const enabledKeys = await keysManager.getEnabledKeysWithProxy();
 
-      // getSQLite provides the centralized SQLite connection
-      const proxyClient = await getProxyClient();
-      await proxyClient.initialize();
-      serverLogger.log('Proxy client initialized.');
+  if (enabledKeys.length === 0) {
+    throw new Error('No enabled OpenCode API keys found. Add a key in Settings.');
+  }
+
+  serverLogger.log(`Found ${enabledKeys.length} enabled OpenCode key(s), trying each...`);
+
+  for (const key of enabledKeys) {
+    let keyProxy: string | undefined;
+
+    if (key.proxy_address) {
+      // Key has a specific proxy from the proxies table — build full URL
+      const pType = key.proxy_type || 'http';
+      keyProxy = `${pType}://${key.proxy_address}`;
+      serverLogger.log(`Trying key '${key.name}' with its proxy: ${getProxyLabel(keyProxy)}`);
     }
 
-    const { client } = await buildOpenAIClient({
-      model: 'deepseek-v4-flash-free',
-      provider: 'opencode',
-      proxy: opencodeClientProxy
-    });
-    opencodeClient = client;
+    if (!keyProxy) {
+      serverLogger.log(`Trying key '${key.name}' with direct connection`);
+    }
+
+    try {
+      const { client } = await buildOpenAIClient({
+        model: 'deepseek-v4-flash-free',
+        provider: 'opencode',
+        proxy: keyProxy,
+        apiKeys: { opencode: { keys: [{ name: key.name, key: key.key }] } }
+      });
+
+      opencodeClient = client;
+
+      const proxyLabel = keyProxy ? ` with proxy: ${getProxyLabel(keyProxy)}` : ' (direct)';
+      serverLogger.log(`OpenCode provider initialized using key '${key.name}'${proxyLabel}`);
+
+      // Mark key as successful
+      if (key.id) {
+        await keysManager.markKeyUsed(key.id, 'success').catch(() => {});
+      }
+
+      break;
+    } catch (err) {
+      serverLogger.logSync(`Key '${key.name}' failed: ${err instanceof Error ? err.message : String(err)}`);
+      if (key.id) {
+        await keysManager.markKeyUsed(key.id, 'failure').catch(() => {});
+      }
+      // Continue to next key
+    }
   }
+
+  if (!opencodeClient) {
+    throw new Error(
+      'None of the enabled OpenCode API keys worked. ' +
+        'Check your keys and proxies in Settings, or ensure the opencode.ai service is reachable.'
+    );
+  }
+
   return opencodeClient;
 }
 
@@ -107,66 +142,6 @@ async function resolveModel(model: string | undefined) {
   }
 
   return model;
-}
-
-async function markProxyDeadSafely(proxyUrl: string): Promise<void> {
-  try {
-    // Extract proxy address from URL (remove protocol and auth)
-    const url = new URL(proxyUrl);
-    const proxyAddress = `${url.hostname}:${url.port}`;
-
-    const proxyClient = await getProxyClient();
-    await proxyClient.markProxyDeadForHost(proxyAddress, 'opencode.ai');
-    serverLogger.log(`Marked dead proxy for host opencode.ai: ${getProxyLabel(proxyUrl)}`);
-
-    // Clear the cached proxy setting since it's no longer working
-    try {
-      const settings = await getSettings();
-      await settings?.deleteSetting('OPENCODE_CACHED_PROXY');
-    } catch {
-      // Setting may not exist, which is fine
-    }
-  } catch (error) {
-    serverLogger.logSync(`Failed to mark proxy dead: ${error}`);
-  }
-}
-
-async function createProxyDispatcher(): Promise<{ dispatcher?: ProxyAgent; proxyUrl?: string }> {
-  // Allow direct connection bypass via env var (used by tests)
-  if (process.env.OPENCODE_NO_PROXY === '1') {
-    serverLogger.log('OpenCode: Direct connection mode (OPENCODE_NO_PROXY=1)');
-    return { dispatcher: undefined, proxyUrl: undefined };
-  }
-
-  let proxyUrl = await selectProxyUrl('opencode.ai');
-
-  // Validate proxy is reachable before using it
-  if (proxyUrl) {
-    serverLogger.log(`Validating proxy reachability: ${getProxyLabel(proxyUrl)}`);
-    const result = await isProxyReachable({
-      type: 'http',
-      proxy: proxyUrl.replace(/^https?:\/\//, '').replace(/^[^@]+@/, ''),
-      timeout: 5000
-    });
-    if (!result.ok) {
-      serverLogger.logSync(
-        `Proxy ${getProxyLabel(proxyUrl)} is not reachable: ${result.error || `failed at ${result.stage}`}`
-      );
-      await markProxyDeadSafely(proxyUrl);
-      // Try to get another proxy
-      proxyUrl = await selectProxyUrl('opencode.ai');
-      if (proxyUrl) {
-        serverLogger.log(`Switched to proxy: ${getProxyLabel(proxyUrl)}`);
-      }
-    } else {
-      serverLogger.log(`Proxy ${getProxyLabel(proxyUrl)} is reachable`);
-    }
-  }
-
-  return {
-    dispatcher: proxyUrl ? new ProxyAgent(proxyUrl) : undefined,
-    proxyUrl
-  };
 }
 
 export async function handleChatCompletion(req: Request): Promise<ProviderResult> {
@@ -239,8 +214,6 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
     }
   }
 
-  const { dispatcher, proxyUrl } = await createProxyDispatcher();
-
   if (stream) {
     return {
       type: 'stream',
@@ -257,13 +230,10 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
         let collectedToolCalls: any[] = [];
         let streamReasoningContent = '';
         try {
-          const streamResponse = await client.chat.completions.create(
-            {
-              ...baseBody,
-              stream: true as const
-            } as OpenAI.ChatCompletionCreateParamsStreaming,
-            { fetchOptions: { dispatcher } }
-          );
+          const streamResponse = await client.chat.completions.create({
+            ...baseBody,
+            stream: true as const
+          } as OpenAI.ChatCompletionCreateParamsStreaming);
           for await (const chunk of streamResponse) {
             const choice = chunk.choices?.[0];
             const delta = choice?.delta;
@@ -328,7 +298,6 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
               );
             }
           }
-          await cacheWorkingProxy('opencode.ai', proxyUrl);
 
           // Check if there are local tools to execute after streaming completes
           if (collectedToolCalls.length > 0) {
@@ -370,13 +339,10 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
               };
 
               try {
-                const followUpStream = await client.chat.completions.create(
-                  {
-                    ...followUpBody,
-                    stream: true as const
-                  } as OpenAI.ChatCompletionCreateParamsStreaming,
-                  { fetchOptions: { dispatcher } }
-                );
+                const followUpStream = await client.chat.completions.create({
+                  ...followUpBody,
+                  stream: true as const
+                } as OpenAI.ChatCompletionCreateParamsStreaming);
 
                 // let followUpResponse = '';
                 for await (const chunk of followUpStream) {
@@ -452,9 +418,8 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
           // appendMessageToFile(logFile, 'OPENCODE STREAMING RESPONSE', fullResponse);
         } catch (streamErr: any) {
           serverLogger.logSync(`OpenCode streaming error: ${streamErr}`);
-          // Mark proxy as dead on connection error
-          if (proxyUrl && isConnectionError(streamErr)) {
-            await markProxyDeadSafely(proxyUrl);
+          if (isConnectionError(streamErr)) {
+            serverLogger.logSync('Stream encountered a connection error');
           }
           if (!res.headersSent) {
             res.write(`data: ${JSON.stringify({ error: { message: streamErr.message || 'Stream error' } })}\n\n`);
@@ -469,15 +434,11 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
     serverLogger.log(
       `OpenCode: Sending request to upstream (model=${resolvedModel}, messages=${baseBody.messages.length})`
     );
-    const completion = await client.chat.completions.create(
-      {
-        ...baseBody,
-        stream: false as const
-      } as OpenAI.ChatCompletionCreateParamsNonStreaming,
-      { fetchOptions: { dispatcher } }
-    );
+    const completion = await client.chat.completions.create({
+      ...baseBody,
+      stream: false as const
+    } as OpenAI.ChatCompletionCreateParamsNonStreaming);
     serverLogger.log(`OpenCode: Received response from upstream`);
-    await cacheWorkingProxy('opencode.ai', proxyUrl);
 
     // Preserve the full upstream response including tool_calls and finish_reason
     const upstreamChoice = completion.choices?.[0];
@@ -522,13 +483,10 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
           tools: deduplicatedTools.length > 0 ? deduplicatedTools : undefined
         };
 
-        const followUpCompletion = await client.chat.completions.create(
-          {
-            ...followUpBody,
-            stream: false as const
-          } as OpenAI.ChatCompletionCreateParamsNonStreaming,
-          { fetchOptions: { dispatcher } }
-        );
+        const followUpCompletion = await client.chat.completions.create({
+          ...followUpBody,
+          stream: false as const
+        } as OpenAI.ChatCompletionCreateParamsNonStreaming);
 
         const followUpChoice = followUpCompletion.choices?.[0];
         const followUpMessage = followUpChoice?.message || { role: 'assistant' as const, content: '' };
@@ -603,10 +561,6 @@ export async function handleChatCompletion(req: Request): Promise<ProviderResult
     };
   } catch (err: any) {
     serverLogger.logSync(`OpenCode chat completion error: ${err}`);
-    // Mark proxy as dead on connection error
-    if (proxyUrl && isConnectionError(err)) {
-      await markProxyDeadSafely(proxyUrl);
-    }
     throw err;
   }
 }
@@ -629,7 +583,6 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
     temperature,
     max_tokens
   };
-  const { dispatcher, proxyUrl } = await createProxyDispatcher();
 
   if (stream) {
     return {
@@ -654,13 +607,10 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
 
         // let fullResponse = '';
         try {
-          const streamResponse = await client.chat.completions.create(
-            {
-              ...baseBody,
-              stream: true as const
-            },
-            { fetchOptions: { dispatcher } }
-          );
+          const streamResponse = await client.chat.completions.create({
+            ...baseBody,
+            stream: true as const
+          });
           for await (const chunk of streamResponse) {
             const delta = chunk.choices?.[0]?.delta?.content || '';
             if (delta) {
@@ -672,7 +622,6 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
               res.write(`data: ${JSON.stringify(deltaPayload)}\n\n`);
             }
           }
-          await cacheWorkingProxy('opencode.ai', proxyUrl);
           res.write(
             `data: ${JSON.stringify({ type: 'response.done', response: { id: responseId, status: 'completed' } })}\n\n`
           );
@@ -680,10 +629,6 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
           // appendMessageToFile(responsesLogFile, 'OPENCODE RESPONSES STREAMING RESPONSE', fullResponse);
         } catch (streamErr: any) {
           serverLogger.logSync(`OpenCode Responses streaming error: ${streamErr}`);
-          // Mark proxy as dead on connection error
-          if (proxyUrl && isConnectionError(streamErr)) {
-            await markProxyDeadSafely(proxyUrl);
-          }
           if (!res.headersSent) {
             res.write(`data: ${JSON.stringify({ error: { message: streamErr.message || 'Stream error' } })}\n\n`);
           }
@@ -694,14 +639,10 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
   }
 
   try {
-    const completion = await client.chat.completions.create(
-      {
-        ...baseBody,
-        stream: false as const
-      },
-      { fetchOptions: { dispatcher } }
-    );
-    await cacheWorkingProxy('opencode.ai', proxyUrl);
+    const completion = await client.chat.completions.create({
+      ...baseBody,
+      stream: false as const
+    });
     const content = completion.choices?.[0]?.message?.content || '';
     // appendMessageToFile(responsesLogFile, 'OPENCODE RESPONSES RESPONSE', content);
 
@@ -713,10 +654,6 @@ export async function handleResponses(req: Request): Promise<ProviderResult> {
     return { type: 'json', data: result };
   } catch (err: any) {
     serverLogger.logSync(`OpenCode Responses completion error: ${err}`);
-    // Mark proxy as dead on connection error
-    if (proxyUrl && isConnectionError(err)) {
-      await markProxyDeadSafely(proxyUrl);
-    }
     throw err;
   }
 }
