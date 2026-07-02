@@ -103,8 +103,36 @@ export async function repairMessageSequence(
   const repairStats = { total: 0, localExecuted: 0, synthetic: 0 };
   const repairedTools = new Set<string>();
 
+  // Two-pass reasoning_content propagation for DeepSeek thinking mode.
+  // DeepSeek requires reasoning_content on ALL tool-call assistant messages
+  // once thinking mode has been used in the conversation.
+  // Pass 1: find the first tool-call assistant message that has reasoning_content.
+  let seedReasoningContent: string | undefined;
+  for (const m of messages) {
+    if (
+      m.role === 'assistant' &&
+      Array.isArray(m.tool_calls) &&
+      m.tool_calls.length > 0 &&
+      (m as any).reasoning_content
+    ) {
+      seedReasoningContent = (m as any).reasoning_content;
+      break;
+    }
+  }
+
   while (i < messages.length) {
     const msg = { ...messages[i] }; // shallow copy to avoid mutating input
+
+    // Pass 2: propagate reasoning_content to all tool-call assistant messages
+    // that lack it. This handles the case where the opencode proxy previously
+    // stripped reasoning_content from responses, leaving historical messages
+    // incomplete, or where reasoning_content only appears on later messages.
+    if (msg.role === 'assistant' && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+      if (!(msg as any).reasoning_content && seedReasoningContent) {
+        (msg as any).reasoning_content = seedReasoningContent;
+      }
+    }
+
     repaired.push(msg);
 
     // Only process assistant messages that have tool_calls
