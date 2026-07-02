@@ -4,11 +4,15 @@ import { ProxyDB } from './ProxyDB.js';
 import { createSettings, Settings } from './Settings.js';
 import SQLHelper from './SQLHelper.js';
 import SQLiteModel from './SQLiteModel.js';
+import { SQLiteProxy } from './SQLiteProxy.js';
+import OpenCodeKeysManager from './OpenCodeKeysManager.js';
 
 // Singleton instances for connection reuse
 let productionMySQLInstance: ProxyDB | null = null;
 let localMySQLInstance: ProxyDB | null = null;
 let centralizedSQLiteInstance: ProxyDB | null = null;
+let openCodeKeysManagerInstance: OpenCodeKeysManager | null = null;
+let sqliteProxyInstance: SQLiteProxy | null = null;
 
 /**
  * Get or create singleton ProxyDB instance for production database (read/add/edit only)
@@ -193,7 +197,28 @@ export async function closeAllDatabases(): Promise<void> {
     centralizedSQLiteInstance = null;
   }
 
+  // SQLiteProxy wraps centralizedSQLiteInstance, so null it out to force
+  // re-initialization on next access.
+  sqliteProxyInstance = null;
+
   await Promise.all(closePromises);
+}
+
+export async function getOpenCodeKeysManager(): Promise<OpenCodeKeysManager> {
+  if (!openCodeKeysManagerInstance) {
+    const db = await getSQLite();
+    openCodeKeysManagerInstance = new OpenCodeKeysManager(db);
+  }
+  return openCodeKeysManagerInstance;
+}
+
+export async function getSQLiteProxy(): Promise<SQLiteProxy> {
+  if (!sqliteProxyInstance) {
+    const db = await getSQLite();
+    sqliteProxyInstance = new SQLiteProxy(db);
+    await sqliteProxyInstance.initialize();
+  }
+  return sqliteProxyInstance;
 }
 
 export default {
@@ -202,5 +227,7 @@ export default {
   getSharedModels,
   getSQLite,
   getSettings,
+  getOpenCodeKeysManager,
+  getSQLiteProxy,
   closeAllDatabases
 };
