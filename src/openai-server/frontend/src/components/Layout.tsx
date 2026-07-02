@@ -2,6 +2,7 @@ import { NavLink, Outlet, useLocation } from 'react-router';
 
 const NAV_ITEMS = [
   { path: '/chat', label: 'Chat', icon: 'fa-comments' },
+  { path: '/providers', label: 'Providers', icon: 'fa-server' },
   { path: '/proxy-manager', label: 'Proxy manager', icon: 'fa-network-wired' },
   { path: '/model-manager', label: 'Models', icon: 'fa-cubes' },
   { path: '/settings', label: 'Settings', icon: 'fa-gear' }
@@ -27,7 +28,8 @@ export default function Layout() {
               <NavLink
                 key={item.path}
                 to={item.path}
-                className={`px-3 py-2 text-sm font-medium transition ${isActive(item.path) ? 'text-emerald-400' : 'text-neutral-400 hover:text-neutral-100'}`}>
+                className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition ${isActive(item.path) ? 'text-emerald-400' : 'text-neutral-400 hover:text-neutral-100'}`}>
+                <i aria-hidden="true" className={`fa-solid ${item.icon}`} />
                 {item.label}
               </NavLink>
             ))}

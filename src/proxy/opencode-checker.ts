@@ -1,22 +1,18 @@
 import ansiColors from 'ansi-colors';
 import { Proxy } from '../database/ProxyDB.js';
 import SQLiteMarker from '../database/SQLiteMarker.js';
-import { SQLiteProxy } from '../database/SQLiteProxy.js';
-import { closeAllDatabases, getProductionMySQL, getSQLite } from '../database/shared.js';
+import { closeAllDatabases, getProductionMySQL, getSQLite, getSQLiteProxy } from '../database/shared.js';
 import { checkProxy, CheckProxyResult } from './checker.js';
 import { getWorkingProxies } from './proxies-data.js';
 
 const productionMySQL = getProductionMySQL();
 let sharedSqlite: Awaited<ReturnType<typeof getSQLite>>;
 let marker: SQLiteMarker;
-let proxyDb: SQLiteProxy;
 
 async function initSharedSqlite() {
   if (!sharedSqlite) {
     sharedSqlite = await getSQLite();
     marker = new SQLiteMarker('', { sharedDb: sharedSqlite });
-    proxyDb = new SQLiteProxy(sharedSqlite);
-    await proxyDb.initialize();
   }
 }
 
@@ -100,7 +96,9 @@ async function checkSingle(item: Proxy) {
     // mark working for configured hours
     marker.mark(item.proxy, WORKING_PROXY_HOURS);
     // write to SQLiteProxy for opencode.ai
-    await proxyDb.addProxy({
+    await (
+      await getSQLiteProxy()
+    ).addProxy({
       proxy: item.proxy,
       type: protocol,
       host: 'opencode.ai'

@@ -750,6 +750,16 @@ OPENAI_SERVER_HTTPS_CERT_FILE=.cert/cert.pem`}</code>
                   <code className="flex-1 text-sm font-mono text-emerald-400">/settings</code>
                   <span className="text-sm text-neutral-400">Settings Page</span>
                 </div>
+                <div className="flex items-center gap-3 rounded-lg border border-white/5 bg-neutral-900 p-3">
+                  <MethodBadge method="GET" />
+                  <code className="flex-1 text-sm font-mono text-emerald-400">/providers</code>
+                  <span className="text-sm text-neutral-400">Provider Catalog</span>
+                </div>
+                <div className="flex items-center gap-3 rounded-lg border border-white/5 bg-neutral-900 p-3">
+                  <MethodBadge method="GET" />
+                  <code className="flex-1 text-sm font-mono text-emerald-400">/provider/opencode</code>
+                  <span className="text-sm text-neutral-400">OpenCode Configuration</span>
+                </div>
               </div>
             </div>
 

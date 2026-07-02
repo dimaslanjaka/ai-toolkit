@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSettings } from '../context/SettingsContext';
-import ProxyControl from './ProxyControl';
+import ProxyLogs from './ProxyLogs';
 import ProxyList from './ProxyList';
-import ProxyOpenCode from './ProxyOpenCode';
 import { createApiUrl } from '../utils/url';
 interface WorkingProxy {
   id?: number;
@@ -179,10 +178,9 @@ export default function ProxyManager() {
   const [currentTime, setCurrentTime] = useState(0);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [workingProxies, setWorkingProxies] = useState<WorkingProxy[]>([]);
-  const [cachedProxy, setCachedProxy] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'control' | 'list' | 'opencode'>(() => {
+  const [activeTab, setActiveTab] = useState<'control' | 'list'>(() => {
     const cached = localStorage.getItem('proxy-manager-tab');
-    return cached === 'control' || cached === 'list' || cached === 'opencode' ? cached : 'control';
+    return cached === 'control' || cached === 'list' ? cached : 'control';
   });
   const initialLoadRef = useRef(true);
 
@@ -241,30 +239,13 @@ export default function ProxyManager() {
     }
   }, [apiKey]);
 
-  const loadCachedProxy = useCallback(async () => {
-    try {
-      const response = await fetch(createApiUrl('/api/settings/OPENCODE_CACHED_PROXY'), {
-        headers: requestHeaders(apiKey)
-      });
-      if (!response.ok) {
-        setCachedProxy(null);
-        return;
-      }
-      const payload = (await response.json()) as { key: string; value: string };
-      setCachedProxy(payload.value ?? null);
-    } catch {
-      setCachedProxy(null);
-    }
-  }, [apiKey]);
-
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       void loadStatus();
       void loadWorkingProxies();
-      void loadCachedProxy();
     }, 0);
     return () => window.clearTimeout(timeout);
-  }, [loadStatus, loadWorkingProxies, loadCachedProxy]);
+  }, [loadStatus, loadWorkingProxies]);
 
   useEffect(() => {
     if (!autoRefresh) return;
@@ -273,12 +254,11 @@ export default function ProxyManager() {
       () => {
         void loadStatus(true);
         void loadWorkingProxies();
-        void loadCachedProxy();
       },
       isActive ? 2000 : 5000
     );
     return () => window.clearInterval(interval);
-  }, [autoRefresh, isActive, loadStatus, loadWorkingProxies, loadCachedProxy]);
+  }, [autoRefresh, isActive, loadStatus, loadWorkingProxies]);
 
   useEffect(() => {
     if (!isActive) return;
@@ -463,18 +443,11 @@ export default function ProxyManager() {
             onClick={() => setActiveTab('list')}>
             <i className="fa-solid fa-network-wired mr-1" aria-hidden="true" /> Proxies
           </button>
-          <button
-            type="button"
-            className={`px-4 py-2 rounded-t-md font-medium ${activeTab === 'opencode' ? 'border-b-2 border-emerald-500 text-emerald-400' : 'text-neutral-500'}
-              `}
-            onClick={() => setActiveTab('opencode')}>
-            <i className="fa-solid fa-bolt mr-1" aria-hidden="true" /> OpenCode
-          </button>
         </div>
 
         <div className="mt-5 grid h-[38rem] gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(18rem,0.75fr)]">
           {activeTab === 'control' ? (
-            <ProxyControl
+            <ProxyLogs
               status={status}
               logs={logs}
               loading={loading}
@@ -491,13 +464,6 @@ export default function ProxyManager() {
               setAutoRefresh={setAutoRefresh}
               runAction={runAction}
               loadStatus={loadStatus}
-            />
-          ) : activeTab === 'opencode' ? (
-            <ProxyOpenCode
-              cachedProxy={cachedProxy}
-              workingProxies={workingProxies}
-              apiKey={apiKey}
-              onProxySet={setCachedProxy}
             />
           ) : (
             <ProxyList workingProxies={workingProxies} />
