@@ -218,9 +218,9 @@ app.post('/v1/completions', provider.handleCompletion);
  */
 app.post('/v1/embeddings', provider.handleEmbeddings);
 
-app.all('/proxy-checker/start', async (_req, res) => {
+app.all('/proxy-checker/start', async (req, res) => {
   try {
-    const result = await proxyChecker.start();
+    const result = await proxyChecker.start(req.body || {});
 
     res.status(result.ok ? 202 : 409).json(result);
   } catch (error) {

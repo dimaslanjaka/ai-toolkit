@@ -178,6 +178,7 @@ export default function ProxyManager() {
   const [currentTime, setCurrentTime] = useState(0);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [workingProxies, setWorkingProxies] = useState<WorkingProxy[]>([]);
+  const [isRechecking, setIsRechecking] = useState(false);
   const [activeTab, setActiveTab] = useState<'control' | 'list'>(() => {
     const cached = localStorage.getItem('proxy-manager-tab');
     return cached === 'control' || cached === 'list' ? cached : 'control';
@@ -238,6 +239,46 @@ export default function ProxyManager() {
       setWorkingProxies([]);
     }
   }, [apiKey]);
+
+  const handleRecheckAll = useCallback(async () => {
+    if (workingProxies.length === 0) return;
+
+    setIsRechecking(true);
+    setNotice('');
+    setError('');
+
+    try {
+      const proxiesToCheck = workingProxies.map((p) => p.proxy);
+
+      const response = await fetch(createApiUrl('/proxy-checker/start'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...requestHeaders(apiKey)
+        },
+        body: JSON.stringify({
+          proxies: proxiesToCheck,
+          host: 'api.deepseek.com'
+        })
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.message || `Failed to recheck proxies: ${response.status}`);
+      }
+
+      setNotice(`Re-checked ${proxiesToCheck.length} proxies successfully`);
+
+      // Reload working proxies after recheck
+      await loadWorkingProxies();
+    } catch (recheckError) {
+      console.error('Failed to recheck proxies:', recheckError);
+      setError(recheckError instanceof Error ? recheckError.message : String(recheckError));
+    } finally {
+      setIsRechecking(false);
+    }
+  }, [workingProxies, apiKey, loadWorkingProxies]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -466,7 +507,7 @@ export default function ProxyManager() {
               loadStatus={loadStatus}
             />
           ) : (
-            <ProxyList workingProxies={workingProxies} />
+            <ProxyList workingProxies={workingProxies} onRecheckAll={handleRecheckAll} isRechecking={isRechecking} />
           )}
 
           <div className="space-y-5">

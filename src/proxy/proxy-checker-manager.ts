@@ -140,7 +140,7 @@ export class ProxyCheckerManager {
     }
   }
 
-  async start() {
+  async start(options?: { proxies?: string[]; host?: string }) {
     await fs.ensureDir(path.dirname(this.logFile));
 
     const currentPid = await this.readPidFile();
@@ -181,9 +181,19 @@ export class ProxyCheckerManager {
 
       await this.writeLog(`Found ${runners.length} runner(s) to execute`);
 
+      // Build extra CLI args from options
+      const extraArgs: string[] = [];
+      if (options?.proxies && options.proxies.length > 0) {
+        extraArgs.push(`--proxies=${options.proxies.join(',')}`);
+        if (options.host) {
+          extraArgs.push(`--host=${options.host}`);
+        }
+        await this.writeLog(`Checking ${options.proxies.length} specific proxies`);
+      }
+
       for (const runner of runners) {
         await this.writeLog(`Executing runner: ${runner.kind} ${runner.file}`);
-        await this.executeRunner(runner);
+        await this.executeRunner(runner, extraArgs);
       }
 
       return {
@@ -202,9 +212,9 @@ export class ProxyCheckerManager {
     }
   }
 
-  private async executeRunner(runner: ResolvedProxyCheckerRunner): Promise<void> {
+  private async executeRunner(runner: ResolvedProxyCheckerRunner, extraArgs: string[] = []): Promise<void> {
     return new Promise((resolve, reject) => {
-      const args = this.createProxyCheckerNodeArgs(runner);
+      const args = this.createProxyCheckerNodeArgs(runner, extraArgs);
 
       this.writeLog(`Command: ${process.execPath} ${args.join(' ')}`);
       this.writeLog(`CWD: ${this.projectRoot}`);

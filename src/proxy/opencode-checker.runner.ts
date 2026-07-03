@@ -1,5 +1,8 @@
 import { loadDotenv } from 'binary-collections';
 import { opencodeCheckProxy } from './opencode-checker.js';
+import { parseRunnerArgs } from './runner-args.js';
+import { Proxy } from '../database/ProxyDB.js';
+import { closeAllDatabases, getSQLiteProxy } from '../database/shared.js';
 import {
   adoptProxyCheckerLock,
   getProxyCheckerLockFromEnv,
@@ -8,7 +11,6 @@ import {
   tryAcquireProxyCheckerLock,
   type ProxyCheckerLockHandle
 } from './proxy-checker-lock.js';
-import { closeAllDatabases } from '../database/shared.js';
 
 loadDotenv();
 
@@ -50,7 +52,20 @@ async function run() {
   process.once('SIGTERM', stop);
 
   try {
-    await opencodeCheckProxy();
+    const { proxies: proxyAddresses } = parseRunnerArgs();
+    if (proxyAddresses) {
+      const proxyDb = await getSQLiteProxy();
+      const proxiesApi = await proxyDb.proxies();
+      const proxies: Proxy[] = [];
+      for (const addr of proxyAddresses) {
+        const r = await proxiesApi.findOne({ proxy: addr });
+        if (r) proxies.push(r);
+      }
+      console.log(`Re-checking ${proxies.length} specific proxies`);
+      await opencodeCheckProxy(proxies);
+    } else {
+      await opencodeCheckProxy();
+    }
   } finally {
     process.off('SIGINT', stop);
     process.off('SIGTERM', stop);

@@ -9,6 +9,8 @@ interface WorkingProxy {
 
 interface ProxyListProps {
   workingProxies: WorkingProxy[];
+  onRecheckAll?: () => Promise<void>;
+  isRechecking?: boolean;
 }
 
 function getProtocolBadgeClasses(type: string): string {
@@ -47,17 +49,30 @@ function getHostBadgeClasses(host: string): string {
   return `${base} ${colors[index]}`;
 }
 
-export default function ProxyList({ workingProxies }: ProxyListProps) {
+export default function ProxyList({ workingProxies, onRecheckAll, isRechecking }: ProxyListProps) {
   return (
     <div className="h-full overflow-auto rounded-2xl border border-white/10 bg-[#272727] p-5 shadow-lg shadow-black/10">
       <div className="flex items-center gap-3">
         <span className="flex size-10 items-center justify-center rounded-xl bg-neutral-800 text-neutral-400">
           <i aria-hidden="true" className="fa-solid fa-network-wired" />
         </span>
-        <div>
+        <div className="flex-1">
           <h2 className="text-sm font-semibold">Working proxies</h2>
-          <p className="text-xs text-neutral-500">Proxies validated for specific hosts and performance metrics</p>
+          <p className="text-xs text-neutral-500">Proxies validated for specific hosts with performance metrics</p>
         </div>
+        {workingProxies.length > 0 && onRecheckAll && (
+          <button
+            type="button"
+            onClick={onRecheckAll}
+            disabled={isRechecking}
+            className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 transition-colors hover:bg-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed">
+            <i
+              className={`fa-solid ${isRechecking ? 'fa-spinner fa-spin' : 'fa-rotate-right'} mr-1.5`}
+              aria-hidden="true"
+            />
+            {isRechecking ? 'Re-checking...' : 'Re-check all'}
+          </button>
+        )}
       </div>
 
       <div className="mt-4 space-y-2">

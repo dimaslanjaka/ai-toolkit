@@ -111,9 +111,9 @@ async function checkSingle(item: Proxy) {
   return result;
 }
 
-export async function opencodeCheckProxy() {
+export async function opencodeCheckProxy(proxiesOverride?: Proxy[]) {
   await initSharedSqlite();
-  const proxies = await getUnseenWorkingProxies();
+  const proxies = proxiesOverride ?? (await getUnseenWorkingProxies());
   for (let index = 0; index < proxies.length; index++) {
     const item = proxies[index];
     const result = await checkSingle(item);

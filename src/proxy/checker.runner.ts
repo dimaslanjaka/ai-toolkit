@@ -1,8 +1,9 @@
 import { loadDotenv } from 'binary-collections';
 import { Proxy } from '../database/ProxyDB.js';
-import { closeAllDatabases, getProductionMySQL } from '../database/shared.js';
+import { closeAllDatabases, getProductionMySQL, getSQLiteProxy } from '../database/shared.js';
 import { checkProxy, CheckProxyResult } from './checker.js';
 import { getWorkingProxies, invalidateProxyEverywhere } from './proxies-data.js';
+import { parseRunnerArgs } from './runner-args.js';
 import {
   adoptProxyCheckerLock,
   getProxyCheckerLockFromEnv,
@@ -102,7 +103,23 @@ async function run() {
   process.once('SIGTERM', stop);
 
   try {
-    const result = await getWorkingProxies().then(checkHttps);
+    const { proxies: proxyAddresses } = parseRunnerArgs();
+    let proxies: Proxy[];
+
+    if (proxyAddresses) {
+      const proxyDb = await getSQLiteProxy();
+      const proxiesApi = await proxyDb.proxies();
+      proxies = [];
+      for (const addr of proxyAddresses) {
+        const r = await proxiesApi.findOne({ proxy: addr });
+        if (r) proxies.push(r);
+      }
+      console.log(`Re-checking ${proxies.length} specific proxies`);
+    } else {
+      proxies = await getWorkingProxies();
+    }
+
+    const result = await checkHttps(proxies);
     console.log(result);
   } finally {
     process.off('SIGINT', stop);
