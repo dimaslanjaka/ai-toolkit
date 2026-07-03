@@ -19,8 +19,8 @@ import SQLiteMarker from '../database/SQLiteMarker.js';
 
 loadDotenv();
 
-// 1 hour in days (SQLiteMarker uses days as its validUntil unit)
-const DEAD_PROXY_DAYS = 1 / 24;
+// Cache dead proxies for 7 days (SQLiteMarker uses days as its validUntil unit)
+const DEAD_PROXY_DAYS = 7;
 
 // Standalone marker database — remembers dead proxies for 1 hour
 const marker = new SQLiteMarker('dead-proxies.sqlite', {

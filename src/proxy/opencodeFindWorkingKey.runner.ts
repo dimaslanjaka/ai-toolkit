@@ -1,9 +1,9 @@
 /**
- * Runner — find working proxies for all enabled OpenCode API keys and assign them.
+ * Runner to find working proxies for all enabled OpenCode API keys and assign them.
  *
- * For each enabled key in the database that doesn't already have a proxy assigned,
- * downloads HTTP/SOCKS5 proxy lists, finds the first working proxy, and saves it
- * to the database (both `proxies` table and `proxy_id` on the key record).
+ * For each enabled key in the database, downloads HTTP/SOCKS5 proxy lists,
+ * finds a working proxy, and saves it to the database (both the `proxies` table
+ * and the `proxy_id` in the key record). Re-tests and reassigns proxies for all keys.
  *
  * Usage:
  *   npx tsx src/proxy/opencodeFindWorkingKey.runner.ts
@@ -13,13 +13,13 @@ import { loadDotenv } from 'binary-collections';
 import { downloader } from '../utils/downloader.js';
 import { extractProxies } from './proxy-extractor.js';
 import { opencodeFindWorkingProxy } from './opencodeFindWorkingKey.js';
-import SQLiteMarker from '../database/SQLiteMarker.js';
+import { SQLiteMarker } from '../database/SQLiteMarker.js';
 import { getOpenCodeKeysManager, getSQLiteProxy } from '../database/shared.js';
 
 loadDotenv();
 
-// 1 hour in days (SQLiteMarker uses days as its validUntil unit)
-const DEAD_PROXY_DAYS = 1 / 24;
+// Cache dead proxies for 7 days (SQLiteMarker uses days as its validUntil unit)
+const DEAD_PROXY_DAYS = 7;
 
 const marker = new SQLiteMarker('dead-proxies.sqlite', {
   tableName: 'dead_proxies',
@@ -28,24 +28,16 @@ const marker = new SQLiteMarker('dead-proxies.sqlite', {
 
 async function main() {
   try {
-    // 1. Get all enabled keys from database
+    // 1. Get all enabled keys from the database
     const keysManager = await getOpenCodeKeysManager();
     const keys = await keysManager.getEnabledKeysWithProxy();
 
     if (keys.length === 0) {
-      console.log('No enabled API keys found in database.');
+      console.log('No enabled API keys found in the database.');
       return;
     }
 
-    // Filter to keys that don't already have a proxy assigned
-    const keysWithoutProxy = keys.filter((k) => !k.proxy_id);
-
-    if (keysWithoutProxy.length === 0) {
-      console.log('All enabled keys already have a proxy assigned.');
-      return;
-    }
-
-    console.log(`Found ${keysWithoutProxy.length} key(s) needing a proxy (out of ${keys.length} enabled).`);
+    console.log(`Found ${keys.length} enabled key(s) to process.`);
 
     // 2. Download proxy lists (shared across all key tests)
     console.log('Downloading proxy lists...');
@@ -59,13 +51,13 @@ async function main() {
 
     const proxies = [...http, ...socks5].sort(() => Math.random() - 0.5);
 
-    // Pre-filter: skip proxies that were marked dead and haven't expired
-    const allUrls = proxies.map((p) => `${p.type}://${p.proxy}`);
+    // Pre-filter: skip proxies marked as dead that haven't expired
+    const allUrls = proxies.map((p) => p.proxy);
     const unseen = marker.filterUnseen(allUrls);
-    const remaining = proxies.filter((p) => unseen.pending.has(`${p.type}://${p.proxy}`));
+    const remaining = proxies.filter((p) => unseen.pending.has(p.proxy));
 
     if (remaining.length === 0) {
-      console.log('All proxies are currently marked dead — nothing to test.');
+      console.log('All proxies are currently marked as dead and nothing to test.');
       return;
     }
 
@@ -76,22 +68,22 @@ async function main() {
     // 3. Set up proxy database manager for the proxies table
     const proxyManager = await getSQLiteProxy();
 
-    // 4. For each key without a proxy, try to find a working one
+    // 4. For each key, try to find a working proxy
     let assigned = 0;
-    for (const keyEntry of keysWithoutProxy) {
+    for (const keyEntry of keys) {
       // Use only the key string for proxy testing (no other parameters needed)
       const apiKey = keyEntry.key;
       console.log(`\n--- Testing key: ${keyEntry.name} (${apiKey.substring(0, 8)}...) ---`);
 
       const result = await opencodeFindWorkingProxy(apiKey, remaining, (failedProxy) => {
-        marker.mark(`${failedProxy.type || 'http'}://${failedProxy.proxy}`, DEAD_PROXY_DAYS);
+        marker.mark(failedProxy.proxy, DEAD_PROXY_DAYS);
       });
 
       if (result.result && result.proxy) {
         const workingProxy = result.proxy;
         console.log(`  ✓ Working proxy found: ${workingProxy.type}://${workingProxy.proxy}`);
 
-        // 4a. Insert the proxy into the proxies table (or find existing)
+        // 4a. Insert proxy into proxies table (or find existing)
         const proxyEntry = await proxyManager.proxy_entries();
         let existing = await proxyEntry.findOne({ proxy: workingProxy.proxy });
         let proxyId: number;
@@ -113,7 +105,7 @@ async function main() {
           console.log(`  Proxy saved to database (id=${proxyId})`);
         }
 
-        // 4b. Assign the proxy to the key
+        // 4b. Assign proxy to the key
         const now = new Date().toISOString();
         await (await keysManager.keys()).update({ proxy_id: proxyId, updated_at: now }, { id: keyEntry.id });
         console.log(`  ✓ Proxy assigned to key "${keyEntry.name}"`);
@@ -128,7 +120,7 @@ async function main() {
       }
     }
 
-    console.log(`\n=== Done. Assigned proxies to ${assigned}/${keysWithoutProxy.length} key(s). ===`);
+    console.log(`\n=== Done. Assigned proxies to ${assigned}/${keys.length} key(s). ===`);
   } finally {
     marker.close();
   }

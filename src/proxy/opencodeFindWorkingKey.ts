@@ -2,10 +2,6 @@ import type { OpenCodeAuthData } from 'binary-collections';
 import { buildOpenAIClient } from '../utils/buildOpenAIClient.js';
 import type { Proxy } from '../database/ProxyDB.js';
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 export interface OpenCodeFindWorkingProxyResult {
   /** Whether a working proxy was found. */
   result: boolean;
@@ -14,10 +10,6 @@ export interface OpenCodeFindWorkingProxyResult {
   /** The working proxy record, if one was found. */
   proxy?: Proxy;
 }
-
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
 
 /**
  * Find a working proxy for a given OpenCode API key.
@@ -56,31 +48,59 @@ export async function opencodeFindWorkingProxy(
     return { result: false, apiKey };
   }
 
-  for (const entry of proxies) {
-    const type = entry.type || 'http';
-    const hasAuth = entry.username && entry.password;
-    const authPart = hasAuth ? `${encodeURIComponent(entry.username!)}:${encodeURIComponent(entry.password!)}@` : '';
-    const proxyUrl = `${type}://${authPart}${entry.proxy}`;
+  const PROTOCOLS = ['http', 'socks4', 'socks5'] as const;
 
-    try {
-      const { client, model, dispatcher } = await buildOpenAIClient({
-        provider: 'opencode',
-        model: 'deepseek-v4-flash-free',
-        proxy: proxyUrl,
-        apiKeys: { opencode: { key: apiKey } } as OpenCodeAuthData
-      });
+  for (let i = 0; i < proxies.length; i++) {
+    const entry = proxies[i];
 
-      const completion = await client.chat.completions.create(
-        { model, messages: [{ role: 'user', content: 'Hello' }], max_tokens: 5 },
-        dispatcher ? { fetchOptions: { dispatcher } } : undefined
-      );
+    process.stdout.write(`\r  [${i + 1}/${proxies.length}] testing ${entry.proxy} (${PROTOCOLS.join(', ')}) ... `);
 
-      if (completion.choices?.[0]?.message?.content) {
-        return { result: true, apiKey, proxy: entry };
+    // Test all 3 protocols for THIS proxy in parallel
+    const tests = PROTOCOLS.map(async (protocol) => {
+      const hasAuth = entry.username && entry.password;
+      const authPart = hasAuth ? `${encodeURIComponent(entry.username!)}:${encodeURIComponent(entry.password!)}@` : '';
+      const proxyUrl = `${protocol}://${authPart}${entry.proxy}`;
+
+      try {
+        const { client, model, dispatcher } = await buildOpenAIClient({
+          provider: 'opencode',
+          model: 'deepseek-v4-flash-free',
+          proxy: proxyUrl,
+          apiKeys: { opencode: { key: apiKey } } as OpenCodeAuthData
+        });
+
+        const completion = await client.chat.completions.create(
+          {
+            model,
+            messages: [{ role: 'user', content: 'Hello' }],
+            max_tokens: 5
+          },
+          dispatcher ? { fetchOptions: { dispatcher } } : undefined
+        );
+
+        if (completion.choices?.[0]?.message?.content) {
+          return { success: true as const, protocol };
+        }
+        throw new Error('Empty response');
+      } catch {
+        return { success: false as const, protocol };
       }
-    } catch {
-      onFail?.(entry);
+    });
+
+    // Wait for all 3 protocols to finish before moving to next proxy
+    const results = await Promise.all(tests);
+
+    // Check if any protocol worked
+    const winner = results.find((r) => r.success);
+
+    if (winner) {
+      process.stdout.write(`✅ WORKING (${winner.protocol})\n`);
+      return { result: true, apiKey, proxy: entry };
     }
+
+    // All 3 protocols failed — mark this proxy dead
+    process.stdout.write(`❌ failed\n`);
+    onFail?.(entry);
   }
 
   return { result: false, apiKey };
