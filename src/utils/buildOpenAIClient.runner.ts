@@ -13,9 +13,8 @@
 
 import { loadDotenv } from 'binary-collections';
 import { getSharedMarker } from '../database/shared.js';
-import { extractProxies } from '../proxy/proxy-extractor.js';
+import { downloadProxies } from '../proxy/download-proxies.js';
 import { buildOpenAIClient } from './buildOpenAIClient.js';
-import { downloader } from './downloader.js';
 
 loadDotenv();
 
@@ -69,23 +68,11 @@ loadDotenv();
 //   console.log('Model:', model);
 // }
 
-async function downloadProxies() {
-  const [httpRaw, socks5Raw] = await Promise.all([
-    downloader('https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/http.txt'),
-    downloader('https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks5.txt')
-  ]);
-
-  const http = extractProxies(httpRaw).map((p) => ({ ...p, type: 'http' }));
-  const socks5 = extractProxies(socks5Raw).map((p) => ({ ...p, type: 'socks5' }));
-
-  return [...http, ...socks5];
-}
-
 /* ------------------------------------------------------------------ */
 /*  Try each proxy, skipping dead ones marked within the last hour    */
 /* ------------------------------------------------------------------ */
 async function main() {
-  const proxies = (await downloadProxies()).sort(() => Math.random() - 0.5);
+  const proxies = await downloadProxies();
   console.log(`Testing ${proxies.length} proxies...`);
 
   // Pre-filter: skip proxies that were marked dead and haven't expired
