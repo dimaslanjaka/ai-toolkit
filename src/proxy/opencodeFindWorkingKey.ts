@@ -57,13 +57,13 @@ export async function opencodeFindWorkingProxy(
 
     console.log(`[${i + 1}/${proxies.length}] testing ${entry.proxy} (${PROTOCOLS.join(',')}) ...`);
 
-    // Test all 3 protocols for this proxy in parallel
-    const tests = PROTOCOLS.map(async (protocol) => {
+    // Test protocols sequentially - return on first success
+    for (const protocol of PROTOCOLS) {
       const hasAuth = entry.username && entry.password;
       const authPart = hasAuth ? `${encodeURIComponent(entry.username!)}:${encodeURIComponent(entry.password!)}@` : '';
       const proxyUrl = `${protocol}://${authPart}${entry.proxy}`;
 
-      // 1. Check if the proxy is reachable before attempting the OpenCode request
+      // 1. Check proxy reachable before attempting OpenCode request
       try {
         const isReachable = await isProxyReachable({
           type: protocol,
@@ -74,17 +74,17 @@ export async function opencodeFindWorkingProxy(
 
         if (!isReachable) {
           console.log(`  [${protocol}] ❌: Proxy is not reachable`);
-          return { success: false as const, protocol };
+          continue;
         } else {
           console.log(`  [${protocol}] ✅: Proxy is reachable`);
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.log(`  [${protocol}] ❌: Error checking reachability - ${errorMessage}`);
-        return { success: false as const, protocol };
+        continue;
       }
 
-      // 2. Attempt to check the proxy with OpenCode
+      // 2. Attempt check proxy OpenCode
       try {
         const opencodeReachableResult = await checkProxy({
           proxy: proxyUrl,
@@ -109,25 +109,26 @@ export async function opencodeFindWorkingProxy(
             }
           }
         });
+
         if (!opencodeReachableResult?.working) {
           console.log(`  [${protocol}] ❌: Proxy failed OpenCode check`);
-          return { success: false as const, protocol };
+          continue;
         } else {
           console.log(`  [${protocol}] ✅: Proxy passed OpenCode check`);
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.log(`  [${protocol}] ❌: Error during OpenCode check - ${errorMessage}`);
-        return { success: false as const, protocol };
+        continue;
       }
 
-      // 3. Attempt to make a lightweight OpenCode request through the proxy
+      // 3. Attempt make lightweight OpenCode request through proxy
       try {
         const { client, model, dispatcher } = await buildOpenAIClient({
           provider: 'opencode',
           model: 'deepseek-v4-flash-free',
           proxy: proxyUrl,
-          apiKeys: { opencode: { key: apiKey } } as OpenCodeAuthData
+          apiKeys: { opencode: { key: apiKey } } as unknown as OpenCodeAuthData
         });
 
         const completion = await client.chat.completions.create(
@@ -140,7 +141,8 @@ export async function opencodeFindWorkingProxy(
         );
 
         if (completion.choices?.[0]?.message?.content) {
-          return { success: true as const, protocol };
+          console.log(`  [${protocol}] ✅: WORKING\n`);
+          return { result: true, apiKey, proxy: entry };
         }
         throw new Error('Empty response');
       } catch (error) {
@@ -149,22 +151,11 @@ export async function opencodeFindWorkingProxy(
         const statusPart = statusCode ? `[HTTP ${statusCode}]` : '';
         const separator = statusCode ? ' - ' : '';
         console.log(`  [${protocol}] ❌: ${statusPart}${separator}${errorMessage}`);
-        return { success: false as const, protocol };
+        continue;
       }
-    });
-
-    // Wait for all 3 protocols to finish before moving to next proxy
-    const results = await Promise.all(tests);
-
-    // Check if any protocol worked
-    const winner = results.find((r) => r.success);
-
-    if (winner) {
-      console.log(`  [${winner.protocol}] ✅: WORKING\n`);
-      return { result: true, apiKey, proxy: entry };
     }
 
-    // All 3 protocols failed — mark this proxy dead
+    // All 3 protocols failed for this proxy - mark dead
     onFail?.(entry);
   }
 
