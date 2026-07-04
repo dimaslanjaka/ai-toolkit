@@ -104,9 +104,9 @@ export async function getSharedModels(): Promise<SQLiteModel> {
 /**
  * Get or create a shared SQLiteMarker instance for tracking unseen items.
  */
-export async function getSharedMarker() {
+export async function getSharedMarker(options?: ConstructorParameters<typeof SQLiteMarker>[1]): Promise<SQLiteMarker> {
   const db = await getSQLite();
-  return new SQLiteMarker('', { sharedDb: db });
+  return new SQLiteMarker('', { sharedDb: db, ...(options || {}) });
 }
 
 /**
