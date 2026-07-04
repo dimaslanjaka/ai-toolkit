@@ -12,19 +12,12 @@
  */
 
 import { loadDotenv } from 'binary-collections';
-import { buildOpenAIClient } from './buildOpenAIClient.js';
+import { getSharedMarker } from '../database/shared.js';
 import { extractProxies } from '../proxy/proxy-extractor.js';
+import { buildOpenAIClient } from './buildOpenAIClient.js';
 import { downloader } from './downloader.js';
-import SQLiteMarker from '../database/SQLiteMarker.js';
 
 loadDotenv();
-
-// Cache dead proxies for 7 days
-// Standalone marker database — remembers dead proxies for 1 hour
-const marker = new SQLiteMarker('dead-proxies.sqlite', {
-  tableName: 'dead_proxies',
-  keyColumn: 'proxy_url'
-});
 
 /* ------------------------------------------------------------------ */
 /*  1. OpenAI provider — no proxy                                     */
@@ -92,55 +85,54 @@ async function downloadProxies() {
 /*  Try each proxy, skipping dead ones marked within the last hour    */
 /* ------------------------------------------------------------------ */
 async function main() {
-  try {
-    const proxies = (await downloadProxies()).sort(() => Math.random() - 0.5);
-    console.log(`Testing ${proxies.length} proxies...`);
+  const proxies = (await downloadProxies()).sort(() => Math.random() - 0.5);
+  console.log(`Testing ${proxies.length} proxies...`);
 
-    // Pre-filter: skip proxies that were marked dead and haven't expired
-    const allUrls = proxies.map((p) => `${p.type}://${p.proxy}`);
-    const unseen = marker.filterUnseen(allUrls);
-    const remaining = proxies.filter((p) => unseen.pending.has(`${p.type}://${p.proxy}`));
+  // Pre-filter: skip proxies that were marked dead and haven't expired
+  const allUrls = proxies.map((p) => `${p.type}://${p.proxy}`);
+  const unseen = (await getSharedMarker({ tableName: 'dead_proxies', keyColumn: 'proxy_url' })).filterUnseen(allUrls);
+  const remaining = proxies.filter((p) => unseen.pending.has(`${p.type}://${p.proxy}`));
 
-    if (remaining.length === 0) {
-      console.log('All proxies are currently marked dead — nothing to test.');
-      return;
-    }
-
-    console.log(`Skipping ${proxies.length - remaining.length} recently-failed proxies.`);
-
-    for (const entry of remaining) {
-      const proxyUrl = `${entry.type}://${entry.proxy}`;
-
-      try {
-        console.log(`Trying proxy: ${proxyUrl}`);
-        const { client, model, dispatcher } = await buildOpenAIClient({
-          provider: 'opencode',
-          model: 'deepseek-v4-flash-free',
-          proxy: proxyUrl
-        });
-
-        const completion = await client.chat.completions.create(
-          {
-            model,
-            messages: [{ role: 'user', content: 'Say hello in one sentence.' }]
-          },
-          { fetchOptions: { dispatcher } }
-        );
-
-        console.log(`Proxy ${proxyUrl} works!`);
-        console.log('Response:', completion.choices[0]?.message?.content);
-        return; // first success
-      } catch (err) {
-        console.warn(`Proxy ${proxyUrl} failed:`, (err as Error).message);
-        marker.mark(proxyUrl, { until: 7, unit: 'day' });
-        // continue to next proxy
-      }
-    }
-
-    console.error('All proxies exhausted — none worked.');
-  } finally {
-    marker.close();
+  if (remaining.length === 0) {
+    console.log('All proxies are currently marked dead — nothing to test.');
+    return;
   }
+
+  console.log(`Skipping ${proxies.length - remaining.length} recently-failed proxies.`);
+
+  for (const entry of remaining) {
+    const proxyUrl = `${entry.type}://${entry.proxy}`;
+
+    try {
+      console.log(`Trying proxy: ${proxyUrl}`);
+      const { client, model, dispatcher } = await buildOpenAIClient({
+        provider: 'opencode',
+        model: 'deepseek-v4-flash-free',
+        proxy: proxyUrl
+      });
+
+      const completion = await client.chat.completions.create(
+        {
+          model,
+          messages: [{ role: 'user', content: 'Say hello in one sentence.' }]
+        },
+        { fetchOptions: { dispatcher } }
+      );
+
+      console.log(`Proxy ${proxyUrl} works!`);
+      console.log('Response:', completion.choices[0]?.message?.content);
+      return; // first success
+    } catch (err) {
+      console.warn(`Proxy ${proxyUrl} failed:`, (err as Error).message);
+      (await getSharedMarker({ tableName: 'dead_proxies', keyColumn: 'proxy_url' })).mark(proxyUrl, {
+        until: 7,
+        unit: 'day'
+      });
+      // continue to next proxy
+    }
+  }
+
+  console.error('All proxies exhausted — none worked.');
 }
 
 main().catch(console.error);
