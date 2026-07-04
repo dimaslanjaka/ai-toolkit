@@ -6,6 +6,7 @@ import SQLHelper from './SQLHelper.js';
 import SQLiteModel from './SQLiteModel.js';
 import { SQLiteProxy } from './SQLiteProxy.js';
 import OpenCodeKeysManager from './OpenCodeKeysManager.js';
+import SQLiteMarker from './SQLiteMarker.js';
 
 // Singleton instances for connection reuse
 let productionMySQLInstance: ProxyDB | null = null;
@@ -98,6 +99,14 @@ export async function getSQLite(): Promise<ProxyDB> {
 export async function getSharedModels(): Promise<SQLiteModel> {
   const db = await getSQLite();
   return new SQLiteModel(db);
+}
+
+/**
+ * Get or create a shared SQLiteMarker instance for tracking unseen items.
+ */
+export async function getSharedMarker() {
+  const db = await getSQLite();
+  return new SQLiteMarker('', { sharedDb: db });
 }
 
 /**
