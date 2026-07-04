@@ -81,12 +81,22 @@ function extractTitle(html) {
  *
  * @param {'http' | 'socks4' | 'socks5'} type - Proxy protocol type.
  * @param {string} proxy - Proxy string in `ip:port` or `user:pass@ip:port` format.
+ * @param {string|null} [username] - Optional username for proxy auth.
+ * @param {string|null} [password] - Optional password for proxy auth.
  * @returns {string} Fully qualified proxy URL.
  * @throws {Error} If `type` is not one of `http`, `socks4`, or `socks5`.
  */
-function buildProxyUrl(type, proxy) {
-  const { host, port, auth } = parseProxy(proxy);
-  const authPart = auth ? `${auth}@` : '';
+function buildProxyUrl(type, proxy, username, password) {
+  let authPart = '';
+
+  if (username && password) {
+    authPart = `${encodeURIComponent(username)}:${encodeURIComponent(password)}@`;
+  } else {
+    const { auth } = parseProxy(proxy);
+    authPart = auth ? `${auth}@` : '';
+  }
+
+  const { host, port } = parseProxy(proxy);
 
   if (type === 'http') {
     return `http://${authPart}${host}:${port}`;
@@ -154,15 +164,25 @@ async function requestSocks(proxyUrl, timeout) {
  * the proxy and verifies the response contains the expected page title.
  *
  * @param {Object} options - Reachability check options.
- * @param {'http' | 'socks4' | 'socks5'} options.type - Proxy protocol type.
+ * @param {string} options.type - Proxy protocol type.
  * @param {string} options.proxy - Proxy string in `ip:port` or `user:pass@ip:port` format.
+ * @param {string} [options.username] - Optional username for proxy authentication.
+ * @param {string} [options.password] - Optional password for proxy authentication.
  * @param {number} [options.timeout=10000] - Connection and request timeout in milliseconds.
  * @param {boolean} [options.useCache=true] - Whether to use cached reachability results.
  * @param {number} [options.cacheTimeout=300000] - Cache validity duration in milliseconds (default: 5 minutes).
  * @returns {Promise<{ok: boolean, stage?: string, host?: string, port?: number, tcp?: boolean, title?: string | null, expected?: string, proxy?: string, error?: string, cached?: boolean}>}
  *   Result object indicating whether the proxy is reachable and diagnostic info.
  */
-async function isProxyReachable({ type, proxy, timeout = 10000, useCache = true, cacheTimeout = 300000 }) {
+async function isProxyReachable({
+  type,
+  proxy,
+  username,
+  password,
+  timeout = 10000,
+  useCache = true,
+  cacheTimeout = 300000
+}) {
   const cacheKey = `${type}:${proxy}`;
   const now = Date.now();
 
@@ -192,7 +212,7 @@ async function isProxyReachable({ type, proxy, timeout = 10000, useCache = true,
     };
   }
 
-  const proxyUrl = buildProxyUrl(type, proxy);
+  const proxyUrl = buildProxyUrl(type, proxy, username, password);
 
   try {
     // 2. Request through proxy

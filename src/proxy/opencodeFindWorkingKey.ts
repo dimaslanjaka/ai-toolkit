@@ -62,15 +62,21 @@ export async function opencodeFindWorkingProxy(
       const authPart = hasAuth ? `${encodeURIComponent(entry.username!)}:${encodeURIComponent(entry.password!)}@` : '';
       const proxyUrl = `${protocol}://${authPart}${entry.proxy}`;
 
-      const isReachable = await isProxyReachable({
-        type: protocol,
-        proxy: entry.proxy,
-        username: entry.username,
-        password: entry.password
-      });
+      try {
+        const isReachable = await isProxyReachable({
+          type: protocol,
+          proxy: entry.proxy,
+          username: entry.username,
+          password: entry.password
+        });
 
-      if (!isReachable) {
-        console.log(`  [${protocol}] ❌: Proxy is not reachable`);
+        if (!isReachable) {
+          console.log(`  [${protocol}] ❌: Proxy is not reachable`);
+          return { success: false as const, protocol };
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.log(`  [${protocol}] ❌: Error checking reachability - ${errorMessage}`);
         return { success: false as const, protocol };
       }
 
