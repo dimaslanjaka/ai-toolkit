@@ -52,7 +52,7 @@ templateStr = templateStr
   .replaceAll('${home}', homeDir);
 
 const template = jsonc.parse(templateStr);
-const targetConfig = path.join(__dirname, 'opencode.jsonc');
+const targetConfig = path.join(__dirname, 'opencode.json');
 
 console.log(inspect(template, true, 3, true));
 

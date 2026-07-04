@@ -35,10 +35,10 @@
       "disable": true
     }
   },
-  "autoupdate": true,
-  "snapshot": true,
-  "formatter": false,
-  "lsp": true,
+  // "autoupdate": true,
+  // "snapshot": true,
+  // "formatter": false,
+  // "lsp": true,
   "shell": "cmd",
   "plugin": [
     "oh-my-opencode-slim@latest",
@@ -56,32 +56,33 @@
     // "packages/*/AGENTS.md"
   ],
   "mcp": {
-    "sequential-thinking": {
+    "ai-toolkit-sequential-thinking": {
       "enabled": true,
       "timeout": 300000,
       "type": "local",
       "environment": {},
       "command": ["npx", "-y", "@modelcontextprotocol/server-sequential-thinking"]
     },
-    "playwright": {
-      "enabled": true,
+    "ai-toolkit-playwright": {
+      "enabled": false,
       "timeout": 300000,
       "type": "local",
       "command": ["npx", "-y", "@playwright/mcp@latest"]
     },
-    "MCP SQLite Server": {
+    "ai-toolkit-sqlite": {
       "enabled": false,
       "timeout": 300000,
       "type": "local",
       "command": ["npx", "-y", "mcp-sqlite", "${workspaceFolder}/tmp/database/ai-toolkit.db"]
     },
-    "ai-memory": {
+    "ai-toolkit-ai-memory": {
       "type": "local",
       "timeout": 300000,
       "command": ["ai-memory", "--db", "${workspaceFolder}/.opencode/memory/memories.db", "mcp", "--tier", "smart"],
       "enabled": true
     },
-    "octocode": {
+    "ai-toolkit-octocode": {
+      "enabled": true,
       "type": "local",
       "timeout": 300000,
       "command": ["npx", "-y", "octocode-mcp@latest"],
@@ -91,7 +92,7 @@
         "WORKSPACE_ROOT": "${workspaceFolder}"
       }
     },
-    "super-shell": {
+    "ai-toolkit-super-shell": {
       "enabled": true,
       "timeout": 300000,
       "type": "local",
@@ -102,7 +103,7 @@
         "SUPER_SHELL_USE_SHELL": "true"
       }
     },
-    "fast-filesystem": {
+    "ai-toolkit-fast-filesystem": {
       "enabled": true,
       "timeout": 300000,
       "type": "local",
@@ -113,7 +114,7 @@
         "MCP_LOG_FILE": "${workspaceFolder}/tmp/logs/fast-filesystem-mcp.log"
       }
     },
-    "filesystem": {
+    "ai-toolkit-filesystem": {
       "enabled": true,
       "timeout": 300000,
       "type": "local",
