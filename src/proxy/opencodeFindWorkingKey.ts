@@ -1,6 +1,7 @@
 import type { OpenCodeAuthData } from 'binary-collections';
-import { buildOpenAIClient } from '../utils/buildOpenAIClient.js';
 import type { Proxy } from '../database/ProxyDB.js';
+import { buildOpenAIClient } from '../utils/buildOpenAIClient.js';
+import { checkProxy } from './checker.js';
 import { isProxyReachable } from './isProxyReachable.cjs';
 
 export interface OpenCodeFindWorkingProxyResult {
@@ -62,6 +63,7 @@ export async function opencodeFindWorkingProxy(
       const authPart = hasAuth ? `${encodeURIComponent(entry.username!)}:${encodeURIComponent(entry.password!)}@` : '';
       const proxyUrl = `${protocol}://${authPart}${entry.proxy}`;
 
+      // 1. Check if the proxy is reachable before attempting the OpenCode request
       try {
         const isReachable = await isProxyReachable({
           type: protocol,
@@ -73,6 +75,8 @@ export async function opencodeFindWorkingProxy(
         if (!isReachable) {
           console.log(`  [${protocol}] ❌: Proxy is not reachable`);
           return { success: false as const, protocol };
+        } else {
+          console.log(`  [${protocol}] ✅: Proxy is reachable`);
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -80,6 +84,44 @@ export async function opencodeFindWorkingProxy(
         return { success: false as const, protocol };
       }
 
+      // 2. Attempt to check the proxy with OpenCode
+      try {
+        const opencodeReachableResult = await checkProxy({
+          proxy: proxyUrl,
+          endpoint: 'https://opencode.ai/zen/v1/responses',
+          callback: (proxy, _endpoint, response) => {
+            const responseBodyValid = String(response.data).includes('OpenCode');
+            if (responseBodyValid) {
+              return {
+                proxy: proxy,
+                working: true,
+                status: response.status,
+                ip: response.data?.ip,
+                protocol
+              };
+            } else {
+              return {
+                proxy: proxy,
+                working: false,
+                status: response.status,
+                error: response.statusText
+              };
+            }
+          }
+        });
+        if (!opencodeReachableResult?.working) {
+          console.log(`  [${protocol}] ❌: Proxy failed OpenCode check`);
+          return { success: false as const, protocol };
+        } else {
+          console.log(`  [${protocol}] ✅: Proxy passed OpenCode check`);
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.log(`  [${protocol}] ❌: Error during OpenCode check - ${errorMessage}`);
+        return { success: false as const, protocol };
+      }
+
+      // 3. Attempt to make a lightweight OpenCode request through the proxy
       try {
         const { client, model, dispatcher } = await buildOpenAIClient({
           provider: 'opencode',
@@ -94,7 +136,7 @@ export async function opencodeFindWorkingProxy(
             messages: [{ role: 'user', content: 'Hello' }],
             max_tokens: 5
           },
-          dispatcher ? { fetchOptions: { dispatcher } } : undefined
+          dispatcher ? { fetchOptions: { dispatcher }, timeout: 60000 } : undefined
         );
 
         if (completion.choices?.[0]?.message?.content) {

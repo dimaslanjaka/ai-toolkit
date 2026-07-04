@@ -29,12 +29,13 @@ export function hasValidCredentials(item: Proxy) {
 }
 
 async function checkSingle(item: Proxy) {
-  const protocols = ['http', 'socks4', 'socks5'];
+  const protocols = ['http', 'https', 'socks4', 'socks5'];
 
   // Filter out invalid credentials (e.g., "-", "-:-", empty)
   const valid = hasValidCredentials(item);
 
   if (!valid) {
+    // If the proxy has invalid credentials, we can attempt to clear them in the production database
     try {
       await productionMySQL.update(
         'proxies',
@@ -106,8 +107,11 @@ async function checkSingle(item: Proxy) {
   return result;
 }
 
-export async function opencodeCheckProxy(proxiesOverride?: Proxy[]) {
+export async function opencodeCheckProxy(proxiesOverride?: Proxy | Proxy[]) {
   const proxies = proxiesOverride || (await getUnseenWorkingProxies());
+  if (!Array.isArray(proxies)) {
+    return checkSingle(proxies);
+  }
   for (let index = 0; index < proxies.length; index++) {
     const item = proxies[index];
     const result = await checkSingle(item);

@@ -30,7 +30,7 @@ async function main() {
     // 2. Download proxy lists
     console.log('Downloading proxy lists...');
     const proxies = await downloadProxies();
-    // proxies.length = 1;
+    proxies.length = 1;
 
     // Pre-filter: skip proxies marked dead if they haven't expired
     const allUrls = proxies.map((p) => p.proxy);

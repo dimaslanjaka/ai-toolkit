@@ -148,6 +148,8 @@ export async function buildOpenAIClient(
     new OpenAI({
       ...(baseURL ? { baseURL } : {}),
       apiKey,
+      timeout: 60000,
+      maxRetries: 2,
       fetch: undiciFetch as any,
       ...(dispatcher ? { fetchOptions: { dispatcher } } : {})
     });
