@@ -18,6 +18,7 @@ interface ProxyEntry {
   id: number;
   proxy: string;
   type: string;
+  hosts?: string[];
 }
 
 interface KeyFormData {
@@ -44,6 +45,8 @@ export default function OpenCodeKeyManager() {
   const [bulkImportText, setBulkImportText] = useState('');
   const [bulkImporting, setBulkImporting] = useState(false);
   const [updatingProxyKey, setUpdatingProxyKey] = useState<number | null>(null);
+  const [checkingId, setCheckingId] = useState<number | null>(null);
+  const [checkResults, setCheckResults] = useState<Record<number, { success: boolean; message: string }>>({});
 
   const fetchKeys = async () => {
     try {
@@ -264,6 +267,30 @@ export default function OpenCodeKeyManager() {
     }
   };
 
+  const handleCheckConnection = async (keyId: number) => {
+    setCheckingId(keyId);
+    setError(null);
+    try {
+      const response = await fetch(`/api/providers/opencode/keys/${keyId}/check`, {
+        method: 'POST'
+      });
+      const data = await response.json();
+      setCheckResults((prev) => ({
+        ...prev,
+        [keyId]: { success: data.success, message: data.message }
+      }));
+      // Also refresh keys to update last_status
+      await fetchKeys();
+    } catch (err) {
+      setCheckResults((prev) => ({
+        ...prev,
+        [keyId]: { success: false, message: err instanceof Error ? err.message : 'Unknown error' }
+      }));
+    } finally {
+      setCheckingId(null);
+    }
+  };
+
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return 'Never';
     try {
@@ -381,6 +408,7 @@ export default function OpenCodeKeyManager() {
                             {proxies.map((proxy) => (
                               <option key={proxy.id} value={proxy.id}>
                                 {proxy.proxy} ({proxy.type})
+                                {proxy.hosts && proxy.hosts.length > 0 ? ` • ${proxy.hosts.join(', ')}` : ''}
                               </option>
                             ))}
                           </select>
@@ -395,8 +423,33 @@ export default function OpenCodeKeyManager() {
                           <span>Last used: {formatDate(key.last_used)}</span>
                           <span>Created: {formatDate(key.created_at)}</span>
                         </div>
+                        {checkResults[key.id] && (
+                          <div
+                            className={`mt-2 flex items-center gap-1.5 text-xs ${
+                              checkResults[key.id].success ? 'text-emerald-400' : 'text-amber-400'
+                            }`}>
+                            <i
+                              aria-hidden="true"
+                              className={`fa-solid ${checkResults[key.id].success ? 'fa-check-circle' : 'fa-exclamation-circle'}`}
+                            />
+                            <span>{checkResults[key.id].message}</span>
+                          </div>
+                        )}
                       </div>
                       <div className="flex gap-2 ml-4">
+                        <button
+                          type="button"
+                          onClick={() => handleCheckConnection(key.id)}
+                          disabled={checkingId === key.id}
+                          className="flex h-8 items-center gap-1.5 rounded px-2.5 text-xs text-neutral-400 transition hover:bg-neutral-700 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Check connection">
+                          {checkingId === key.id ? (
+                            <i aria-hidden="true" className="fa-solid fa-spinner animate-spin text-sm" />
+                          ) : (
+                            <i aria-hidden="true" className="fa-solid fa-plug text-sm" />
+                          )}
+                          <span>{checkingId === key.id ? 'Checking...' : 'Check'}</span>
+                        </button>
                         <button
                           type="button"
                           onClick={() => handleToggleKey(key.id, key.enabled)}
@@ -486,6 +539,7 @@ export default function OpenCodeKeyManager() {
                       {proxies.map((proxy) => (
                         <option key={proxy.id} value={proxy.id}>
                           {proxy.proxy} ({proxy.type})
+                          {proxy.hosts && proxy.hosts.length > 0 ? ` • ${proxy.hosts.join(', ')}` : ''}
                         </option>
                       ))}
                     </select>

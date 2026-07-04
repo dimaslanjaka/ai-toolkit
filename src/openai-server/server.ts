@@ -988,4 +988,144 @@ app.delete('/api/providers/:provider/keys/:keyId', async (req: Request, res: Res
   }
 });
 
+/**
+ * POST /api/providers/:provider/keys/:keyId/check - Check connection for a specific key
+ */
+app.post('/api/providers/:provider/keys/:keyId/check', async (req: Request, res: Response) => {
+  try {
+    const providerName = req.params.provider;
+    const keyIdParam = req.params.keyId;
+    const keyId = parseInt(Array.isArray(keyIdParam) ? keyIdParam[0] : keyIdParam, 10);
+
+    if (providerName !== 'opencode') {
+      return res.status(400).json({ error: 'Only opencode provider supports this' });
+    }
+
+    if (!keyId || isNaN(keyId)) {
+      return res.status(400).json({ error: 'Invalid key ID' });
+    }
+
+    const keysManager = await getOpenCodeKeysManager();
+    await keysManager.initialize();
+
+    // Get key directly (not just enabled ones)
+    const keysApi = await keysManager.keys();
+    const keyEntry = await keysApi.findOne({ id: keyId });
+    if (!keyEntry) {
+      return res.status(404).json({ error: 'Key not found' });
+    }
+
+    // Build proxy URL if proxy is assigned
+    let proxyUrl: string | undefined;
+    let proxyAddress: string | undefined;
+    let proxyType: string | undefined;
+
+    if (keyEntry.proxy_id) {
+      const proxyRows = await keysManager.query<any>(
+        'SELECT proxy, type, username, password FROM proxies WHERE id = ?',
+        [keyEntry.proxy_id]
+      );
+      if (proxyRows.length > 0) {
+        proxyAddress = proxyRows[0].proxy;
+        proxyType = proxyRows[0].type || 'http';
+        const username = proxyRows[0].username;
+        const password = proxyRows[0].password;
+        let url = `${proxyType}://`;
+        if (username || password) {
+          const encodedUsername = encodeURIComponent(username || '');
+          const encodedPassword = encodeURIComponent(password || '');
+          url += `${encodedUsername}:${encodedPassword}@`;
+        }
+        url += proxyAddress;
+        proxyUrl = url;
+      }
+    }
+
+    // Import and test connection
+    const { buildOpenAIClient } = await import('../utils/buildOpenAIClient.js');
+
+    let working = false;
+    let protocol = 'direct';
+    let errorMessage: string | undefined;
+
+    if (proxyUrl) {
+      // Test proxy with all 3 protocols (http, socks4, socks5)
+      const PROTOCOLS = [proxyType || 'http', 'socks4', 'socks5'];
+      const uniqueProtocols = [...new Set(PROTOCOLS)];
+
+      for (const pt of uniqueProtocols) {
+        const testUrl = `${pt}://${proxyAddress}`;
+        try {
+          const { client, model, dispatcher } = await buildOpenAIClient({
+            provider: 'opencode',
+            model: 'deepseek-v4-flash-free',
+            proxy: testUrl,
+            apiKeys: { opencode: { key: keyEntry.key } } as any
+          });
+
+          const completion = await client.chat.completions.create(
+            {
+              model,
+              messages: [{ role: 'user', content: 'Hello' }],
+              max_tokens: 5
+            },
+            dispatcher ? { fetchOptions: { dispatcher } } : undefined
+          );
+
+          if (completion.choices?.[0]?.message?.content) {
+            working = true;
+            protocol = pt;
+            break;
+          }
+        } catch {
+          continue;
+        }
+      }
+    } else {
+      // Direct connection - test key alone
+      try {
+        const { client, model, dispatcher } = await buildOpenAIClient({
+          provider: 'opencode',
+          model: 'deepseek-v4-flash-free',
+          apiKeys: { opencode: { key: keyEntry.key } } as any
+        });
+
+        const completion = await client.chat.completions.create(
+          {
+            model,
+            messages: [{ role: 'user', content: 'Hello' }],
+            max_tokens: 5
+          },
+          dispatcher ? { fetchOptions: { dispatcher } } : undefined
+        );
+
+        if (completion.choices?.[0]?.message?.content) {
+          working = true;
+        }
+      } catch (e) {
+        errorMessage = e instanceof Error ? e.message : String(e);
+      }
+    }
+
+    if (working) {
+      await keysManager.markKeyUsed(keyId, 'success');
+    } else {
+      await keysManager.markKeyUsed(keyId, 'failure');
+    }
+
+    res.json({
+      success: working,
+      message: working ? 'Connection successful' : errorMessage || 'Connection failed',
+      proxy: proxyUrl || 'direct',
+      protocol: working ? protocol : undefined
+    });
+  } catch (error) {
+    serverLogger.logSync(`Keys check error: ${error}`);
+    res.status(500).json({
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
 export { app };
