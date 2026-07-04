@@ -21,7 +21,7 @@ async function run() {
   if (!externalLock && !lock) {
     const acquired = tryAcquireProxyCheckerLock();
 
-    if (!acquired.acquired) {
+    if ('ownerPid' in acquired) {
       console.log(
         acquired.ownerPid
           ? `Proxy checker is already running with PID ${acquired.ownerPid}`
