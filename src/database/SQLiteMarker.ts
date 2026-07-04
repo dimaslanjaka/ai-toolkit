@@ -5,7 +5,10 @@ import path from 'upath';
 import moment from 'moment-timezone';
 import { ProxyDB } from './ProxyDB.js';
 
-export type ValidUntil = string | number | null | undefined;
+export interface MarkOptions {
+  until: number;
+  unit: 'hour' | 'min' | 'day' | 'week' | 'month';
+}
 
 export interface SQLiteMarkerOptions {
   tableName?: string;
@@ -40,6 +43,14 @@ const IDENTIFIER_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const DEFAULT_TIMEZONE = 'Asia/Jakarta';
 const DATE_FORMAT = 'YYYY-MM-DDTHH:mm:ssZ';
 
+const UNIT_DURATION_MAP: Record<string, moment.unitOfTime.DurationConstructor> = {
+  hour: 'hours',
+  min: 'minutes',
+  day: 'days',
+  week: 'weeks',
+  month: 'months'
+};
+
 export class UnseenResult {
   cleaned: Set<string>;
   pending: Set<string>;
@@ -66,6 +77,12 @@ export class UnseenResult {
       already_checked: this.already_checked
     };
   }
+}
+
+const UNIT_VALUES: ReadonlyArray<string> = ['hour', 'min', 'day', 'week', 'month'];
+
+function isValidUnit(value: unknown): value is MarkOptions['unit'] {
+  return UNIT_VALUES.includes(value as string);
 }
 
 export class SQLiteMarker {
@@ -123,7 +140,7 @@ export class SQLiteMarker {
 
     this.configureSqlite();
     this.createTable();
-    this.ensureExpiresColumn();
+    this.ensureColumns();
   }
 
   private getRelativePath(...parts: string[]): string {
@@ -167,7 +184,9 @@ export class SQLiteMarker {
       CREATE TABLE IF NOT EXISTS ${table} (
         ${key} TEXT PRIMARY KEY,
         created_at TEXT NOT NULL,
-        expires_at TEXT
+        expires_at TEXT,
+        until_number INTEGER,
+        until_unit TEXT
       )
     `);
   }
@@ -180,17 +199,20 @@ export class SQLiteMarker {
     return rows.some((row) => row.name === columnName);
   }
 
-  private ensureExpiresColumn(): void {
-    if (this.columnExists('expires_at')) {
-      return;
-    }
-
+  private ensureColumns(): void {
     const table = this.quoteIdentifier(this.tableName);
 
-    this.db.exec(`
-      ALTER TABLE ${table}
-      ADD COLUMN expires_at TEXT
-    `);
+    const migrations: { column: string; def: string }[] = [
+      { column: 'expires_at', def: 'expires_at TEXT' },
+      { column: 'until_number', def: 'until_number INTEGER' },
+      { column: 'until_unit', def: 'until_unit TEXT' }
+    ];
+
+    for (const { column, def } of migrations) {
+      if (!this.columnExists(column)) {
+        this.db.exec(`ALTER TABLE ${table} ADD COLUMN ${def}`);
+      }
+    }
   }
 
   private normalizeDate(value: string): string {
@@ -209,16 +231,24 @@ export class SQLiteMarker {
     return parsed.tz(this.timezone).format(DATE_FORMAT);
   }
 
-  private resolveValidUntil(validUntil: ValidUntil): string | null {
-    if (validUntil === null || validUntil === undefined) {
+  private resolveValidUntil(options: MarkOptions | null): string | null {
+    if (!options) {
       return null;
     }
 
-    if (typeof validUntil === 'number' && isFinite(validUntil)) {
-      return moment().tz(this.timezone).add(validUntil, 'days').format(DATE_FORMAT);
+    const { until, unit } = options;
+
+    if (typeof until !== 'number' || !isFinite(until)) {
+      throw new Error(`Invalid mark until value: ${until}`);
     }
 
-    return this.normalizeDate(String(validUntil));
+    const durationKey = UNIT_DURATION_MAP[unit];
+
+    if (!durationKey) {
+      throw new Error(`Invalid mark unit: ${unit}. Must be one of: hour, min, day, week, month`);
+    }
+
+    return moment().tz(this.timezone).add(until, durationKey).format(DATE_FORMAT);
   }
 
   getExisting(values: Iterable<unknown>, asOf: string | null = null): Set<string> {
@@ -308,7 +338,7 @@ export class SQLiteMarker {
     });
   }
 
-  mark(value: unknown, validUntil: ValidUntil = null): void {
+  mark(value: unknown, options: MarkOptions | null = null): void {
     if (value === null || value === undefined) {
       return;
     }
@@ -318,22 +348,33 @@ export class SQLiteMarker {
       return;
     }
 
+    if (options !== null) {
+      if (typeof options.until !== 'number' || !isFinite(options.until)) {
+        throw new Error(`Invalid mark until value: ${options.until}`);
+      }
+      if (!isValidUnit(options.unit)) {
+        throw new Error(`Invalid mark unit: ${options.unit}. Must be one of: hour, min, day, week, month`);
+      }
+    }
+
     const now = this.now();
-    const expires = this.resolveValidUntil(validUntil);
+    const expires = this.resolveValidUntil(options);
 
     const table = this.quoteIdentifier(this.tableName);
     const key = this.quoteIdentifier(this.keyColumn);
 
     const sql = `
-      INSERT INTO ${table} (${key}, created_at, expires_at)
-      VALUES (?, ?, ?)
+      INSERT INTO ${table} (${key}, created_at, expires_at, until_number, until_unit)
+      VALUES (?, ?, ?, ?, ?)
       ON CONFLICT(${key})
       DO UPDATE SET
         created_at = excluded.created_at,
-        expires_at = excluded.expires_at
+        expires_at = excluded.expires_at,
+        until_number = excluded.until_number,
+        until_unit = excluded.until_unit
     `;
 
-    this.db.prepare(sql).run(text, now, expires);
+    this.db.prepare(sql).run(text, now, expires, options?.until ?? null, options?.unit ?? null);
   }
 
   close(): void {

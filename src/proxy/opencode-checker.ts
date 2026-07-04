@@ -16,9 +16,7 @@ async function initSharedSqlite() {
   }
 }
 
-// Marker durations (in days)
-const WORKING_PROXY_HOURS = 1 / 24; // 1 hour
-const DEAD_PROXY_HOURS = 3 / 24; // 3 hours
+// Marker durations
 
 async function getUnseenWorkingProxies() {
   await initSharedSqlite();
@@ -94,7 +92,7 @@ async function checkSingle(item: Proxy) {
 
   if (result?.working) {
     // mark working for configured hours
-    marker.mark(item.proxy, WORKING_PROXY_HOURS);
+    marker.mark(item.proxy, { until: 1, unit: 'hour' });
     // write to SQLiteProxy for opencode.ai
     await (
       await getSQLiteProxy()
@@ -105,7 +103,7 @@ async function checkSingle(item: Proxy) {
     });
   } else {
     // mark dead for configured hours
-    marker.mark(item.proxy, DEAD_PROXY_HOURS);
+    marker.mark(item.proxy, { until: 3, unit: 'hour' });
   }
 
   return result;

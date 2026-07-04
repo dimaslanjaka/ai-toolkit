@@ -17,9 +17,7 @@ async function initSharedSqlite() {
   }
 }
 
-// Marker durations (in days)
-const WORKING_PROXY_HOURS = 1 / 24; // 1 hour
-const DEAD_PROXY_HOURS = 3 / 24; // 3 hours
+// Marker durations
 
 async function getUnseenWorkingProxies() {
   await initSharedSqlite();
@@ -143,7 +141,7 @@ async function checkSingle(item: Proxy) {
   }
 
   if (result?.working) {
-    marker.mark(item.proxy, WORKING_PROXY_HOURS);
+    marker.mark(item.proxy, { until: 1, unit: 'hour' });
     await (
       await getSQLiteProxy()
     ).addProxy({
@@ -152,7 +150,7 @@ async function checkSingle(item: Proxy) {
       host: 'google.com'
     });
   } else {
-    marker.mark(item.proxy, DEAD_PROXY_HOURS);
+    marker.mark(item.proxy, { until: 3, unit: 'hour' });
   }
 
   return result;

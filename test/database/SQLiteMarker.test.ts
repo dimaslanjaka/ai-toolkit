@@ -128,10 +128,10 @@ describe('SQLiteMarker', () => {
       timezone: TEST_TIMEZONE
     });
 
-    marker.mark('proxy-1', -1);
+    marker.mark('proxy-1', { until: -1, unit: 'day' });
     expect(marker.getExisting(['proxy-1']).has('proxy-1')).toBe(false);
 
-    marker.mark('proxy-1', 7);
+    marker.mark('proxy-1', { until: 7, unit: 'day' });
     expect(marker.getExisting(['proxy-1']).has('proxy-1')).toBe(true);
 
     marker.close();
@@ -145,7 +145,7 @@ describe('SQLiteMarker', () => {
       timezone: TEST_TIMEZONE
     });
 
-    marker.mark('expired-proxy', -1);
+    marker.mark('expired-proxy', { until: -1, unit: 'day' });
 
     const existing = marker.getExisting(['expired-proxy']);
 
@@ -162,7 +162,7 @@ describe('SQLiteMarker', () => {
       timezone: TEST_TIMEZONE
     });
 
-    marker.mark('future-proxy', 7);
+    marker.mark('future-proxy', { until: 7, unit: 'day' });
 
     const existing = marker.getExisting(['future-proxy']);
 
@@ -171,17 +171,15 @@ describe('SQLiteMarker', () => {
     expect(existing.has('future-proxy')).toBe(true);
   });
 
-  test('accepts explicit date string using timezone format', () => {
-    const dbName = createDbName('explicit-date');
+  test('marks with day unit and finds existing marker', () => {
+    const dbName = createDbName('day-unit');
 
     const marker = new SQLiteMarker(dbName, {
       baseDir: TEST_BASE_DIR,
       timezone: TEST_TIMEZONE
     });
 
-    const validUntil = moment().tz(TEST_TIMEZONE).add(1, 'day').format(DATE_FORMAT);
-
-    marker.mark('date-proxy', validUntil);
+    marker.mark('date-proxy', { until: 1, unit: 'day' });
 
     const existing = marker.getExisting(['date-proxy']);
 
@@ -198,13 +196,11 @@ describe('SQLiteMarker', () => {
       timezone: TEST_TIMEZONE
     });
 
-    const expiresAt = moment().tz(TEST_TIMEZONE).add(1, 'day').format(DATE_FORMAT);
-
     const beforeExpiry = moment().tz(TEST_TIMEZONE).add(12, 'hours').format(DATE_FORMAT);
 
     const afterExpiry = moment().tz(TEST_TIMEZONE).add(2, 'days').format(DATE_FORMAT);
 
-    marker.mark('asof-proxy', expiresAt);
+    marker.mark('asof-proxy', { until: 1, unit: 'day' });
 
     const existingBefore = marker.getExisting(['asof-proxy'], beforeExpiry);
     const existingAfter = marker.getExisting(['asof-proxy'], afterExpiry);
@@ -278,11 +274,11 @@ describe('SQLiteMarker', () => {
     });
   });
 
-  it('should support fractional days in mark', () => {
+  it('should support hour unit in mark', () => {
     const marker = new SQLiteMarker('test-fraction.db', { baseDir: TEST_BASE_DIR, timezone: TEST_TIMEZONE });
     const key = 'proxy-1h';
     // mark for 1 hour
-    marker.mark(key, 1 / 24);
+    marker.mark(key, { until: 1, unit: 'hour' });
 
     const unseen = marker.filterUnseen([key]);
     expect(unseen.pending.has(key)).toBe(false);
@@ -291,19 +287,14 @@ describe('SQLiteMarker', () => {
     marker.close();
   });
 
-  it('should expire fractional days properly', () => {
+  it('should expire minute-based markers', () => {
     const marker = new SQLiteMarker('test-fraction-expire.db', { baseDir: TEST_BASE_DIR, timezone: TEST_TIMEZONE });
     const key = 'proxy-expired';
 
-    // mark for 1 second ago (very small fraction)
-    // 1 second = 1 / (24 * 3600) days
-    const oneSecond = 1 / (24 * 3600);
+    // mark for 1 minute, then check 2 minutes later
+    marker.mark(key, { until: 1, unit: 'min' });
 
-    // We can't easily travel in time here without mocks,
-    // but we can pass an asOf date to filterUnseen
-    marker.mark(key, oneSecond);
-
-    const future = moment().add(2, 'seconds').toISOString();
+    const future = moment().add(2, 'minutes').toISOString();
     const unseen = marker.filterUnseen([key], future);
 
     expect(unseen.pending.has(key)).toBe(true);
@@ -317,10 +308,10 @@ describe('SQLiteMarker', () => {
       const dbName = createDbName('cleanup-expired');
       const marker = new SQLiteMarker(dbName, { baseDir: TEST_BASE_DIR, timezone: TEST_TIMEZONE });
 
-      marker.mark('expired-1', -1);
-      marker.mark('expired-2', -5);
-      marker.mark('valid-1', 10);
-      marker.mark('valid-2', 30);
+      marker.mark('expired-1', { until: -1, unit: 'day' });
+      marker.mark('expired-2', { until: -5, unit: 'day' });
+      marker.mark('valid-1', { until: 10, unit: 'day' });
+      marker.mark('valid-2', { until: 30, unit: 'day' });
 
       const deleted = marker.cleanupExpired();
 
@@ -336,7 +327,7 @@ describe('SQLiteMarker', () => {
       const dbName = createDbName('cleanup-asof');
       const marker = new SQLiteMarker(dbName, { baseDir: TEST_BASE_DIR, timezone: TEST_TIMEZONE });
 
-      marker.mark('item-1', 10);
+      marker.mark('item-1', { until: 10, unit: 'day' });
 
       const futureDate = moment().tz(TEST_TIMEZONE).add(15, 'days').format(DATE_FORMAT);
       const deleted = marker.cleanupExpired(futureDate);
@@ -380,10 +371,10 @@ describe('SQLiteMarker', () => {
       const dbName = createDbName('cleanup-combined');
       const marker = new SQLiteMarker(dbName, { baseDir: TEST_BASE_DIR, timezone: TEST_TIMEZONE });
 
-      marker.mark('expired-1', -1);
+      marker.mark('expired-1', { until: -1, unit: 'day' });
       marker.mark('no-expiry-1');
       marker.mark('no-expiry-2');
-      marker.mark('valid-1', 30);
+      marker.mark('valid-1', { until: 30, unit: 'day' });
 
       const result = marker.cleanup({ maxAgeDays: 0 });
 
@@ -402,8 +393,8 @@ describe('SQLiteMarker', () => {
       const dbName = createDbName('cleanup-custom-age');
       const marker = new SQLiteMarker(dbName, { baseDir: TEST_BASE_DIR, timezone: TEST_TIMEZONE });
 
-      marker.mark('expired-1', -10);
-      marker.mark('valid-1', 10);
+      marker.mark('expired-1', { until: -10, unit: 'day' });
+      marker.mark('valid-1', { until: 10, unit: 'day' });
 
       const result = marker.cleanup({ maxAgeDays: 30 });
 
