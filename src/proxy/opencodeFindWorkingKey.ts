@@ -92,20 +92,9 @@ export async function opencodeFindWorkingProxy(
           callback: (proxy, _endpoint, response) => {
             const responseBodyValid = String(response.data).includes('OpenCode');
             if (responseBodyValid) {
-              return {
-                proxy: proxy,
-                working: true,
-                status: response.status,
-                ip: response.data?.ip,
-                protocol
-              };
+              return { proxy, working: true, status: response.status, ip: response.data?.ip, protocol };
             } else {
-              return {
-                proxy: proxy,
-                working: false,
-                status: response.status,
-                error: response.statusText
-              };
+              return { proxy, working: false, status: response.status, error: response.statusText };
             }
           }
         });
@@ -124,22 +113,23 @@ export async function opencodeFindWorkingProxy(
 
       // 3. Attempt make lightweight OpenCode request through proxy
       try {
+        console.log(`  [${protocol}] calling buildOpenAIClient...`);
         const { client, model, dispatcher } = await buildOpenAIClient({
           provider: 'opencode',
           model: 'deepseek-v4-flash-free',
           proxy: proxyUrl,
           apiKeys: { opencode: { key: apiKey } } as unknown as OpenCodeAuthData
         });
-
+        console.log(`  [${protocol}] calling client.chat.completions.create...`);
         const completion = await client.chat.completions.create(
           {
             model,
             messages: [{ role: 'user', content: 'Hello' }],
             max_tokens: 5
           },
-          dispatcher ? { fetchOptions: { dispatcher }, timeout: 60000 } : undefined
+          dispatcher ? { fetchOptions: { dispatcher } } : undefined
         );
-
+        console.log(`  [${protocol}] received response:`, completion.choices?.[0]?.message?.content);
         if (completion.choices?.[0]?.message?.content) {
           console.log(`  [${protocol}] ✅: WORKING\n`);
           return { result: true, apiKey, proxy: entry };
