@@ -1,25 +1,12 @@
-/**
- * Runner to find working proxies for all enabled OpenCode API keys and assign them.
- *
- * For each enabled key in the database, downloads HTTP/SOCKS5 proxy lists,
- * finds a working proxy, and saves it to the database (both the `proxies` table
- * and the `proxy_id` in the key record). Re-tests and reassigns proxies for all keys.
- *
- * Usage:
- *   npx tsx src/proxy/opencodeFindWorkingKey.runner.ts
- */
-
 import { loadDotenv } from 'binary-collections';
-import { downloader } from '../utils/downloader.js';
-import { extractProxies } from './proxy-extractor.js';
-import { opencodeFindWorkingProxy } from './opencodeFindWorkingKey.js';
-import { SQLiteMarker } from '../database/SQLiteMarker.js';
-import { getOpenCodeKeysManager, getSQLiteProxy } from '../database/shared.js';
+import { SQLiteMarker } from '../../database/SQLiteMarker.js';
+import { getOpenCodeKeysManager, getSQLiteProxy } from '../../database/shared.js';
+import { downloadProxies } from '../download-proxies.js';
+import { opencodeFindWorkingProxy } from '../opencodeFindWorkingKey.js';
 
 loadDotenv();
 
-// Cache dead proxies for 7 days (SQLiteMarker uses days as its validUntil unit)
-const DEAD_PROXY_DAYS = 7;
+// Cache dead proxies for 7 days
 
 const marker = new SQLiteMarker('dead-proxies.sqlite', {
   tableName: 'dead_proxies',
@@ -41,15 +28,7 @@ async function main() {
 
     // 2. Download proxy lists (shared across all key tests)
     console.log('Downloading proxy lists...');
-    const [httpRaw, socks5Raw] = await Promise.all([
-      downloader('https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/http.txt'),
-      downloader('https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks5.txt')
-    ]);
-
-    const http = extractProxies(httpRaw).map((p) => ({ ...p, type: 'http' as const }));
-    const socks5 = extractProxies(socks5Raw).map((p) => ({ ...p, type: 'socks5' as const }));
-
-    const proxies = [...http, ...socks5].sort(() => Math.random() - 0.5);
+    const proxies = await downloadProxies();
 
     // Pre-filter: skip proxies marked as dead that haven't expired
     const allUrls = proxies.map((p) => p.proxy);
@@ -76,7 +55,7 @@ async function main() {
       console.log(`\n--- Testing key: ${keyEntry.name} (${apiKey.substring(0, 8)}...) ---`);
 
       const result = await opencodeFindWorkingProxy(apiKey, remaining, (failedProxy) => {
-        marker.mark(failedProxy.proxy, DEAD_PROXY_DAYS);
+        marker.mark(failedProxy.proxy, { until: 7, unit: 'day' });
       });
 
       if (result.result && result.proxy) {

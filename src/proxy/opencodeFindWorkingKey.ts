@@ -1,6 +1,7 @@
 import type { OpenCodeAuthData } from 'binary-collections';
 import { buildOpenAIClient } from '../utils/buildOpenAIClient.js';
 import type { Proxy } from '../database/ProxyDB.js';
+import { isProxyReachable } from './isProxyReachable.cjs';
 
 export interface OpenCodeFindWorkingProxyResult {
   /** Whether a working proxy was found. */
@@ -48,18 +49,30 @@ export async function opencodeFindWorkingProxy(
     return { result: false, apiKey };
   }
 
-  const PROTOCOLS = ['http', 'socks4', 'socks5'] as const;
+  const PROTOCOLS = ['http', 'https', 'socks5'] as const;
 
   for (let i = 0; i < proxies.length; i++) {
     const entry = proxies[i];
 
-    process.stdout.write(`\r  [${i + 1}/${proxies.length}] testing ${entry.proxy} (${PROTOCOLS.join(', ')}) ... `);
+    console.log(`[${i + 1}/${proxies.length}] testing ${entry.proxy} (${PROTOCOLS.join(',')}) ...`);
 
-    // Test all 3 protocols for THIS proxy in parallel
+    // Test all 3 protocols for this proxy in parallel
     const tests = PROTOCOLS.map(async (protocol) => {
       const hasAuth = entry.username && entry.password;
       const authPart = hasAuth ? `${encodeURIComponent(entry.username!)}:${encodeURIComponent(entry.password!)}@` : '';
       const proxyUrl = `${protocol}://${authPart}${entry.proxy}`;
+
+      const isReachable = await isProxyReachable({
+        type: protocol,
+        proxy: entry.proxy,
+        username: entry.username,
+        password: entry.password
+      });
+
+      if (!isReachable) {
+        console.log(`  [${protocol}] ❌: Proxy is not reachable`);
+        return { success: false as const, protocol };
+      }
 
       try {
         const { client, model, dispatcher } = await buildOpenAIClient({
@@ -82,7 +95,12 @@ export async function opencodeFindWorkingProxy(
           return { success: true as const, protocol };
         }
         throw new Error('Empty response');
-      } catch {
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const statusCode = (error as any)?.status ?? (error as any)?.response?.status;
+        const statusPart = statusCode ? `[HTTP ${statusCode}]` : '';
+        const separator = statusCode ? ' - ' : '';
+        console.log(`  [${protocol}] ❌: ${statusPart}${separator}${errorMessage}`);
         return { success: false as const, protocol };
       }
     });
@@ -94,12 +112,11 @@ export async function opencodeFindWorkingProxy(
     const winner = results.find((r) => r.success);
 
     if (winner) {
-      process.stdout.write(`✅ WORKING (${winner.protocol})\n`);
+      console.log(`  [${winner.protocol}] ✅: WORKING\n`);
       return { result: true, apiKey, proxy: entry };
     }
 
     // All 3 protocols failed — mark this proxy dead
-    process.stdout.write(`❌ failed\n`);
     onFail?.(entry);
   }
 
