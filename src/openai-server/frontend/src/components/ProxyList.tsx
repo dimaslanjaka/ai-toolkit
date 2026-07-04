@@ -11,6 +11,7 @@ interface ProxyListProps {
   workingProxies: WorkingProxy[];
   onRecheckAll?: () => Promise<void>;
   isRechecking?: boolean;
+  isCheckerBusy?: boolean;
 }
 
 function getProtocolBadgeClasses(type: string): string {
@@ -49,7 +50,7 @@ function getHostBadgeClasses(host: string): string {
   return `${base} ${colors[index]}`;
 }
 
-export default function ProxyList({ workingProxies, onRecheckAll, isRechecking }: ProxyListProps) {
+export default function ProxyList({ workingProxies, onRecheckAll, isRechecking, isCheckerBusy }: ProxyListProps) {
   return (
     <div className="h-full overflow-auto rounded-2xl border border-white/10 bg-[#272727] p-5 shadow-lg shadow-black/10">
       <div className="flex items-center gap-3">
@@ -64,7 +65,7 @@ export default function ProxyList({ workingProxies, onRecheckAll, isRechecking }
           <button
             type="button"
             onClick={onRecheckAll}
-            disabled={isRechecking}
+            disabled={isRechecking || isCheckerBusy}
             className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 transition-colors hover:bg-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed">
             <i
               className={`fa-solid ${isRechecking ? 'fa-spinner fa-spin' : 'fa-rotate-right'} mr-1.5`}

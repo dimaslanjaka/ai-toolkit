@@ -186,6 +186,7 @@ export default function ProxyManager() {
   const initialLoadRef = useRef(true);
 
   const isActive = status ? ACTIVE_STATES.includes(status.state) : false;
+  const isCheckerBusy = status ? ACTIVE_STATES.includes(status.state) : false;
   const stateMeta = STATE_META[status?.state ?? 'idle'];
 
   // Cache active tab to localStorage
@@ -507,7 +508,12 @@ export default function ProxyManager() {
               loadStatus={loadStatus}
             />
           ) : (
-            <ProxyList workingProxies={workingProxies} onRecheckAll={handleRecheckAll} isRechecking={isRechecking} />
+            <ProxyList
+              workingProxies={workingProxies}
+              onRecheckAll={handleRecheckAll}
+              isRechecking={isRechecking}
+              isCheckerBusy={isCheckerBusy}
+            />
           )}
 
           <div className="space-y-5">
