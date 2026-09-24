@@ -7,12 +7,12 @@ import { pipeline } from 'stream/promises';
 import { Readable } from 'stream';
 import { loadDotenv } from 'binary-collections';
 
-loadDotenv();
+loadDotenv('ACCESS_TOKEN');
 
 const OWNER = 'rtk-ai';
 const REPO = 'rtk';
 
-const TOKEN = process.env.GITHUB_TOKEN;
+const TOKEN = process.env.ACCESS_TOKEN || process.env.GITHUB_TOKEN;
 
 // ===============================
 // Platform detection
