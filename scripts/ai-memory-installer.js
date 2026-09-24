@@ -193,6 +193,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('Install failed:', err.message);
+  console.error('AI Memory Install failed:', err.message);
   process.exit(1);
 });
