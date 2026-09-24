@@ -100,7 +100,7 @@ const Configuration = {
 
     // Footer rules
     'footer-leading-blank': [2, 'always'],
-    'footer-max-line-length': [2, 'always', 100]
+    'footer-max-line-length': [0]
 
     // Referenced issues
     // 'references-empty': [0, 'never']
