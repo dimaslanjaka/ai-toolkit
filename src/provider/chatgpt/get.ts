@@ -5,7 +5,7 @@ import isLoggedIn from '../../puppeteer/chatgpt/isLoggedIn.js';
 import writeQuestion from '../../puppeteer/chatgpt/writeQuestion.js';
 import clickSubmitButton from '../../puppeteer/chatgpt/clickSubmitButton.js';
 import waitForInitialResponse from '../../puppeteer/chatgpt/waitForInitialResponse.js';
-import type { Browser, Page } from 'puppeteer';
+import type { Browser, Page } from 'puppeteer-core';
 
 // Browser session management
 let browserInstance: Browser | null = null;

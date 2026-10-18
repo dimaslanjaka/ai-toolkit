@@ -10,7 +10,7 @@ const NETWORK_IDLE_TIMEOUT_MS = 15000;
 /**
  * Navigates to a page with a resilient strategy for apps that keep long-lived network connections.
  *
- * @param {import('puppeteer').Page} page - Puppeteer page instance.
+ * @param {import('puppeteer-core').Page} page - Puppeteer page instance.
  * @param {string} url - URL to navigate to.
  * @returns {Promise<void>} Resolves when the page is at least DOM-ready.
  */
@@ -27,7 +27,7 @@ async function gotoWithFallback(page, url) {
 /**
  * Navigates to a URL using Puppeteer, loading cookies for the host and injecting a DOM mutation observer.
  *
- * @param {import('puppeteer').Page} page - Puppeteer page instance.
+ * @param {import('puppeteer-core').Page} page - Puppeteer page instance.
  * @param {string} url - The URL to navigate to.
  * @returns {Promise<{ waitForDomIdle: (idleMs?: number, timeout?: number) => Promise<boolean> }>} An object containing a function to wait for DOM stability.
  */
@@ -92,7 +92,7 @@ async function navigatePage(page, url) {
  * Injects a fresh MutationObserver (same logic as navigatePage).
  * Works after navigation, clicks, or any other action.
  *
- * @param {import('puppeteer').Page} page
+ * @param {import('puppeteer-core').Page} page
  * @param {number} [idleMs=1000]
  * @param {number} [timeout=10000]
  * @returns {Promise<boolean>}

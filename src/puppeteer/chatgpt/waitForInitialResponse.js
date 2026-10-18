@@ -4,7 +4,7 @@ import { chatState } from './state.js';
 /**
  * Waits for the initial assistant response to appear and finish thinking.
  *
- * @param {import('puppeteer').Page} page - Puppeteer page instance.
+ * @param {import('puppeteer-core').Page} page - Puppeteer page instance.
  * @param {number} [timeout=30000] - Maximum time to wait for the response (ms).
  * @returns {Promise<void>} Resolves when the initial response is ready.
  */

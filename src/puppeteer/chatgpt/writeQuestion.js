@@ -1,7 +1,7 @@
 /**
  * Writes a question to the ChatGPT prompt textarea, handling multi-line questions.
  *
- * @param {import('puppeteer').Page} page - Puppeteer page instance.
+ * @param {import('puppeteer-core').Page} page - Puppeteer page instance.
  * @param {string} question - The question text to write.
  * @returns {Promise<void>} Resolves when the question is written.
  */

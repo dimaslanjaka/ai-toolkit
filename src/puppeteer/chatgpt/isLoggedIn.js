@@ -3,7 +3,7 @@
  * Uses positive indicators (chat UI elements) rather than relying on login button visibility,
  * because `offsetParent` is unreliable in headless browser mode.
  *
- * @param {import('puppeteer').Page} page - Puppeteer page instance.
+ * @param {import('puppeteer-core').Page} page - Puppeteer page instance.
  * @returns {Promise<boolean>} True if logged in (chat interface detected), false if not logged in.
  */
 export default async function isLoggedIn(page) {

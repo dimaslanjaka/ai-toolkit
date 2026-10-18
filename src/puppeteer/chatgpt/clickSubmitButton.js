@@ -1,7 +1,7 @@
 /**
  * Clicks the submit button in ChatGPT interface, trying different button variants.
  *
- * @param {import('puppeteer').Page} page - Puppeteer page instance.
+ * @param {import('puppeteer-core').Page} page - Puppeteer page instance.
  * @returns {Promise<boolean>} Resolves to true when submission is detected, otherwise false.
  */
 export default async function clickSubmitButton(page) {
