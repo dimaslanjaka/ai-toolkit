@@ -15,6 +15,18 @@ const REPO = 'rtk';
 const TOKEN = process.env.ACCESS_TOKEN || process.env.GITHUB_TOKEN;
 
 // ===============================
+// Token masking helper
+// ===============================
+function maskToken(token) {
+  if (!token) return 'undefined';
+  if (token.length <= 8) return '*'.repeat(token.length);
+  const prefix = token.slice(0, 4);
+  const suffix = token.slice(-4);
+  const masked = '*'.repeat(token.length - 8);
+  return `${prefix}${masked}${suffix}`;
+}
+
+// ===============================
 // Platform detection
 // ===============================
 function getPlatformTriple() {
@@ -75,6 +87,26 @@ function buildCandidates({ osPart, archPart, platform }) {
 // ===============================
 // GitHub API
 // ===============================
+async function isGitHubTokenValid() {
+  if (!TOKEN) return false;
+
+  console.log(`GitHub token: ${maskToken(TOKEN)}`);
+
+  try {
+    const res = await fetch('https://api.github.com/user', {
+      headers: {
+        Authorization: `Bearer ${TOKEN}`,
+        Accept: 'application/vnd.github+json',
+        'User-Agent': 'nodejs'
+      }
+    });
+
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 async function getRelease() {
   // Get latest release (similar to ai-memory-installer)
   const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/releases/latest`, {
@@ -173,6 +205,11 @@ async function main() {
   const { osPart, archPart, platform } = getPlatformTriple();
 
   console.log(`Platform: ${platform} (${archPart})`);
+
+  if (!(await isGitHubTokenValid())) {
+    console.warn('Warning: GitHub token is missing or invalid. Skipping RTK installation.');
+    return;
+  }
 
   const release = await getRelease();
 
