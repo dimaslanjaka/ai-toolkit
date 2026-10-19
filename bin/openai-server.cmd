@@ -11,13 +11,15 @@ npx -y nodemon ^
   --watch "*gulp*.*" ^
   --ext ts,js,mjs,cjs ^
   --ignore "**/tmp/**" ^
+  --ignore "**/node_modules/**" ^
   --ignore "**/*.json" ^
   --ignore "**/*.md" ^
-  --ignore "**/node_modules/**" ^
   --ignore "**/*test*" ^
-  --ignore "**/*runner*" ^
+  --ignore "**/*.runner.*" ^
   --ignore "**/frontend/**" ^
   --delay 10 ^
-  --exec "tsc -p tsconfig.build.json && set ROLLUP_ENTRIES=src/openai-server/start.ts && gulp buildServer && node dist/openai-server/start.cjs"
+  --exec "set ROLLUP_ENTRIES=src/openai-server/start.ts && gulp buildServer && node dist/openai-server/start.cjs"
 
 @REM npx -y nodemon --watch "src/**/*.{ts,js,mjs,cjs}" --watch "rollup.*.{js,mjs}" --ext "js,ts,cjs,mjs" --ignore "tmp,node_modules" --exec "bun run src/openai-server/start.ts"
+
+@REM yarn exec gulp devServer
