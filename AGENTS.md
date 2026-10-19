@@ -9,10 +9,11 @@
 - Lint/format: prefer `corepack yarn exec eslint --fix <files>` (the repo does not define a `yarn eslint` script); TypeScript check `corepack yarn exec tsc --noEmit`.
 - Test: `yarn test` (Jest) – tests under `test/`; single Jest file via `corepack yarn jest --runTestsByPath <file>`.
 - Run single TS file: `node --no-warnings=ExperimentalWarning --loader ts-node/esm <file.ts>`.
+- OpenAI-compatible web frontend dev: run `yarn dev:web` and `node dist/openai-server/start.mjs` in separate terminals; run `yarn dev:web` once first so `vite-plugin-mkcert` can generate the shared cert files.
 
 - Lint-staged formatters: ESLint for `*.{js,cjs,mjs,ts,jsx,tsx}`; Prettier for `*.{json,css,scss,less,yml,yaml,sql,jsonc}`; `php-cs-fixer` for `*.php`; Black for `*.py`.
 
-- OpenAI-compatible server dev mode: `bin/openai-server.cmd` (Windows) uses nodemon to watch `src/`, rebuilds via `tsc -p tsconfig.build.json && rollup -c`, then runs the built entry.
+- OpenAI-compatible server dev mode: `bin/openai-server.cmd` (Windows) uses nodemon to watch `src/`, rebuilds via `set ROLLUP_ENTRIES=src/openai-server/start.ts && gulp buildServer`, then runs `node dist/openai-server/start.cjs`.
 - Terminal PATH: before running commands, prepend repository-local executable directories so project tools take precedence:
   - Windows: `bin/`, `node_modules/.bin/`, `venv/Scripts/`, `.venv/Scripts/`, `vendor/bin/`.
   - Linux/macOS: `bin/`, `node_modules/.bin/`, `venv/bin/`, `.venv/bin/`, `vendor/bin/`.
@@ -30,11 +31,11 @@
       - 1st terminal: `gulp buildServer && node dist/openai-server/start.cjs`
       - 2nd terminal:
       ```bash
-      curl -k -s -N https://localhost:5758/v1/chat/completions -H "Content-Type: application/json" -d "{\"model\":\"deepseek-v4-flash-free\",\"messages\":[{\"role\":\"user\",\"content\":\"search for buildOpenAIClient.ts\"}],\"stream\":true}" --max-time 60 | head -n 5
+      curl -k -s -N https://localhost:5758/v1/chat/completions -H "Content-Type: application/json" -d "{\"model\":\"deepseek-v4.1-flash-free\",\"messages\":[{\"role\":\"user\",\"content\":\"search for buildOpenAIClient.ts\"}],\"stream\":true}" --max-time 60 | head -n 5
       # on windows cmd
-      curl -k -s -N https://localhost:5758/v1/chat/completions -H "Content-Type: application/json" -d "{\"model\":\"deepseek-v4-flash-free\",\"messages\":[{\"role\":\"user\",\"content\":\"describe gulpfile.js\"}],\"stream\":true}" | more +0 | findstr /n "^" | findstr "^[1-5]:"
+      curl -k -s -N https://localhost:5758/v1/chat/completions -H "Content-Type: application/json" -d "{\"model\":\"deepseek-v4.1-flash-free\",\"messages\":[{\"role\":\"user\",\"content\":\"describe gulpfile.js\"}],\"stream\":true}" | more +0 | findstr /n "^" | findstr "^[1-5]:"
       # on powershell
-      curl.exe -k -s -N https://localhost:5758/v1/chat/completions -H "Content-Type: application/json" -d '{"model":"deepseek-v4-flash-free","messages":[{"role":"user","content":"describe gulpfile.js"}],"stream":true}' | Select-Object -First 5
+      curl.exe -k -s -N https://localhost:5758/v1/chat/completions -H "Content-Type: application/json" -d '{"model":"deepseek-v4.1-flash-free","messages":[{"role":"user","content":"describe gulpfile.js"}],"stream":true}' | Select-Object -First 5
       ```
     - To check if nodemon of `bin/openai-server.cmd` running using `wmic process where "name='node.exe'" get processid,commandline 2>nul | findstr /i "openai"`
 - Memory system: this project uses two complementary memory systems:
@@ -74,4 +75,3 @@
 - React/TSX guidelines (`*.tsx, *.jsx`): Tailwind utility classes, Flowbite patterns, Font Awesome Pro icons; no CDN tags; PascalCase filenames; functional components default export.
 - Python files (`*.py`): PEP 8, Black formatting, type hints, tests with pytest.
 - PHP files (`*.php`): PSR‑12, PHP 8.1+, typed properties, PHPDoc for public API.
-
