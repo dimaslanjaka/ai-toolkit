@@ -2,7 +2,7 @@
 ## Releases
 | version | tarball url |
 | :--- | :--- |
-| latest | https://github.com/dimaslanjaka/ai-toolkit/raw/e257bbf/release/ai-toolkit.tgz |
+| latest | https://github.com/dimaslanjaka/ai-toolkit/raw/d5b9b1c/release/ai-toolkit.tgz |
 | latest | https://github.com/dimaslanjaka/ai-toolkit/raw/master/release/ai-toolkit.tgz |
 
 use this tarball with `resolutions`:
