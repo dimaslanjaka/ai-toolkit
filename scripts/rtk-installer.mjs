@@ -271,5 +271,5 @@ async function main() {
 
 main().catch((err) => {
   console.error('RTK Install failed:', err.message);
-  process.exit(1);
+  // Do not process.exit(1) — postinstall must not fail the parent install
 });
