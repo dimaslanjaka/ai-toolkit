@@ -192,5 +192,6 @@
   "bugs": {
     "url": "https://github.com/dimaslanjaka/ai-toolkit/issues"
   },
-  "homepage": "https://github.com/dimaslanjaka/ai-toolkit#readme"
+  "homepage": "https://github.com/dimaslanjaka/ai-toolkit#readme",
+  "packageManager": "yarn@4.18.1"
 }
