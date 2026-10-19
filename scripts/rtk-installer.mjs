@@ -5,9 +5,11 @@ import os from 'os';
 import { execSync } from 'child_process';
 import { pipeline } from 'stream/promises';
 import { Readable } from 'stream';
-import { loadDotenv } from 'binary-collections';
+import dotenv from 'dotenv';
 
-loadDotenv('ACCESS_TOKEN');
+dotenv.config({ path: path.join(process.cwd(), '.env') });
+
+console.log('RTK Installer script starting...');
 
 const OWNER = 'rtk-ai';
 const REPO = 'rtk';
@@ -266,7 +268,7 @@ async function main() {
     }
   }
 
-  console.log('Done ✔');
+  console.log('RTK Installer script finished.');
 }
 
 main().catch((err) => {
