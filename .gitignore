@@ -114,3 +114,5 @@ coverage.*
 !.opencode/memory/.gitignore
 !.opencode/memory/openai-compatible.md
 /AI-Unlimited
+.omo/
+.tmp*
