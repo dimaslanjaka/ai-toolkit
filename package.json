@@ -54,9 +54,9 @@
   "files": [
     "dist",
     ".puppeteerrc.cjs",
-    "scripts/postinstall.js",
-    "scripts/rtk-installer.js",
-    "scripts/sqlite-installer.js"
+    "scripts/postinstall.mjs",
+    "scripts/rtk-installer.mjs",
+    "scripts/sqlite-installer.mjs"
   ],
   "workspaces": [
     "packages/*"

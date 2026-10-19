@@ -1,3 +1,3 @@
-import('./rtk-installer.js').then(() => {
-  return import('./sqlite-installer.js');
+import('./rtk-installer.mjs').then(() => {
+  return import('./sqlite-installer.mjs');
 });
